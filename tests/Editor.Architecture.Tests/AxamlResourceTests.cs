@@ -32,6 +32,8 @@ public sealed class AxamlResourceTests
     /// <param name="markup">The invalid markup.</param>
     /// <param name="property">The property that must fail.</param>
     [Theory]
+    [InlineData("<Window xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' x:CompileBindings='False' />", "CompileBindings")]
+    [InlineData("<TextBox Text='{ReflectionBinding Text}' />", "ReflectionBinding")]
     [InlineData("<Button Content='Save' />", "Content")]
     [InlineData("<TextBox Watermark='Find' />", "Watermark")]
     [InlineData("<TextBox AutomationProperties.Name='Find' />", "AutomationProperties.Name")]
@@ -64,6 +66,17 @@ public sealed class AxamlResourceTests
         List<string> violations = [];
         foreach (XElement element in document.Descendants())
         {
+            if (element.Attribute(XName.Get("CompileBindings", "http://schemas.microsoft.com/winfx/2006/xaml")) is { } compiled
+                && !string.Equals(compiled.Value, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                violations.Add("CompileBindings");
+            }
+
+            foreach (XAttribute attribute in element.Attributes().Where(attribute => attribute.Value.StartsWith("{ReflectionBinding", StringComparison.Ordinal)))
+            {
+                violations.Add("ReflectionBinding");
+            }
+
             foreach (XAttribute attribute in element.Attributes().Where(attribute => ResourceProperties.Contains(attribute.Name.LocalName)))
             {
                 Check(attribute.Name.LocalName, attribute.Value);
@@ -80,6 +93,11 @@ public sealed class AxamlResourceTests
 
         void Check(string property, string value)
         {
+            if (value.StartsWith("{ReflectionBinding", StringComparison.Ordinal))
+            {
+                return;
+            }
+
             bool binding = value.StartsWith("{Binding ", StringComparison.Ordinal) || value.StartsWith("{CompiledBinding ", StringComparison.Ordinal);
             bool resource = value.StartsWith("{DynamicResource ", StringComparison.Ordinal)
                 || (!ThemeProperties.Contains(property) && value.StartsWith("{StaticResource ", StringComparison.Ordinal));
