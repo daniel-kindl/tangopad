@@ -23,5 +23,13 @@
     "packages": [
       "xunit.v3"
     ]
+  },
+  "tests/Editor.Desktop.SmokeTests/Editor.Desktop.SmokeTests.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
   }
 }

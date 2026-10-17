@@ -6,5 +6,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj" />
+    <Project Path="tests/Editor.Desktop.SmokeTests/Editor.Desktop.SmokeTests.csproj" />
   </Folder>
 </Solution>

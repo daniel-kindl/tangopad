@@ -15,15 +15,19 @@ dotnet msbuild eng/verify.proj
 ```
 
 The command checks locked dependencies, known vulnerabilities, formatting, static
-analysis, the Release build, and architecture tests. It requires network access to NuGet.
-To check native startup on a desktop, run:
+analysis, the Release build, architecture tests, and native startup of the blank shell.
+It requires network access to NuGet.
+Linux native startup needs an X11 display.
+The check starts Xvfb when no display is open and the host has the Xvfb command.
+[Native startup](docs/native-startup.md) records the supported hosts, native libraries, and results.
+
+To open the blank window yourself, run:
 
 ```sh
-dotnet run --project src/Editor.App --configuration Release --no-build
+dotnet run --project src/Editor.App --configuration Release
 ```
 
 The app displays an empty window. Close the window to stop the app.
-Linux requires the native libraries listed in the [Avalonia platform policy](https://docs.avaloniaui.net/docs/supported-platforms).
 
 The repository contains these modules and support directories:
 
@@ -34,6 +38,7 @@ src/
   Editor.Core/                Domain boundary, no types yet
 tests/
   Editor.Architecture.Tests/  Executable dependency policy
+  Editor.Desktop.SmokeTests/  Native startup of the blank shell
 eng/                         Verification and dependency policy
 docs/                        Architecture, decisions, research, and planned issues
 .github/                     CI and contribution templates
@@ -43,6 +48,7 @@ Read [architecture](docs/architecture.md) for module ownership and the dependenc
 diagram. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 [Tooling research](docs/tooling-research.md) records version checks and optional
 agent skills. [Planned issues](docs/backlog.md) define M0 and M1 work.
-[Verification results](docs/bootstrap-verification.md) record completed checks and platform limits.
+[Verification results](docs/bootstrap-verification.md) record the bootstrap checks.
+[Native startup](docs/native-startup.md) records the blank-shell startup check and its platform limits.
 
 Tangopad uses the [MIT license](LICENSE).
