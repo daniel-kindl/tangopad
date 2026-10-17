@@ -1,0 +1,24 @@
+name: Engineering task
+description: Define a bounded change and its acceptance criteria.
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Describe the observable result and the affected modules.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: State the included work and explicit exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List checks that prove completion. Include relevant platforms.
+    validations:
+      required: true

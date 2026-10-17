@@ -1,0 +1,27 @@
+{
+  "src/Editor.App/Editor.App.csproj": {
+    "projects": [
+      "src/Editor.Application/Editor.Application.csproj"
+    ],
+    "packages": [
+      "Avalonia.Desktop",
+      "Avalonia.Themes.Fluent"
+    ]
+  },
+  "src/Editor.Application/Editor.Application.csproj": {
+    "projects": [
+      "src/Editor.Core/Editor.Core.csproj"
+    ],
+    "packages": []
+  },
+  "src/Editor.Core/Editor.Core.csproj": {
+    "projects": [],
+    "packages": []
+  },
+  "tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj": {
+    "projects": [],
+    "packages": [
+      "xunit.v3"
+    ]
+  }
+}
