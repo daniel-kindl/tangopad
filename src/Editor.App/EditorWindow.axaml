@@ -21,6 +21,41 @@
       </StackPanel>
       <Button x:Name="CancelOperation" Content="{StaticResource Text.Command.CancelOperation}"
               IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
+      <Button x:Name="FindButton" Content="{StaticResource Text.Search.Find}" />
+      <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
+    </StackPanel>
+    <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
+                Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
+      <Grid ColumnDefinitions="Auto,*">
+        <Label Content="{StaticResource Text.Search.Find}" Target="{Binding #QueryInput}" />
+        <TextBox x:Name="QueryInput" Grid.Column="1" Text="{Binding Search.Query, Mode=TwoWay}"
+                 AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
+                 AutomationProperties.Name="{StaticResource Text.Search.Find}" />
+      </Grid>
+      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding Search.IsReplaceVisible}">
+        <Label Content="{StaticResource Text.Search.Replace}" Target="{Binding #ReplacementInput}" />
+        <TextBox x:Name="ReplacementInput" Grid.Column="1" Text="{Binding Search.Replacement, Mode=TwoWay}"
+                 AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
+                 AutomationProperties.Name="{StaticResource Text.Search.Replace}" />
+      </Grid>
+      <WrapPanel>
+        <CheckBox x:Name="MatchCaseInput" Content="{StaticResource Text.Search.MatchCase}" IsChecked="{Binding Search.MatchCase, Mode=TwoWay}" />
+        <Button x:Name="PreviousMatchButton" Content="{StaticResource Text.Search.Previous}" Command="{Binding Search.PreviousCommand}" />
+        <Button x:Name="NextMatchButton" Content="{StaticResource Text.Search.Next}" Command="{Binding Search.NextCommand}" />
+        <Button x:Name="ReplaceCurrentButton" Content="{StaticResource Text.Search.ReplaceCurrent}" Command="{Binding Search.ReplaceCurrentCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />
+        <Button x:Name="ReplaceAllButton" Content="{StaticResource Text.Search.ReplaceAll}" Command="{Binding Search.ReplaceAllCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />
+        <Button x:Name="CloseSearchButton" Content="{StaticResource Text.Search.Close}" Command="{Binding Search.CloseCommand}" />
+      </WrapPanel>
+      <WrapPanel AutomationProperties.LiveSetting="Polite">
+        <TextBlock Text="{StaticResource Text.Search.Empty}" IsVisible="{Binding !Search.HasQuery}" />
+        <TextBlock x:Name="NoMatchesText" Text="{StaticResource Text.Search.NoMatches}" IsVisible="{Binding Search.NoMatches}" />
+        <TextBlock IsVisible="{Binding Search.HasQuery}" Margin="{StaticResource Inset.Search.Status}">
+          <Run Text="{StaticResource Text.Search.MatchCount}" /><Run Text="{Binding Search.MatchCount}" />
+        </TextBlock>
+        <TextBlock IsVisible="{Binding Search.IsReplaceVisible}">
+          <Run Text="{StaticResource Text.Search.ReplacementCount}" /><Run Text="{Binding Search.ReplacementCount}" />
+        </TextBlock>
+      </WrapPanel>
     </StackPanel>
     <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"

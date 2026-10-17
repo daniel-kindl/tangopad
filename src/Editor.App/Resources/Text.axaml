@@ -18,4 +18,16 @@
   <x:String x:Key="Text.Picker.Save.Title">Save text file</x:String>
   <x:String x:Key="Text.Picker.Save.DefaultName">Untitled.txt</x:String>
   <x:String x:Key="Text.Error.LocalPathRequired">This file has no local path. Select a local file.</x:String>
+  <x:String x:Key="Text.Search.Find">Find</x:String>
+  <x:String x:Key="Text.Search.Replace">Replace</x:String>
+  <x:String x:Key="Text.Search.Next">Find next</x:String>
+  <x:String x:Key="Text.Search.Previous">Find previous</x:String>
+  <x:String x:Key="Text.Search.ReplaceCurrent">Replace current</x:String>
+  <x:String x:Key="Text.Search.ReplaceAll">Replace all</x:String>
+  <x:String x:Key="Text.Search.Close">Close search</x:String>
+  <x:String x:Key="Text.Search.MatchCase">Match case</x:String>
+  <x:String x:Key="Text.Search.NoMatches">No matches</x:String>
+  <x:String x:Key="Text.Search.Empty">Enter text to find</x:String>
+  <x:String x:Key="Text.Search.MatchCount" xml:space="preserve">Matches: </x:String>
+  <x:String x:Key="Text.Search.ReplacementCount" xml:space="preserve">Replaced: </x:String>
 </ResourceDictionary>

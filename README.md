@@ -39,6 +39,16 @@ Cancel leaves the document open. Errors appear in a dialog.
 | Open | Ctrl+O | Command+O |
 | Save | Ctrl+S | Command+S |
 | Save As | Ctrl+Shift+S | Command+Shift+S |
+| Find | Ctrl+F | Command+F |
+| Replace | Ctrl+H | Command+H |
+
+Find searches literal text with optional case sensitivity. Enter finds the next match
+while focus is in a search field. Shift+Enter finds the previous match.
+Both directions wrap. Escape closes the panel and returns focus to the editor.
+Paste multiline text into either search field to preserve its exact line endings.
+Replace current changes only a selected match. Replace all replaces non-overlapping
+matches from left to right and reports the replacement count. One Undo restores the operation.
+[Search behavior](docs/find-replace.md) describes matching and command availability.
 
 You can continue editing during a save. Edits after the saved snapshot remain dirty.
 Cancel operation requests cancellation of pending file I/O.
