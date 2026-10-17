@@ -5,11 +5,13 @@
   },
   "src/Editor.App/Editor.App.csproj": {
     "projects": [
-      "src/Editor.Application/Editor.Application.csproj"
+      "src/Editor.Application/Editor.Application.csproj",
+      "src/Editor.Infrastructure/Editor.Infrastructure.csproj"
     ],
     "packages": [
       "Avalonia.Desktop",
-      "Avalonia.Themes.Fluent"
+      "Avalonia.Themes.Fluent",
+      "Avalonia.AvaloniaEdit"
     ]
   },
   "src/Editor.Application/Editor.Application.csproj": {
@@ -65,6 +67,15 @@
       "src/Editor.App/Editor.App.csproj"
     ],
     "packages": [
+      "xunit.v3"
+    ]
+  },
+  "tests/Editor.App.Tests/Editor.App.Tests.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "Avalonia.Headless",
       "xunit.v3"
     ]
   }
