@@ -1,0 +1,34 @@
+name: Pull request title
+
+on:
+  pull_request:
+    branches: [main, dev]
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Conventional Commit title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the pull request title
+        run: |
+          python3 - << 'PY'
+          import json, os, subprocess
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event_file:
+              title = json.load(event_file)["pull_request"]["title"]
+          environment = os.environ.copy()
+          environment["TITLE"] = title
+          raise SystemExit(subprocess.call(["bash", "eng/check-pr-title.sh", "--check"], env=environment))
+          PY
