@@ -6,7 +6,8 @@ text and Markdown. The design prioritizes performance, reliability, and independ
 
 This repository currently contains build infrastructure and a blank Avalonia window.
 It has no editing, file access, parsing, rendering, highlighting, or export features.
-Core and Application contain no source types.
+Core owns `TextDocument` for plain-text document behavior.
+Application contains no source types.
 
 Install the exact .NET SDK from [global.json](global.json). Run the shared verification command from the repository root:
 
@@ -35,9 +36,10 @@ The repository contains these modules and support directories:
 src/
   Editor.App/                 Desktop startup and presentation boundary
   Editor.Application/         Application boundary, no types yet
-  Editor.Core/                Domain boundary, no types yet
+  Editor.Core/                Plain-text document behavior
 tests/
   Editor.Architecture.Tests/  Executable dependency policy
+  Editor.Core.Tests/          Document identity, text, and baseline
   Editor.Desktop.SmokeTests/  Native startup of the blank shell
 eng/                         Verification and dependency policy
 docs/                        Architecture, decisions, research, and planned issues

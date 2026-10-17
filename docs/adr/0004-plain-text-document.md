@@ -59,14 +59,18 @@ incremental text storage until their consumers exist.
 Add `Editor.Core.Tests` with a reference only to Core and the existing xUnit
 package. Keep architecture tests independent of production assembly references.
 They inspect the built Core assembly metadata in the test configuration.
+The Core API test builds Core for the active test configuration.
+That test reads the assembly at the evaluated `TargetPath`.
 
 Core may reference only `System.Runtime`. Referenced type namespaces are limited
 to `System`, `System.Diagnostics`, `System.Reflection`,
 `System.Runtime.CompilerServices`, and `System.Runtime.Versioning`.
-The latter namespaces permit compiler and assembly attributes. Native imports
-are prohibited. The namespace rule excludes filesystem APIs in `System.IO`,
-including those available from the base runtime. The assembly rule excludes
-Avalonia, rendering libraries, and external format parsers.
+`System.Diagnostics`, `System.Reflection`, `System.Runtime.CompilerServices`, and
+`System.Runtime.Versioning` are permitted because the compiler emits assembly and
+compiler attributes in those namespaces. Native imports are prohibited.
+The namespace rule excludes filesystem APIs in `System.IO`, including filesystem
+types from the base runtime. The assembly rule excludes Avalonia, rendering
+libraries, and external format parsers.
 
 These checks inspect static references. They do not prove semantic ownership
 or detect arbitrary runtime code generation. Review remains necessary. A new

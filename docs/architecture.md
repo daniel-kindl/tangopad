@@ -68,10 +68,12 @@ Architecture tests reference the tool to test its comparison behavior.
 These checks include imported and conditional MSBuild items for the evaluated
 configurations on the host OS. The CI matrix evaluates all three host systems.
 They do not inspect arbitrary runtime-specific configurations.
-An API-level test also inspects the compiled Core assembly. It permits only
-`System.Runtime` references and a small set of runtime and metadata namespaces.
-It prohibits native imports. This excludes `System.IO`, Avalonia, rendering
-libraries, and external format parsers, including filesystem types from the base runtime.
+An API-level test inspects the compiled Core assembly.
+The assembly-reference check permits only `System.Runtime`.
+That check rejects Avalonia, rendering libraries, and external format parsers.
+The namespace check permits only the ADR 0004 allowlist.
+That check rejects `System.IO`, including filesystem types from the base runtime.
+The native-import check rejects methods that import native code.
 See [ADR 0004](adr/0004-plain-text-document.md) for the allowlist and its limits.
 Review semantic ownership alongside automated dependency checks.
 

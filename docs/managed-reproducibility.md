@@ -23,9 +23,9 @@ filesystem has insufficient space.
 The tool reads every project from `Tangopad.slnx`. For each project, it evaluates
 Release `TargetPath`, `DebugType`, and `MSBuildProjectDirectory` through MSBuild.
 Relative output paths use the evaluated project directory, which accounts for
-macOS temporary path aliases. It compares that project's managed DLL and adjacent portable PDB by SHA-256. All six solution projects
-currently produce twelve eligible files, including the verification executable
-and both test assemblies. The tool checks assembly and portable PDB metadata
+macOS temporary path aliases. It compares that project's managed DLL and adjacent portable PDB by SHA-256. All seven solution projects
+currently produce fourteen eligible files, including the verification executable
+and the three test assemblies. The tool checks assembly and portable PDB metadata
 before comparing hashes.
 
 The comparison excludes copied dependency DLLs, native package assets, native
