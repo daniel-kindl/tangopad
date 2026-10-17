@@ -71,39 +71,47 @@ Date: 2026-10-17.
 | --- | --- | --- | --- | --- |
 | Fedora Linux 44 (Container Image) | x64 | .NET 10.0.13 | X11 `:0` | PASS. `WM_DELETE_WINDOW` closed the shell with exit code 0. |
 | Ubuntu 24.04.5 LTS | x64 | .NET 10.0.13 | Xvfb `:99` | PASS. `WM_DELETE_WINDOW` closed the shell with exit code 0. |
-| Windows Server 2025 Datacenter 10.0.26100 | x64 | .NET 10.0.13 | A visible Win32 window | FAILED. `PostMessage` is not an entry point. Follow-up: record the next `Verify (windows-2025)` result. |
-| macOS 15.7.9 | arm64 | .NET 10.0.13 | Not in the uploaded TRX | PASS. The smoke assembly passed on `net10.0|arm64` in 4s 447ms. |
+| Microsoft Windows 10.0.26100 | x64 | .NET 10.0.13 | Win32 desktop | PASS. `WM_CLOSE` closed the shell with exit code 0. |
+| macOS 15.7.9 | arm64 | .NET 10.0.13 | macOS desktop | PASS. `AXCloseButton` closed the shell with exit code 0. |
 
 The Fedora result is the output of `Editor.Desktop.SmokeTests.BlankShellStartsAndCloses` on this host.
 The session type was Wayland.
 The shell used XWayland through `DISPLAY=:0`.
 
-The Ubuntu result is the same test in run `39036041068`, job `Verify (ubuntu-24.04)`.
+Run `39036041068`, job `Verify (ubuntu-24.04)`, recorded the Ubuntu result.
 The TRX message is:
 
 `PASS. The shell opened a native window. The check sent WM_DELETE_WINDOW. The shell exited with code 0. Display: Xvfb :99. Host: Ubuntu 24.04.5 LTS. Architecture: X64. Runtime: .NET 10.0.13.`
 
-The macOS result is the same run, job `Verify (macos-15)`.
-The job image is `macos-15-arm64`.
-The job installed runtime 10.0.13.
-`Editor.Desktop.SmokeTests.dll (net10.0|arm64)` passed in 4s 447ms.
-The test run reported 4 passed tests and 0 failed tests.
-The uploaded artifact does not contain the smoke-test message.
-Both assemblies wrote one results file with the same name.
+Run `39036549092` also passed `Verify (ubuntu-24.04)`.
+That run's uploaded artifact does not contain the smoke-test message.
 
-The Windows result is the same run, job `Verify (windows-2025)`.
+Run `39036549092`, job `Verify (windows-2025)`, recorded the Windows result.
 The job image is `windows-2025-vs2026`.
-The job installed runtime 10.0.13.
-`BlankShellStartsAndCloses` found a visible window for the shell process.
+The job reports Microsoft Windows Server 2025 Datacenter.
+The TRX message is:
+
+`PASS. The shell opened a native window. The check sent WM_CLOSE. The shell exited with code 0. Display: Win32 desktop. Host: Microsoft Windows 10.0.26100. Architecture: X64. Runtime: .NET 10.0.13.`
+
+Run `39036041068` on that job failed before this result.
+The check found a visible window.
 The call to `PostMessage` then threw `EntryPointNotFoundException`.
-The message says `user32.dll` has no entry point with that name.
-The check now calls `PostMessageW`.
-That call is not yet recorded on Windows.
+
+Run `39036549092`, job `Verify (macos-15)`, recorded the macOS result.
+The job image is `macos-15-arm64`.
+The TRX message is:
+
+`PASS. The shell opened a native window. The check sent AXCloseButton. The shell exited with code 0. Display: macOS desktop. Host: macOS 15.7.9. Architecture: Arm64. Runtime: .NET 10.0.13.`
 
 ## Limits
 
 A result on one host does not prove another host.
 The check does not measure rendering, input, or startup time.
+Two test assemblies wrote the same TRX file name on one macOS run and one Ubuntu run.
+The uploaded artifact then omitted the smoke-test message.
+The job log still reported that the assembly passed.
+A 32-bit Linux process is `NOT TESTED`.
+The X11 close path uses the 64-bit Xlib event layout.
 Headless Linux uses Xvfb, which has no GPU.
 Avalonia can fall back from GLX to software rendering on that display.
 The Fedora result used the existing X11 display, not Xvfb.
