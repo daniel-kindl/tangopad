@@ -30,8 +30,12 @@ dotnet msbuild eng/verify.proj
 The command stops at the first failing stage. It performs locked restore and
 NuGet auditing for direct and transitive dependencies, format and analyzer
 verification at info severity, Release compilation, and all tests. Build warnings
-are errors. CI repeats the command on Linux, Windows, and macOS. TRX files appear
-under `artifacts/test-results`.
+are errors. CI repeats the command on Linux, Windows, and macOS.
+The test stage clears `artifacts/test-results` before each run.
+Each test project writes `<project-name>.trx` in that directory.
+Verification requires a readable report with results from each expected assembly.
+Missing, empty, or overwritten reports fail verification.
+CI uploads the directory for each runner, including reports from failed runs.
 
 The test stage includes native startup of the blank shell.
 The test starts the built executable, closes its native window, and requires exit code 0.
