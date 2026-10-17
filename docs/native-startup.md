@@ -107,9 +107,10 @@ The TRX message is:
 
 A result on one host does not prove another host.
 The check does not measure rendering, input, or startup time.
-Two test assemblies wrote the same TRX file name on one macOS run and one Ubuntu run.
-The uploaded artifact then omitted the smoke-test message.
-The job log still reported that the assembly passed.
+[PR #6](https://github.com/daniel-kindl/tangopad/pull/6) found a TRX file name collision on macOS and Ubuntu.
+The uploaded artifact omitted the smoke-test message, although the job log reported that the assembly passed.
+Verification now writes `Editor.Architecture.Tests.trx` and `Editor.Desktop.SmokeTests.trx`.
+It checks that each report contains results from the expected assembly before CI uploads the directory.
 A 32-bit Linux process is `NOT TESTED`.
 The X11 close path uses the 64-bit Xlib event layout.
 Headless Linux uses Xvfb, which has no GPU.
