@@ -51,13 +51,13 @@ public sealed class TextDocument
         Text = text;
     }
 
-    /// <summary>Sets the current text as the clean baseline without changing identity or text.</summary>
-    /// <remarks>
-    /// Call only when the current text can be acknowledged as clean.
-    /// This method does not save text or acknowledge an older asynchronous save snapshot.
-    /// </remarks>
-    public void AcceptChanges()
+    /// <summary>Sets acknowledged text as the clean baseline without changing identity or current text.</summary>
+    /// <param name="text">The exact text successfully persisted or otherwise acknowledged.</param>
+    /// <remarks>A saved snapshot can differ from current text when edits occur during persistence.</remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is null.</exception>
+    public void AcceptChanges(string text)
     {
-        baseline = Text;
+        ArgumentNullException.ThrowIfNull(text);
+        baseline = text;
     }
 }

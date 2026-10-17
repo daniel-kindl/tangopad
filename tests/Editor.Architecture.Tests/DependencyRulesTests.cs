@@ -11,29 +11,38 @@ namespace Editor.Architecture.Tests;
 /// <summary>Checks evaluated project dependencies against the repository policy.</summary>
 public sealed class DependencyRulesTests
 {
-    /// <summary>Limits compiled Core APIs to basic runtime types and assembly metadata.</summary>
-    /// <returns>A task that completes after the compiled Core assembly is checked.</returns>
-    [Fact]
-    public async Task CoreUsesOnlyDomainRuntimeApis()
+    /// <summary>Limits compiled domain and application APIs to their permitted dependencies.</summary>
+    /// <param name="module">The assembly to inspect.</param>
+    /// <returns>A task that completes after the compiled assembly is checked.</returns>
+    [Theory]
+    [InlineData("Editor.Core")]
+    [InlineData("Editor.Application")]
+    public async Task InnerModulesUseOnlyPermittedApis(string module)
     {
         string configuration = typeof(DependencyRulesTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
         string root = FindRepositoryRoot();
-        const string project = "src/Editor.Core/Editor.Core.csproj";
+        string project = $"src/{module}/{module}.csproj";
         await BuildProjectAsync(root, project, configuration).ConfigureAwait(true);
         string path = await EvaluateTargetPathAsync(root, project, configuration).ConfigureAwait(true);
-        Assert.True(File.Exists(path), $"The Core build did not produce the evaluated TargetPath: {path}");
+        Assert.True(File.Exists(path), $"The {module} build did not produce the evaluated TargetPath: {path}");
         using FileStream stream = File.OpenRead(path);
         using PEReader assembly = new(stream);
         MetadataReader metadata = assembly.GetMetadataReader();
 
-        Assert.Equal(["System.Runtime"], metadata.AssemblyReferences
-            .Select(handle => metadata.GetString(metadata.GetAssemblyReference(handle).Name)));
+        string[] permittedAssemblies = module == "Editor.Core" ? ["System.Runtime"] : ["Editor.Core", "System.Runtime"];
+        Assert.Equal(permittedAssemblies, metadata.AssemblyReferences
+            .Select(handle => metadata.GetString(metadata.GetAssemblyReference(handle).Name)).Order(StringComparer.Ordinal));
 
         string[] permittedNamespaces =
         [
             "System", "System.Diagnostics", "System.Reflection",
             "System.Runtime.CompilerServices", "System.Runtime.Versioning",
         ];
+        if (module == "Editor.Application")
+        {
+            permittedNamespaces = [.. permittedNamespaces, "Editor.Core", "System.Threading", "System.Threading.Tasks"];
+        }
+
         foreach (TypeReferenceHandle handle in metadata.TypeReferences)
         {
             TypeReference reference = metadata.GetTypeReference(handle);
@@ -45,7 +54,7 @@ public sealed class DependencyRulesTests
 
             string typeNamespace = metadata.GetString(declaringType.Namespace);
             Assert.True(permittedNamespaces.Contains(typeNamespace, StringComparer.Ordinal),
-                $"Core cannot reference {typeNamespace}.{metadata.GetString(reference.Name)}. Review the domain boundary before changing the API policy.");
+                $"{module} cannot reference {typeNamespace}.{metadata.GetString(reference.Name)}. Review the module boundary before changing the API policy.");
         }
 
         foreach (MethodDefinitionHandle handle in metadata.MethodDefinitions)
