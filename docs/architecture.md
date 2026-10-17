@@ -51,6 +51,69 @@ Infrastructure references Application only and adds no packages. App composes th
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
 
+## File placement
+
+Choose the owning layer and directory before creating a file. Extend an existing
+feature directory when it fits. Directory changes do not create new architectural
+layers or change the dependency policy in `eng/architecture.json`.
+
+| Project | Current placement | Rule as the project grows |
+| --- | --- | --- |
+| Editor.Core | `TextDocument.cs` at the root | Group related domain types under a feature such as `Documents/`. |
+| Editor.Application | `DocumentSession.cs` and `ITextDocumentStore.cs` at the root | Group use cases and their contracts under a feature such as `Documents/`. |
+| Editor.Infrastructure | `FileTextDocumentStore.cs` at the root | Group external-system implementations by capability, such as `Persistence/`, `Logging/`, or `Metadata/`. |
+| Editor.App | Presentation directories below | Use responsibility directories now. Add feature directories within them when a feature needs a distinct group. |
+
+Keep a project shallow while it has only one or two closely related source files.
+Create a directory when it groups related files or gives concrete planned work a
+durable home. Do not create empty directories or force symmetry between projects.
+Keep project files, package lock files, and assembly metadata at the project root.
+
+Editor.App uses these directories:
+
+- `Views/` contains `EditorWindow.axaml` and its code-behind. `EditorBufferAdapter`
+  stays beside its consuming view because it connects that window to AvaloniaEdit.
+- `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
+- `ViewModels/` contains `EditorViewModel`, `SearchViewModel`, and the search
+  consumer's `ISearchBuffer` contract and `SearchMatch` value.
+- `Services/` contains `IEditorDialogs`, its `UnsavedDecision` result, and
+  `DesktopEditorDialogs`, which implements the desktop interaction contract.
+- `Resources/` contains text, tokens, theme dictionaries, `EditorLabels`, and
+  `PresentationResources`. The labels keep resource lookup outside ViewModels.
+- `Styles/` contains control styles. `App.axaml`, its code-behind, and `Program.cs`
+  remain at the root for startup and composition.
+
+Add `Controls/` only for a reusable presentation control or behavior. Add a
+presentation `Models/` directory only when concrete presentation-only types need
+one. Domain models remain in Core. Avoid generic `Common/`, `Helpers/`,
+`Utilities/`, `Managers/`, `Interfaces/`, and `Adapters/` directories.
+An interface belongs with its consumer's use case or presentation responsibility.
+
+Domain rules belong in Core. Application owns use cases and their contracts.
+Infrastructure owns storage, network and data providers, and concrete logging
+providers. Logger abstractions belong in the consuming layer unless a concrete
+use case requires a separate framework-neutral contract. Core must not depend on
+an infrastructure logging package. App owns Avalonia views, ViewModels, UI bridges,
+and diagnostic presentation. AvaloniaEdit adapters therefore belong in App.
+
+Tests follow architectural ownership and observable behavior. `Editor.App.Tests`
+groups command tests under `ViewModels/` and headless control tests under `Views/`.
+The other test projects remain shallow while they cover one coherent concern.
+The desktop smoke project keeps its startup probes together at the root.
+Add feature groups when they improve navigation, without a parallel tree of empty
+or redundant directories.
+
+Align new namespaces with meaningful directories. Preserve existing public type
+identity when a file move alone is sufficient. This layout keeps the public Core,
+Application, and Infrastructure namespaces unchanged. App's internal namespaces
+follow its directories, including the matching AXAML `x:Class` values and compiled
+binding namespace. Projects, resource dictionaries, and executable paths retain
+their existing identities. Resource checks scan AXAML recursively.
+
+Record directory and namespace placement in new issues and pull request reviews.
+For each move, check consumers, compiled bindings, resource URIs, test fixtures,
+native acceptance scripts, and build tooling. Update affected references together.
+
 ## Future boundaries
 
 Create a module when a real use case requires it. Update the dependency policy

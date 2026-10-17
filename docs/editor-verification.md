@@ -9,6 +9,22 @@ Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),
 [semantic themes issue #24](https://github.com/daniel-kindl/tangopad/issues/24),
 and [resource convention issue #27](https://github.com/daniel-kindl/tangopad/issues/27).
 
+## Folder refactor verification
+
+[Issue #30](https://github.com/daniel-kindl/tangopad/issues/30) reorganizes
+presentation files, including the merged find/replace implementation.
+`dotnet msbuild eng/verify.proj` passed on Linux with zero build warnings or errors.
+All six TRX reports passed validation. Tests passed 99 cases and skipped one
+Windows-only filesystem case. Native startup and headless compiled-view, binding,
+dialog, theme, and search checks passed.
+
+`python3 eng/check-native-editor.py` passed all 13 native acceptance groups.
+Local evidence is in `artifacts/native-editor-_r4oh8d0`.
+The move comparison found only namespace, import, and AXAML type-reference changes
+in the 17 moved files. Public production type identities and dependencies remain
+unchanged. Windows and macOS native interaction remain untested on this host.
+Hosted matrix checks must pass on the pull request before a normal merge.
+
 ## Repository verification
 
 The latest PR #26 run used this command:

@@ -1,9 +1,11 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Editor.App.Resources;
+using Editor.App.Services;
 using Editor.Application;
 
-namespace Editor.App;
+namespace Editor.App.ViewModels;
 
 // All calls and continuations use the UI thread, as required by DocumentSession.
 internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels) : ObservableObject

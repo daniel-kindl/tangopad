@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Editor.App.ErrorDialog"
+        x:Class="Editor.App.Views.Dialogs.ErrorDialog"
         Classes="dialog"
         Title="{StaticResource Text.Dialog.Error.Title}">
   <StackPanel Classes="dialog-body">

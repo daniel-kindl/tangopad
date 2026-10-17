@@ -80,7 +80,9 @@ docs/                        Architecture, decisions, research, and planned issu
 ```
 
 Read [architecture](docs/architecture.md) for module ownership and the dependency
-diagram. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
+diagram. The [file placement rules](docs/architecture.md#file-placement) describe
+presentation directories and when to add feature folders.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 [Tooling research](docs/tooling-research.md) records version checks and optional
 agent skills. [Planned issues](docs/backlog.md) define M0 and M1 work.
 [Verification results](docs/bootstrap-verification.md) record the bootstrap checks.

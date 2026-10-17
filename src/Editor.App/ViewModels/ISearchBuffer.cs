@@ -1,4 +1,4 @@
-namespace Editor.App;
+namespace Editor.App.ViewModels;
 
 internal readonly record struct SearchMatch(int Start, int Length);
 

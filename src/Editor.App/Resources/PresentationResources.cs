@@ -1,6 +1,6 @@
 using Avalonia.Styling;
 
-namespace Editor.App;
+namespace Editor.App.Resources;
 
 internal static class PresentationResources
 {

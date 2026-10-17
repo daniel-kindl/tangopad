@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Editor.App.Resources;
+using Editor.App.Views.Dialogs;
 
-namespace Editor.App;
+namespace Editor.App.Services;
 
 internal sealed class DesktopEditorDialogs(Window owner) : IEditorDialogs
 {

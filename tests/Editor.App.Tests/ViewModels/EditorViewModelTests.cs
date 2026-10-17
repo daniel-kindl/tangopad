@@ -1,7 +1,10 @@
+using Editor.App.Resources;
+using Editor.App.Services;
+using Editor.App.ViewModels;
 using Editor.Application;
 using Xunit;
 
-namespace Editor.App.Tests;
+namespace Editor.App.Tests.ViewModels;
 
 /// <summary>Checks presentation behavior through the editor commands.</summary>
 public sealed class EditorViewModelTests

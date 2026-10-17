@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using AvaloniaEdit;
+using Editor.App.ViewModels;
 
-namespace Editor.App;
+namespace Editor.App.Views;
 
 internal sealed class EditorBufferAdapter : ISearchBuffer
 {
