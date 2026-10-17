@@ -8,8 +8,9 @@
 4. Read [architecture](docs/architecture.md) before changing module ownership or dependencies.
 5. Implement the smallest change that satisfies the issue.
 
-`main` holds stable releases. `dev` integrates reviewed changes. Target `dev` for
-normal pull requests. Merge a reviewed release pull request from `dev` into `main`.
+`main` holds stable releases. `dev` integrates reviewed changes and is the default
+branch. Target `dev` for normal pull requests. Merge a reviewed release pull
+request from this repository's `dev` branch into `main`.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.
 
@@ -88,7 +89,38 @@ then revise it for natural language without changing its meaning.
 3. Update an ADR if the change alters architecture or tooling policy.
 4. Request review and wait for the required checks.
 
-Repository administrators must configure branch protection on GitHub. Require
-pull requests, review, and all three `Verify` matrix checks for `main` and `dev`.
-Create `dev` from the accepted bootstrap commit if the branch does not exist.
-Local repository files do not apply these remote settings.
+## GitHub integration safeguards
+
+The active [Integration safeguards ruleset](https://github.com/daniel-kindl/tangopad/rules/25302628)
+targets `main` and `dev`. GitHub requires a pull request, one approving review,
+resolved review threads, and these checks from the GitHub Actions app:
+
+- `Verify (ubuntu-24.04)`
+- `Verify (windows-2025)`
+- `Verify (macos-15)`
+
+The PR source branch must be current with its target before merging. New reviewable commits
+dismiss previous approvals. The ruleset also blocks branch deletion and force pushes.
+
+The owner, `daniel-kindl`, can bypass the ruleset through a pull request. This
+exception includes review and check requirements. It does not permit direct pushes.
+Normal merges must wait for all three checks. The owner cannot approve their own
+pull request. An independent reviewer with write access must approve it, or the
+owner must explicitly use the bypass. A bypass is not evidence of review.
+
+The release source restriction is a review convention. This ruleset does not
+restrict the source branch of a pull request. Before merging into `main`, the
+reviewer must confirm that the source is this repository's `dev` branch.
+
+The [Verify workflow](.github/workflows/verify.yml) runs for pushes and pull
+requests to both branches, manual dispatches, and the weekly schedule. It has no
+path filters. Fork pull requests need no secrets. The workflow uses `contents: read`
+and does not persist checkout credentials. Repository token permissions are
+read-only, and Actions cannot create or approve pull requests. GitHub can require
+approval before a fork workflow runs. Workflow approval does not replace PR review.
+
+For [issue #3](https://github.com/daniel-kindl/tangopad/issues/3), `dev` initially
+pointed to accepted bootstrap commit `282d48b0e1c5fe4d28287f06666023e41bc19e7f`.
+The ruleset and default branch are remote settings. Repository files do not apply
+them. Administrators can change these settings, so this document records the
+configuration rather than an immutable guarantee.
