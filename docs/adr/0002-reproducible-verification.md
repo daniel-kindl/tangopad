@@ -35,7 +35,9 @@ For [issue #9](https://github.com/daniel-kindl/tangopad/issues/9), add the
 package-free `eng/BuildVerification` executable. The final verification stage
 runs it after tests and report validation. The tool invokes the same `Restore`
 and `Build` targets in two fresh source trees. `Compile` uses `Build` after
-format verification. The isolated builds do not repeat formatting or tests.
+format verification. The isolated builds do not repeat formatting or tests. The shared build command
+uses `--disable-build-servers` so persistent workers cannot retain package task
+assemblies when temporary caches are removed.
 
 Snapshot Git-tracked files and non-ignored untracked files from the working tree.
 Exclude deleted files, `bin`, `obj`, `artifacts`, and Git metadata. Reject source

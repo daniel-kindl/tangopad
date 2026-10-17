@@ -12,6 +12,8 @@ Git must be available. Restore requires NuGet access for both fresh caches.
 The tool removes temporary build directories and caches after the comparison.
 Isolated builds set `AVALONIA_TELEMETRY_OPTOUT=1` to prevent the background
 collector from keeping temporary package files open on Windows.
+The shared build command uses `--disable-build-servers` so persistent MSBuild
+workers cannot retain task assemblies after compilation.
 The temporary filesystem needs space for two restored package caches and builds.
 On Unix, set `TMPDIR` to a disk-backed directory if the default temporary
 filesystem has insufficient space.

@@ -66,6 +66,11 @@ now uses MSBuild's evaluated project directory, with a regression case for this
 path difference. Windows compared all twelve files successfully, then failed to
 delete `Avalonia.BuildServices.Collector.dll`. Isolated builds now set the package's
 documented `AVALONIA_TELEMETRY_OPTOUT=1` to prevent that background collector.
+The [next hosted run](https://github.com/daniel-kindl/tangopad/actions/runs/39038534123)
+passed Ubuntu and macOS. Windows again matched all twelve files, then failed to
+delete the task assembly `Avalonia.BuildServices.dll`. The shared build command
+now disables persistent build servers so task assemblies are released before
+cache cleanup.
 
 This local record covers Linux only. Hosted results appear in the pull request's
 three Verify checks and per-host reproducibility artifacts. The comparison makes

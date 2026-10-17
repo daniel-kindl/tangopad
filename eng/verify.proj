@@ -15,7 +15,7 @@
   </Target>
   <Target Name="Compile" DependsOnTargets="Format;Build" />
   <Target Name="Build">
-    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore" />
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore --disable-build-servers" />
   </Target>
   <Target Name="Test" DependsOnTargets="Compile">
     <RemoveDir Directories="$(TestResultsDirectory)" />
