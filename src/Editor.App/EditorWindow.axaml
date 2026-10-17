@@ -1,25 +1,28 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:edit="using:AvaloniaEdit"
+        xmlns:app="using:Editor.App"
         x:Class="Editor.App.EditorWindow"
-        Width="960"
-        Height="680"
-        MinWidth="400"
-        MinHeight="250"
-        Title="Untitled - Tangopad">
+        x:DataType="app:EditorViewModel"
+        Width="{StaticResource Size.Window.Width}"
+        Height="{StaticResource Size.Window.Height}"
+        MinWidth="{StaticResource Size.Window.MinWidth}"
+        MinHeight="{StaticResource Size.Window.MinHeight}"
+        Title="{Binding Title}">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-      <StackPanel x:Name="Actions" Orientation="Horizontal" Spacing="8" Margin="8">
-        <Button x:Name="NewButton" Content="New" />
-        <Button x:Name="OpenButton" Content="Open" />
-        <Button x:Name="SaveButton" Content="Save" />
-        <Button x:Name="SaveAsButton" Content="Save As" />
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource Brush.Surface}">
+      <StackPanel x:Name="Actions" Orientation="Horizontal"
+                  Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}"
+                  IsEnabled="{Binding !IsBusy}">
+        <Button x:Name="NewButton" Content="{StaticResource Text.Command.New}" Command="{Binding NewCommand}" />
+        <Button x:Name="OpenButton" Content="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}" />
+        <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" />
+        <Button x:Name="SaveAsButton" Content="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" />
       </StackPanel>
-      <Button x:Name="CancelOperation" Content="Cancel operation" IsVisible="False" />
+      <Button x:Name="CancelOperation" Content="{StaticResource Text.Command.CancelOperation}"
+              IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
     </StackPanel>
-    <edit:TextEditor x:Name="Editor"
-                     FontFamily="monospace"
-                     FontSize="15"
+    <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto" />

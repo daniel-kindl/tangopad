@@ -1,0 +1,47 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="using:AvaloniaEdit"
+        xmlns:editing="using:AvaloniaEdit.Editing">
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource Brush.Background}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="FontFamily" Value="{StaticResource Font.Body}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+  </Style>
+  <Style Selector="Window.dialog">
+    <Setter Property="Width" Value="{StaticResource Size.Dialog.Width}" />
+    <Setter Property="SizeToContent" Value="Height" />
+    <Setter Property="CanResize" Value="False" />
+    <Setter Property="WindowStartupLocation" Value="CenterOwner" />
+  </Style>
+  <Style Selector="StackPanel.dialog-body">
+    <Setter Property="Margin" Value="{StaticResource Inset.Dialog}" />
+    <Setter Property="Spacing" Value="{StaticResource Spacing.Dialog}" />
+  </Style>
+  <Style Selector="StackPanel.dialog-actions">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Spacing" Value="{StaticResource Spacing.Actions}" />
+  </Style>
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}" />
+  </Style>
+  <Style Selector="Button:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Focus}" />
+  </Style>
+  <Style Selector="Button:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}" />
+  </Style>
+  <Style Selector="edit|TextEditor">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Editor}" />
+    <Setter Property="LineNumbersForeground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+  <Style Selector="editing|TextArea">
+    <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Selection}" />
+  </Style>
+  <Style Selector="TextBlock.error-message">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+  </Style>
+</Styles>

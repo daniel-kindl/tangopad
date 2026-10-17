@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceInclude x:Key="Light" Source="/Resources/Themes/Light.axaml" />
+    <ResourceInclude x:Key="Dark" Source="/Resources/Themes/Dark.axaml" />
+  </ResourceDictionary.ThemeDictionaries>
+  <x:Double x:Key="Size.Window.Width">960</x:Double>
+  <x:Double x:Key="Size.Window.Height">680</x:Double>
+  <x:Double x:Key="Size.Window.MinWidth">400</x:Double>
+  <x:Double x:Key="Size.Window.MinHeight">250</x:Double>
+  <x:Double x:Key="Size.Dialog.Width">460</x:Double>
+  <x:Double x:Key="Spacing.Actions">8</x:Double>
+  <x:Double x:Key="Spacing.Dialog">20</x:Double>
+  <Thickness x:Key="Inset.Toolbar">8</Thickness>
+  <Thickness x:Key="Inset.Dialog">20</Thickness>
+  <FontFamily x:Key="Font.Editor">monospace</FontFamily>
+  <x:Double x:Key="FontSize.Editor">15</x:Double>
+  <StaticResource x:Key="Font.Body" ResourceKey="ContentControlThemeFontFamily" />
+  <StaticResource x:Key="FontSize.Body" ResourceKey="ControlContentThemeFontSize" />
+  <StaticResource x:Key="Radius.Control" ResourceKey="ControlCornerRadius" />
+</ResourceDictionary>

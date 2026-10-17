@@ -18,6 +18,84 @@ namespace Editor.App.Tests;
 /// <summary>Checks compiled views and the AvaloniaEdit control on a headless UI dispatcher.</summary>
 public sealed class EditorBindingTests
 {
+    /// <summary>Compiled bindings disable replacement during Open and expose cancellation without replacing the buffer.</summary>
+    [Fact]
+    public async Task BusyBindingsPreserveTheEditorBuffer()
+    {
+        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        _ = await ui.Dispatch(async () =>
+        {
+            DelayedStore store = new();
+            EditorWindow window = new(store, new Dialogs { OpenPath = "/input.txt" });
+            window.Show();
+            window.Editor.Document.Insert(0, "keep");
+            window.Editor.CaretOffset = 2;
+            Task opening = window.ViewModel.OpenCommand.ExecuteAsync(null);
+            Assert.False(window.NewButton.IsEffectivelyEnabled);
+            Assert.True(window.CancelOperation.IsVisible);
+            Assert.True(window.Editor.IsReadOnly);
+            Assert.True(window.Editor.Document.UndoStack.CanUndo);
+            Assert.Equal(2, window.Editor.CaretOffset);
+            window.CancelOperation.Command!.Execute(null);
+            store.Load.SetResult("must not replace");
+            await opening.ConfigureAwait(true);
+            Assert.Equal("keep", window.Editor.Text);
+            Assert.Equal(2, window.Editor.CaretOffset);
+            Assert.True(window.NewButton.IsEffectivelyEnabled);
+            Assert.False(window.CancelOperation.IsVisible);
+            Assert.False(window.Editor.IsReadOnly);
+            window.Editor.Document.UndoStack.Undo();
+            Assert.Equal(string.Empty, window.ViewModel.Text);
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Semantic resources update an existing window, editor selection, and error text in both themes.</summary>
+    [Fact]
+    public async Task ThemeResourcesUpdateExistingControls()
+    {
+        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        _ = await ui.Dispatch(() =>
+        {
+            Avalonia.Application application = Avalonia.Application.Current!;
+            Assert.Equal(ThemeVariant.Default, application.RequestedThemeVariant);
+            application.RequestedThemeVariant = ThemeVariant.Light;
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            ErrorDialog error = new("cannot write");
+            Task<UnsavedDecision> dialog = error.ShowDialog<UnsavedDecision>(window);
+            Color lightBackground = Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color;
+            Color lightError = Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color;
+            Assert.Equal(Colors.Black, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
+            _ = Assert.IsType<IBrush>(window.Editor.TextArea.SelectionBrush, exactMatch: false);
+            string[] roles = ["Background", "Surface", "Text.Primary", "Text.Muted", "Text.Disabled", "Accent", "Border", "Focus", "Error", "Selection"];
+            foreach (string role in roles)
+            {
+                Assert.True(application.TryGetResource($"Brush.{role}", ThemeVariant.Light, out object? light));
+                _ = Assert.IsType<IBrush>(light, exactMatch: false);
+                Assert.True(application.TryGetResource($"Brush.{role}", ThemeVariant.Dark, out object? dark));
+                _ = Assert.IsType<IBrush>(dark, exactMatch: false);
+            }
+
+            application.RequestedThemeVariant = ThemeVariant.Dark;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
+            Assert.Equal(Colors.White, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
+            Assert.NotEqual(lightBackground, Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color);
+            Assert.NotEqual(lightError, Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color);
+            Assert.Equal("Untitled - Tangopad", window.Title);
+            Assert.Equal(460, error.Width);
+            Assert.Equal("cannot write", error.MessageText.Text);
+            error.Close();
+            Assert.True(dialog.IsCompleted);
+            window.Close();
+            application.RequestedThemeVariant = ThemeVariant.Default;
+            Assert.Equal(ThemeVariant.Default, application.RequestedThemeVariant);
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>Typing, loading, saving, undo, and new preserve exact text and dirty state.</summary>
     [Fact]
     public async Task EditorCommandsPreserveExactText()
@@ -37,26 +115,26 @@ public sealed class EditorBindingTests
                 window.Show();
                 _ = window.Editor.TextArea.Focus();
                 window.KeyTextInput("typed");
-                Assert.Equal("typed", window.Workspace.Session.Document.Text);
+                Assert.Equal("typed", window.ViewModel.Session.Document.Text);
                 Assert.Equal("Untitled * - Tangopad", window.Title);
-                Assert.True(await window.Workspace.OpenAsync().ConfigureAwait(true));
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
                 Assert.Equal("loaded\r\nnext\nλ", window.Editor.Text);
                 Assert.False(window.Editor.Document.UndoStack.CanUndo);
                 Assert.Equal($"{input} - Tangopad", window.Title);
                 window.Editor.Document.Insert(window.Editor.Document.TextLength, "\rfinal");
                 window.KeyPressQwerty(PhysicalKey.S, (OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control) | RawInputModifiers.Shift);
-                for (int attempt = 0; window.Workspace.IsBusy && attempt < 100; attempt++)
+                for (int attempt = 0; window.ViewModel.IsBusy && attempt < 100; attempt++)
                 {
                     await Task.Delay(10, TestContext.Current.CancellationToken).ConfigureAwait(true);
                 }
 
-                Assert.False(window.Workspace.IsBusy);
+                Assert.False(window.ViewModel.IsBusy);
                 Assert.Equal("loaded\r\nnext\nλ\rfinal", await File.ReadAllTextAsync(output).ConfigureAwait(true));
                 Assert.Equal($"{output} - Tangopad", window.Title);
                 window.Editor.Document.UndoStack.Undo();
-                Assert.True(window.Workspace.Session.Document.IsDirty);
-                Assert.Equal("loaded\r\nnext\nλ", window.Workspace.Session.Document.Text);
-                Assert.True(await window.Workspace.NewAsync().ConfigureAwait(true));
+                Assert.True(window.ViewModel.Session.Document.IsDirty);
+                Assert.Equal("loaded\r\nnext\nλ", window.ViewModel.Session.Document.Text);
+                Assert.True(await window.ViewModel.NewAsync().ConfigureAwait(true));
                 Assert.Equal(string.Empty, window.Editor.Text);
                 Assert.False(window.Editor.Document.UndoStack.CanUndo);
                 Assert.Equal("Untitled - Tangopad", window.Title);
@@ -64,7 +142,7 @@ public sealed class EditorBindingTests
                 window.KeyTextInput("unsaved");
                 window.Close();
                 Assert.True(window.IsVisible);
-                Assert.True(window.Workspace.Session.Document.IsDirty);
+                Assert.True(window.ViewModel.Session.Document.IsDirty);
                 dialogs.Decision = UnsavedDecision.Discard;
                 window.Close();
                 Dispatcher.UIThread.RunJobs();
@@ -86,6 +164,7 @@ public sealed class EditorBindingTests
         _ = await ui.Dispatch(() =>
         {
             EditorWindow window = new(new FileTextDocumentStore());
+            window.Show();
             Assert.Equal(960, window.Width);
             Assert.Equal(680, window.Height);
             Assert.Equal(400, window.MinWidth);
@@ -133,7 +212,7 @@ public sealed class EditorBindingTests
             Assert.Equal(gestures[0].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[0])));
             Assert.Equal(gestures[3].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[3])));
 
-            Assert.Equal(2, Avalonia.Application.Current!.Styles.Count);
+            Assert.Equal(3, Avalonia.Application.Current!.Styles.Count);
             _ = Assert.IsType<FluentTheme>(Avalonia.Application.Current.Styles[0]);
             Styles editorTheme = Assert.IsType<Styles>(Avalonia.Application.Current.Styles[1]);
             // These keys identify avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml.
@@ -151,6 +230,7 @@ public sealed class EditorBindingTests
         _ = await ui.Dispatch(async () =>
         {
             UnsavedChangesDialog unsaved = new();
+            _ = unsaved.ApplyStyling();
             Assert.Equal("Unsaved changes", unsaved.Title);
             Assert.Equal(460, unsaved.Width);
             Assert.Equal(SizeToContent.Height, unsaved.SizeToContent);
@@ -186,6 +266,7 @@ public sealed class EditorBindingTests
             Assert.Equal(UnsavedDecision.Save, await saving.ConfigureAwait(true));
 
             ErrorDialog error = new("cannot write");
+            _ = error.ApplyStyling();
             Assert.Equal("File operation failed", error.Title);
             Assert.Equal(460, error.Width);
             Assert.Equal(SizeToContent.Height, error.SizeToContent);
@@ -225,5 +306,20 @@ public sealed class EditorBindingTests
         public Task<string?> ChooseSaveAsync(string? destination) { return Task.FromResult(SavePath); }
         public Task<UnsavedDecision> ConfirmUnsavedAsync() { return Task.FromResult(Decision); }
         public Task ShowErrorAsync(string message) { Assert.Fail(message); return Task.CompletedTask; }
+    }
+
+    private sealed class DelayedStore : Application.ITextDocumentStore
+    {
+        internal TaskCompletionSource<string> Load { get; } = new();
+
+        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        {
+            return Load.Task;
+        }
+
+        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("This test does not save documents.");
+        }
     }
 }

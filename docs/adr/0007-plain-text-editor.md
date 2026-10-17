@@ -27,25 +27,30 @@ EditorWindow.axaml owns the window size, toolbar, editor control, and their fixe
 UnsavedChangesDialog.axaml owns the unsaved-changes prompt.
 ErrorDialog.axaml owns the file-operation error prompt.
 Code-behind loads each view.
-Code-behind keeps shortcut selection, tooltips, commands, text synchronization, cancellation, and close behavior.
-AXAML is the only definition of those controls.
+Code-behind keeps platform shortcuts, focus, and native close integration.
+AXAML binds the title, command availability, cancellation, and edit availability to EditorViewModel.
+EditorBufferAdapter transfers exact text between AvaloniaEdit and the ViewModel.
 DesktopEditorDialogs calls the platform file pickers.
 The project leaves Avalonia developer tools unloaded.
-The Avalonia XAML compiler writes absolute paths into the Editor.App debug output.
-The byte-rewriting build target was removed after review.
-[Compiled AXAML path mapping](../avalonia-pathmap.md) records the remaining reproducibility blocker.
-View models and design tokens remain separate follow-up work.
-EditorWindow owns AvaloniaEdit, toolbar actions, shortcuts, and close handling.
-EditorWorkspace coordinates presentation state through DocumentSession.
+
+CommunityToolkit.Mvvm 8.4.2 is the sole MVVM utility dependency.
+EditorViewModel derives from ObservableObject.
+Source-generated observable properties and relay commands publish state and CanExecute changes.
+The ViewModel coordinates presentation state through DocumentSession.
+It has no Avalonia controls, resource lookups, brushes, or dimensions.
+It receives immutable title labels from the presentation resource adapter.
+[Presentation resources](../presentation-resources.md) defines text and theme ownership.
+
 IEditorDialogs isolates the file pickers and confirmation dialogs for tests.
 It stays internal to Editor.App. It adds no application persistence contract.
 There is no DI container or format layer.
 
 DocumentSession.Document is authoritative for text and dirty state.
 AvaloniaEdit retains its editing buffer, selection, caret, and undo history.
-Each text-change event transfers exact text to the document.
-Only a new document identity replaces the control text and clears undo history.
-State notifications update the title and controls without assigning text.
+Each text-change event updates ViewModel.Text and the document.
+A new document identity replaces the control text and clears undo history.
+A programmatic ViewModel.Text update changes the buffer only if its text differs.
+Unchanged text is not assigned during title or command notifications.
 Undo therefore follows the same text-change path as typing.
 The UI does not keep another clean baseline or infer saved state.
 
@@ -53,7 +58,7 @@ The window title displays the full destination or Untitled.
 An asterisk marks dirty text. The toolbar exposes New, Open, Save, and Save As.
 Shortcuts use Control on Linux and Windows, and Command on macOS.
 
-The workspace serializes commands on the UI thread.
+The ViewModel serializes commands on the UI thread.
 It disables replacement commands while an operation is pending.
 Open and replacement confirmation make the editor read-only.
 Save permits editing while the store writes its captured snapshot.
@@ -72,23 +77,24 @@ Save As changes the destination only after successful persistence.
 
 Cancel operation requests cancellation of pending I/O.
 Native picker APIs do not accept cancellation tokens.
-An open picker must close before the workspace observes a cancellation request.
+An open picker must close before the ViewModel observes a cancellation request.
 Expected file, encoding, and path errors appear in an owned dialog.
-The workspace restores command availability after success, failure, or cancellation.
+The ViewModel restores command availability after success, failure, or cancellation.
 Persistence retains the UTF-8 and replacement rules in ADR 0006.
 The UI does not normalize text or line endings.
 
 ## Alternatives
 
-Binding two mutable text properties would require feedback suppression and
-could replace the control buffer during ordinary state updates.
+A general two-way text binding could replace the control buffer during ordinary state updates.
+The small adapter checks text equality and resets undo only for a new document identity.
 Direct file access in the window would duplicate persistence policy.
-A general command framework or view-model package would add dependencies for
-four actions. An internal ICommand adapter supplies the existing shortcut API.
+CommunityToolkit.Mvvm supplies notifications and asynchronous commands without reactive streams.
+ReactiveUI, Rx.NET, messaging, and a DI container have no concrete consumer here.
+Reconsider reactive composition only when an actual use case needs it.
 
 ## Verification
 
-Editor.App.Tests drives workspace commands with controlled stores and dialogs.
+Editor.App.Tests drives ViewModel commands with controlled stores and dialogs.
 A headless test uses the production styles, the actual editor control, and
 FileTextDocumentStore. It checks keyboard text input, exact mixed line endings,
 Save As output, dirty state, and undo history.

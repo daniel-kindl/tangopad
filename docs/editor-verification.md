@@ -4,38 +4,37 @@ Date: 2026-10-17
 
 Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),
 [native acceptance issue #21](https://github.com/daniel-kindl/tangopad/issues/21),
-and [compiled AXAML issue #22](https://github.com/daniel-kindl/tangopad/issues/22).
+[compiled AXAML issue #22](https://github.com/daniel-kindl/tangopad/issues/22),
+[MVVM issue #23](https://github.com/daniel-kindl/tangopad/issues/23),
+[semantic themes issue #24](https://github.com/daniel-kindl/tangopad/issues/24),
+and [resource convention issue #27](https://github.com/daniel-kindl/tangopad/issues/27).
 
 ## Repository verification
 
 The latest PR #26 run used this command:
 
 ```sh
-TMPDIR=/workspace/tangopad/artifacts/tmp dotnet msbuild eng/verify.proj
+dotnet msbuild eng/verify.proj
 ```
 
 Locked restore and audit, formatting, analyzers, and Release compilation passed
-with zero warnings or errors. Six distinct TRX reports contain 87 passed tests
+with zero warnings or errors. Six distinct TRX reports contain 82 passed tests
 and one Windows-only skip. Native editor startup passed.
-The full command failed at managed reproducibility because the two Editor.App.dll hashes differed.
-Managed reproducibility remains a merge blocker after removal of the custom
-DLL and PDB byte rewrite. The earlier matching hashes depended on that rewrite.
-[Compiled AXAML path mapping](avalonia-pathmap.md) records the upstream limitation
-and a minimal reproduction. [Issue #28](https://github.com/daniel-kindl/tangopad/issues/28)
-tracks a separate build solution. The verification check remains unchanged.
-
-The earlier issue #19 verification first failed during reproducibility restore because the temporary
-filesystem exceeded its quota. The successful rerun used the workspace disk
-for temporary files. It used the same verification entry point and checks.
-Reports and reproducibility manifests are in artifacts/test-results and
-artifacts/reproducibility.
+The project owner removed the managed reproducibility requirement in this combined change.
+The comparison tool, its tests, CI uploads, and fixed test runners are deleted.
+[ADR 0002](adr/0002-reproducible-verification.md) records the current policy.
+TRX reports remain in artifacts/test-results.
 
 ## Compiled AXAML views
 
 [Issue #22](https://github.com/daniel-kindl/tangopad/issues/22) moved the editor
 views into compiled AXAML. The repository command above includes that change.
 
-Editor.App.Tests passed 9 tests.
+Editor.App.Tests passed 13 tests.
+Eight ViewModel tests run without initializing Avalonia.
+Five headless tests check compiled views, editor behavior, command bindings, dialogs, and theme switching.
+Architecture tests also enforce the AXAML resource convention and unique resource keys.
+[Presentation resources](presentation-resources.md) records the ownership and resource exceptions.
 One test checks the window size, title, named toolbar buttons, editor control,
 shortcuts, and Fluent theme resources.
 One test checks the unsaved-changes dialog and the error dialog.
@@ -45,15 +44,15 @@ Save returns `UnsavedDecision.Save`.
 The error dialog returns `UnsavedDecision.Cancel`.
 
 This host ran the Linux native startup smoke test.
-After removal of the binary rewrite, `eng/check-native-editor.py` passed all 11 groups.
-The evidence directory is `artifacts/native-editor-4vg2i5bq`.
+After the combined presentation refactor, `eng/check-native-editor.py` passed all 11 groups.
+The evidence directory is `artifacts/native-editor-yan2r48e`.
 Windows and macOS interactive desktop checks remain NOT TESTED.
 The Windows-only filesystem test skipped on Linux.
 
 ## Automated evidence
 
 The first test run failed because the presentation types did not exist.
-After implementation, the workspace tests passed.
+After implementation, the presentation tests passed.
 A control test then exposed an input-focus failure.
 The window now focuses AvaloniaEdit's TextArea when it opens.
 
@@ -63,6 +62,9 @@ Editor.App.Tests checks these observable behaviors:
 - Cancelled pickers, failed Open, and cancelled pending Open preserve the document.
 - Cancelled confirmation and cancelled Save prevent close.
 - Busy commands cannot replace a document or overlap a pending Save.
+- Property and command notifications expose busy state, cancellation, dirty state, and title changes.
+- Compiled bindings disable replacement and editing during Open without resetting the buffer.
+- Existing windows and error dialogs update semantic brush resources when the theme changes.
 - Failed Save preserves the destination and dirty baseline and displays the error.
 - Successful Save before close permits close. Later Save uses the saved destination.
 - The actual AvaloniaEdit control accepts text input and preserves mixed line endings.
@@ -83,7 +85,7 @@ Picker completion on that desktop remains NOT TESTED.
 
 | Host and session | Result | Follow-up |
 | --- | --- | --- |
-| Fedora Linux 44 container, x64, .NET 10.0.13, Xvfb `:1`, private D-Bus, GTK portal | PASS. All 11 native acceptance groups passed. | Repeat on the hosted Ubuntu runner. |
+| Fedora Linux 44 container, x64, .NET 10.0.13, Xvfb `:1`, private D-Bus, GTK portal | PASS. All 11 groups passed after the combined MVVM and resource refactor. | Repeat on the hosted Ubuntu runner. |
 | Fedora Linux 44 container, XWayland `:0` on a Wayland desktop | PASS for startup, typing, and dirty title. Native picker completion is NOT TESTED. | Repeat the interactive procedure with input access to the desktop picker. |
 | Windows desktop | NOT TESTED. This host cannot run a Windows desktop session. | Run the interactive procedure on Windows. Check Ctrl shortcuts and record OS, session, and results. |
 | macOS desktop | NOT TESTED. This host cannot run a macOS desktop session. | Run the interactive procedure on macOS. Check Command shortcuts and record OS, session, and results. |

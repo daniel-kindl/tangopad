@@ -9,7 +9,7 @@ internal sealed class DesktopEditorDialogs(Window owner) : IEditorDialogs
     {
         IReadOnlyList<IStorageFile> files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open text file",
+            Title = PresentationResources.Text("Text.Picker.Open.Title"),
             AllowMultiple = false,
         }).ConfigureAwait(true);
         try
@@ -29,8 +29,8 @@ internal sealed class DesktopEditorDialogs(Window owner) : IEditorDialogs
     {
         using IStorageFile? file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Save text file",
-            SuggestedFileName = destination is null ? "Untitled.txt" : Path.GetFileName(destination),
+            Title = PresentationResources.Text("Text.Picker.Save.Title"),
+            SuggestedFileName = destination is null ? PresentationResources.Text("Text.Picker.Save.DefaultName") : Path.GetFileName(destination),
             ShowOverwritePrompt = true,
         }).ConfigureAwait(true);
         return file is null ? null : LocalPath(file);
@@ -48,6 +48,6 @@ internal sealed class DesktopEditorDialogs(Window owner) : IEditorDialogs
 
     private static string LocalPath(IStorageFile file)
     {
-        return file.TryGetLocalPath() ?? throw new NotSupportedException("This file has no local path. Select a local file.");
+        return file.TryGetLocalPath() ?? throw new NotSupportedException(PresentationResources.Text("Text.Error.LocalPathRequired"));
     }
 }

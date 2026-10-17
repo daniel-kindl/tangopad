@@ -15,7 +15,7 @@ dotnet msbuild eng/verify.proj
 ```
 
 The command checks locked dependencies, known vulnerabilities, formatting, static
-analysis, the Release build, architecture tests, native editor startup, and managed build reproducibility.
+analysis, the Release build, architecture tests, and native editor startup.
 It requires network access to NuGet.
 Linux native startup needs an X11 display.
 The check starts Xvfb when no display is open and the host has the Xvfb command.

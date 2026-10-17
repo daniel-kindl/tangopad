@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <StaticResource x:Key="Brush.Background" ResourceKey="SystemRegionBrush" />
+  <StaticResource x:Key="Brush.Surface" ResourceKey="SystemRegionBrush" />
+  <StaticResource x:Key="Brush.Text.Primary" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.Text.Muted" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Text.Disabled" ResourceKey="SystemControlDisabledBaseMediumLowBrush" />
+  <StaticResource x:Key="Brush.Accent" ResourceKey="SystemControlForegroundAccentBrush" />
+  <StaticResource x:Key="Brush.Border" ResourceKey="SystemControlForegroundBaseLowBrush" />
+  <StaticResource x:Key="Brush.Focus" ResourceKey="SystemControlRevealFocusVisualBrush" />
+  <StaticResource x:Key="Brush.Error" ResourceKey="SystemControlErrorTextForegroundBrush" />
+  <StaticResource x:Key="Brush.Selection" ResourceKey="TextAreaSelectionBrush" />
+</ResourceDictionary>

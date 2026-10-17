@@ -10,6 +10,7 @@
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
 </Project>
