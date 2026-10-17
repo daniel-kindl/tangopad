@@ -7,7 +7,7 @@ application contracts. The domain owns no UI, parser, renderer, or filesystem im
 ## Current boundaries
 
 The solid arrows below are project references. Core owns plain-text document
-behavior. Application reserves use-case ownership without speculative interfaces.
+behavior. Application owns plain-text load and save orchestration and its persistence port.
 
 ```mermaid
 flowchart LR
@@ -16,6 +16,7 @@ flowchart LR
     App --> Avalonia[Avalonia desktop and Fluent theme]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
     ArchitectureTests --> BuildVerification[BuildVerification]
+    ApplicationTests[Editor.Application.Tests] --> Application
     CoreTests[Editor.Core.Tests] --> Core
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
@@ -23,15 +24,16 @@ flowchart LR
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
 | Editor.App | Presentation and composition | Avalonia startup and an empty window |
-| Editor.Application | Use cases and contracts needed by those use cases | Project reference to Core |
+| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
+| Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
 | Editor.Core.Tests | Document behavior | Identity, edits, acknowledgement, reversion, Unicode, and null input |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
 | BuildVerification | Managed build reproducibility | Creates isolated builds and compares project DLL and portable PDB hashes |
 | Editor.Desktop.SmokeTests | Native startup of the blank shell | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
 `Program.Main` is the single composition root. `App` performs framework lifecycle
-setup only. No service container is necessary while there are no services.
+setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
@@ -68,13 +70,15 @@ Architecture tests reference the tool to test its comparison behavior.
 These checks include imported and conditional MSBuild items for the evaluated
 configurations on the host OS. The CI matrix evaluates all three host systems.
 They do not inspect arbitrary runtime-specific configurations.
-An API-level test inspects the compiled Core assembly.
-The assembly-reference check permits only `System.Runtime`.
+API-level tests inspect the compiled Core and Application assemblies.
+Core may reference only `System.Runtime`.
+Application may reference only `Editor.Core` and `System.Runtime`.
 That check rejects Avalonia, rendering libraries, and external format parsers.
-The namespace check permits only the ADR 0004 allowlist.
+The namespace check permits only the allowlists in ADR 0004 and ADR 0005.
 That check rejects `System.IO`, including filesystem types from the base runtime.
 The native-import check rejects methods that import native code.
-See [ADR 0004](adr/0004-plain-text-document.md) for the allowlist and its limits.
+See [ADR 0004](adr/0004-plain-text-document.md) and
+[ADR 0005](adr/0005-document-persistence-use-cases.md) for the allowlists and their limits.
 Review semantic ownership alongside automated dependency checks.
 
 ## Design policy
@@ -93,3 +97,4 @@ callers together. Avoid permanent compatibility layers inside this monolith.
 
 See [ADR 0001](adr/0001-module-boundaries.md) for the alternatives and decision.
 See [ADR 0004](adr/0004-plain-text-document.md) for document use cases and invariants.
+See [ADR 0005](adr/0005-document-persistence-use-cases.md) for persistence contracts and save concurrency limits.

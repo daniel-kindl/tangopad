@@ -5,6 +5,23 @@ namespace Editor.Core.Tests;
 /// <summary>Checks document identity, exact text, and baseline behavior.</summary>
 public sealed class TextDocumentTests
 {
+    /// <summary>Checks that acknowledgement preserves edits made after a save starts.</summary>
+    [Fact]
+    public void AcknowledgementUsesTheSavedSnapshot()
+    {
+        TextDocument document = TextDocument.FromText("loaded");
+        document.ReplaceText("saved snapshot");
+        string snapshot = document.Text;
+        document.ReplaceText("newer edit");
+
+        document.AcceptChanges(snapshot);
+
+        Assert.Equal("newer edit", document.Text);
+        Assert.True(document.IsDirty);
+        document.ReplaceText(snapshot);
+        Assert.False(document.IsDirty);
+    }
+
     /// <summary>Checks that a new untitled document is empty and clean.</summary>
     [Fact]
     public void NewDocumentIsEmptyAndClean()
@@ -91,8 +108,8 @@ public sealed class TextDocumentTests
         Guid identity = document.Id;
         document.ReplaceText("saved");
 
-        document.AcceptChanges();
-        document.AcceptChanges();
+        document.AcceptChanges(document.Text);
+        document.AcceptChanges(document.Text);
         Assert.False(document.IsDirty);
         Assert.Equal("saved", document.Text);
         Assert.Equal(identity, document.Id);
@@ -109,7 +126,7 @@ public sealed class TextDocumentTests
     {
         TextDocument document = TextDocument.FromText("loaded");
         document.ReplaceText(string.Empty);
-        document.AcceptChanges();
+        document.AcceptChanges(document.Text);
 
         Assert.Equal(string.Empty, document.Text);
         Assert.False(document.IsDirty);
@@ -140,6 +157,22 @@ public sealed class TextDocumentTests
         Assert.Equal("text", error.ParamName);
         Assert.Equal("draft", document.Text);
         Assert.Equal(identity, document.Id);
+        Assert.True(document.IsDirty);
+        document.ReplaceText("loaded");
+        Assert.False(document.IsDirty);
+    }
+
+    /// <summary>Checks that null acknowledgement preserves the previous baseline.</summary>
+    [Fact]
+    public void NullAcknowledgementLeavesTheDocumentUnchanged()
+    {
+        TextDocument document = TextDocument.FromText("loaded");
+        document.ReplaceText("draft");
+
+        ArgumentNullException error = Assert.Throws<ArgumentNullException>(() => document.AcceptChanges(null!));
+
+        Assert.Equal("text", error.ParamName);
+        Assert.Equal("draft", document.Text);
         Assert.True(document.IsDirty);
         document.ReplaceText("loaded");
         Assert.False(document.IsDirty);

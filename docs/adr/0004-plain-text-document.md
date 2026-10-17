@@ -19,8 +19,8 @@ Core must not read files, interpret formats, or depend on the desktop framework.
 | Replace text | Preserve identity and baseline, replace the entire text |
 | Supply unchanged text | Preserve the current clean or dirty state |
 | Revert to the baseline | Clear dirty state |
-| Acknowledge current text | Make current text the clean baseline, preserve identity and text |
-| Supply null text | Throw `ArgumentNullException` without changing existing state |
+| Acknowledge supplied text | Make supplied text the clean baseline, preserve identity and current text |
+| Supply null text for creation, editing, or acknowledgement | Throw `ArgumentNullException` without changing existing state |
 
 Empty text and all .NET string contents are valid. Core does not normalize
 Unicode, line endings, or whitespace. Ordinal comparison distinguishes canonically
@@ -29,7 +29,7 @@ equivalent Unicode sequences with different UTF-16 contents.
 ## Decision
 
 Use the sealed `TextDocument` class with `CreateUntitled`, `FromText`,
-`ReplaceText`, and `AcceptChanges`. Expose read-only `Id`, `Text`, and `IsDirty`
+`ReplaceText`, and `AcceptChanges(string text)`. Expose read-only `Id`, `Text`, and `IsDirty`
 properties. The model stores current text and baseline text. `IsDirty` compares
 them with `StringComparison.Ordinal`. Immutable strings let both values share
 storage until an edit. Comparison can take time proportional to text length.
@@ -42,13 +42,13 @@ are outside this model. A later path change must not replace document identity.
 Persistent identity, serialization, and identity restoration remain deferred.
 
 A new untitled document has an empty clean baseline. Its dirty state answers
-whether text changed, not whether a file exists. A later application use case
-must decide when an untitled document needs a save destination.
+whether text changed, not whether a file exists. `DocumentSession` requires
+save-as for an untitled document, as defined in ADR 0005.
 
-`AcceptChanges` acknowledges the current text. It performs no persistence and
-cannot acknowledge an older snapshot while newer edits exist. Callers must
-serialize access and acknowledge only the current text. Concurrent saves need
-a separate application use case before this contract changes.
+`AcceptChanges(string text)` acknowledges supplied text. It performs no persistence.
+It can acknowledge an older saved snapshot while newer edits remain dirty.
+Callers must serialize access. [ADR 0005](0005-document-persistence-use-cases.md)
+defines asynchronous save acknowledgement and replaces the original parameterless API.
 
 Reject an edit counter or sticky dirty flag because reverting text must clear
 dirty state. Defer revision identifiers, events, interfaces, undo history, and
@@ -81,4 +81,5 @@ runtime API requires a boundary review before the allowlist changes.
 Core has no package, framework, or adapter dependencies beyond the base runtime.
 The shared verification command discovers the new test project and validates its
 TRX report. Managed reproducibility includes the new assembly and symbols.
-Application orchestration, filesystem integration, and UI behavior remain deferred.
+[ADR 0005](0005-document-persistence-use-cases.md) adds application orchestration.
+Filesystem integration and UI behavior remain deferred.

@@ -22,6 +22,14 @@
     "projects": [],
     "packages": []
   },
+  "tests/Editor.Application.Tests/Editor.Application.Tests.csproj": {
+    "projects": [
+      "src/Editor.Application/Editor.Application.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
   "tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj": {
     "projects": [
       "eng/BuildVerification/BuildVerification.csproj"
