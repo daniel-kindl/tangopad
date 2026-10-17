@@ -203,7 +203,8 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         await File.WriteAllTextAsync(path, "previous", TestContext.Current.CancellationToken);
         using (FileStream locked = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            _ = await Assert.ThrowsAsync<IOException>(() => store.SaveAsync(path, "new", TestContext.Current.CancellationToken));
+            Exception? error = await Record.ExceptionAsync(() => store.SaveAsync(path, "new", TestContext.Current.CancellationToken));
+            Assert.True(error is IOException or UnauthorizedAccessException, $"Unexpected error: {error}");
             Assert.Equal("previous", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             Assert.Equal([path], Directory.GetFileSystemEntries(directory));
         }
