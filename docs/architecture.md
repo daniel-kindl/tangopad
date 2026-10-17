@@ -16,8 +16,8 @@ flowchart LR
     Application --> Core[Editor.Core]
     Infrastructure[Editor.Infrastructure] --> Application
     App --> Avalonia[Avalonia desktop, Fluent theme, and AvaloniaEdit]
+    App --> Toolkit[CommunityToolkit.Mvvm]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
-    ArchitectureTests --> BuildVerification[BuildVerification]
     ApplicationTests[Editor.Application.Tests] --> Application
     CoreTests[Editor.Core.Tests] --> Core
     InfrastructureTests[Editor.Infrastructure.Tests] --> Infrastructure
@@ -27,7 +27,7 @@ flowchart LR
 
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
-| Editor.App | Presentation and composition | Plain-text editing, desktop dialogs, and composition |
+| Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
 | Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
@@ -36,11 +36,16 @@ flowchart LR
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
 | Editor.Core.Tests | Document behavior | Identity, edits, acknowledgement, reversion, Unicode, and null input |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
-| BuildVerification | Managed build reproducibility | Creates isolated builds and compares project DLL and portable PDB hashes |
 | Editor.Desktop.SmokeTests | Native editor startup | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
-`Program.Main` is the single composition root. `App` performs framework lifecycle
-setup only. The document service receives its persistence port directly. No service container is necessary.
+`EditorViewModel` owns observable state and commands through CommunityToolkit.Mvvm.
+It references no Avalonia controls, resources, or brushes.
+The window binds state and commands. EditorBufferAdapter integrates AvaloniaEdit text and document identity.
+DesktopEditorDialogs owns native pickers and owned dialogs.
+[Presentation resources](presentation-resources.md) defines the resource policy.
+
+`Program.Main` is the single composition root. `App.axaml` owns the theme resources.
+App code-behind performs framework lifecycle setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
 Infrastructure references Application only and adds no packages. App composes the adapter through Program.Main.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
@@ -70,9 +75,6 @@ and Release. They compare exact project and package references with the policy.
 They reject direct assembly references and framework references beyond the .NET base framework.
 They also require the solution and policy to contain every project under `src`, `tests`, and `eng`.
 The exact acyclic policy excludes cycles and production references to tests.
-
-`BuildVerification` is an engineering tool with no package or production project references.
-Architecture tests reference the tool to test its comparison behavior.
 
 These checks include imported and conditional MSBuild items for the evaluated
 configurations on the host OS. The CI matrix evaluates all three host systems.

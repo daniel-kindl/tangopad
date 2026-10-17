@@ -317,6 +317,7 @@
           "Avalonia.AvaloniaEdit": "[12.0.0, )",
           "Avalonia.Desktop": "[12.1.4, )",
           "Avalonia.Themes.Fluent": "[12.1.4, )",
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Editor.Application": "[0.1.0, )",
           "Editor.Infrastructure": "[0.1.0, )"
         }
@@ -367,6 +368,12 @@
         "dependencies": {
           "Avalonia": "12.1.4"
         }
+      },
+      "CommunityToolkit.Mvvm": {
+        "type": "CentralTransitive",
+        "requested": "[8.4.2, )",
+        "resolved": "8.4.2",
+        "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
       }
     }
   }

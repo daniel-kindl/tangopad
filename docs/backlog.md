@@ -9,7 +9,6 @@ tracks the bootstrap in the M0 milestone. The further tasks below remain drafts.
 | --- | --- |
 | `chore(repo): activate integration workflow and branch protection` | Create `dev` from the accepted bootstrap. Require review and all three CI checks on `main` and `dev`. Confirm fork pull requests need no secrets. |
 | `test(desktop): verify native startup on supported systems` | Record a blank-window launch and clean close on Windows, Linux, and macOS. Document native prerequisites and the selected OS baseline. Automate repeatable checks where practical. |
-| `test(build): automate managed output reproducibility checks` | Turn the bootstrap two-path comparison into a repeatable check. Include different NuGet cache paths and supported hosts. Compare managed DLL and PDB hashes. Record native asset exclusions. |
 | `chore(quality): enforce contribution metadata` | Select a minimal check for Conventional Commit squash titles. Verify valid and invalid examples. Keep the workflow permission read-only. |
 
 [Issue #11](https://github.com/daniel-kindl/tangopad/issues/11) tracks the

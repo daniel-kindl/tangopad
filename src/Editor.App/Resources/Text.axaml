@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:String x:Key="Text.Document.Untitled">Untitled</x:String>
+  <x:String x:Key="Text.Document.DirtyMarker" xml:space="preserve"> *</x:String>
+  <x:String x:Key="Text.Window.TitleFormat">{0}{1} - Tangopad</x:String>
+  <x:String x:Key="Text.Command.New">New</x:String>
+  <x:String x:Key="Text.Command.Open">Open</x:String>
+  <x:String x:Key="Text.Command.Save">Save</x:String>
+  <x:String x:Key="Text.Command.SaveAs">Save As</x:String>
+  <x:String x:Key="Text.Command.CancelOperation">Cancel operation</x:String>
+  <x:String x:Key="Text.Command.Discard">Discard</x:String>
+  <x:String x:Key="Text.Command.Cancel">Cancel</x:String>
+  <x:String x:Key="Text.Command.OK">OK</x:String>
+  <x:String x:Key="Text.Dialog.Unsaved.Title">Unsaved changes</x:String>
+  <x:String x:Key="Text.Dialog.Unsaved.Prompt">Save changes before continuing?</x:String>
+  <x:String x:Key="Text.Dialog.Error.Title">File operation failed</x:String>
+  <x:String x:Key="Text.Picker.Open.Title">Open text file</x:String>
+  <x:String x:Key="Text.Picker.Save.Title">Save text file</x:String>
+  <x:String x:Key="Text.Picker.Save.DefaultName">Untitled.txt</x:String>
+  <x:String x:Key="Text.Error.LocalPathRequired">This file has no local path. Select a local file.</x:String>
+</ResourceDictionary>

@@ -2,12 +2,15 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Debug InitializeComponent calls AttachDevTools. This project does not reference Avalonia.Diagnostics. -->
+    <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
 </Project>

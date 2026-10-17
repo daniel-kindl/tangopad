@@ -4,6 +4,9 @@ Date: 2026-10-17
 
 Host: Fedora 44, Linux x64. SDK: 10.0.402. Runtime: 10.0.13.
 
+This is a historical record. PR #26 removed the managed reproducibility check and its tooling.
+See [ADR 0002](adr/0002-reproducible-verification.md) for the current verification policy.
+
 ## Initial bootstrap results
 
 | Check | Result |
@@ -74,8 +77,7 @@ cache cleanup.
 
 This local record covers Linux only. Hosted results appear in the pull request's
 three Verify checks and per-host reproducibility artifacts. The comparison makes
-no claim of matching hashes between operating systems. See
-[managed reproducibility](managed-reproducibility.md) for output scope and limits.
+no claim of matching hashes between operating systems. These historical artifacts are no longer produced by the current workflow.
 
 ## Remaining checks and setup
 

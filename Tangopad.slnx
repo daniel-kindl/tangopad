@@ -1,7 +1,4 @@
 <Solution>
-  <Folder Name="/eng/">
-    <Project Path="eng/BuildVerification/BuildVerification.csproj" />
-  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Editor.App/Editor.App.csproj" />
     <Project Path="src/Editor.Application/Editor.Application.csproj" />

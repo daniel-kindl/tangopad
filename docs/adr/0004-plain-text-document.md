@@ -80,6 +80,6 @@ runtime API requires a boundary review before the allowlist changes.
 
 Core has no package, framework, or adapter dependencies beyond the base runtime.
 The shared verification command discovers the new test project and validates its
-TRX report. Managed reproducibility includes the new assembly and symbols.
+TRX report.
 [ADR 0005](0005-document-persistence-use-cases.md) adds application orchestration.
 Filesystem integration and UI behavior remain deferred.

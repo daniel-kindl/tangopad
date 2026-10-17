@@ -1,30 +1,46 @@
+using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Editor.Application;
 
 namespace Editor.App;
 
 // All calls and continuations use the UI thread, as required by DocumentSession.
-internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs dialogs)
+internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels) : ObservableObject
 {
     private CancellationTokenSource? operation;
 
-    internal event EventHandler? Changed;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand))]
+    public partial bool IsBusy { get; private set; }
+
+    [ObservableProperty]
+    public partial bool CanEdit { get; private set; } = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(IsDirty))]
+    public partial string Text { get; set; } = string.Empty;
 
     internal DocumentSession Session { get; private set; } = DocumentSession.CreateUntitled(store);
-    internal bool IsBusy => operation is not null;
-    internal bool CanEdit { get; private set; } = true;
-    internal string Title => $"{Session.Destination ?? "Untitled"}{(Session.Document.IsDirty ? " *" : string.Empty)} - Tangopad";
+    public Guid DocumentId => Session.Document.Id;
+    public bool IsDirty => Session.Document.IsDirty;
+    public string Title => string.Format(CultureInfo.CurrentCulture, labels.WindowTitleFormat,
+        Session.Destination ?? labels.UntitledName, IsDirty ? labels.DirtyMarker : string.Empty);
 
-    internal void Edit(string text)
+    partial void OnTextChanged(string value)
     {
-        Session.Document.ReplaceText(text);
-        Notify();
+        Session.Document.ReplaceText(value);
     }
 
+    private bool CanStartOperation => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(IsBusy))]
     internal void Cancel()
     {
         operation?.Cancel();
     }
 
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
     internal Task<bool> NewAsync()
     {
         return RunAsync(async token =>
@@ -35,10 +51,13 @@ internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs d
             }
 
             Session = DocumentSession.CreateUntitled(store);
+            Text = Session.Document.Text;
+            OnPropertyChanged(nameof(DocumentId));
             return true;
         }, allowEditing: false);
     }
 
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
     internal Task<bool> OpenAsync()
     {
         return RunAsync(async token =>
@@ -50,16 +69,24 @@ internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs d
             }
 
             CanEdit = false;
-            Notify();
             DocumentSession loaded = await DocumentSession.LoadAsync(store, path, token).ConfigureAwait(true);
             Session = loaded;
+            Text = Session.Document.Text;
+            OnPropertyChanged(nameof(DocumentId));
             return true;
         }, allowEditing: false);
     }
 
-    internal Task<bool> SaveAsync(bool saveAs = false)
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    internal Task<bool> SaveAsync()
     {
-        return RunAsync(token => SaveDocumentAsync(saveAs, token), allowEditing: true);
+        return RunAsync(token => SaveDocumentAsync(false, token), allowEditing: true);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    internal Task<bool> SaveAsAsync()
+    {
+        return RunAsync(token => SaveDocumentAsync(true, token), allowEditing: true);
     }
 
     internal Task<bool> CanCloseAsync()
@@ -89,7 +116,6 @@ internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs d
     private async Task<bool> SaveDocumentAsync(bool saveAs, CancellationToken token)
     {
         CanEdit = true;
-        Notify();
         string? path = Session.Destination;
         if (saveAs || path is null)
         {
@@ -115,8 +141,8 @@ internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs d
 
         using CancellationTokenSource source = new();
         operation = source;
+        IsBusy = true;
         CanEdit = allowEditing;
-        Notify();
         try
         {
             return await action(source.Token).ConfigureAwait(true);
@@ -133,13 +159,11 @@ internal sealed class EditorWorkspace(ITextDocumentStore store, IEditorDialogs d
         finally
         {
             operation = null;
+            IsBusy = false;
             CanEdit = true;
-            Notify();
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(IsDirty));
         }
     }
 
-    private void Notify()
-    {
-        Changed?.Invoke(this, EventArgs.Empty);
-    }
 }
