@@ -61,7 +61,7 @@ dotnet msbuild eng/verify.proj
 
 The command stops at the first failing stage. It performs locked restore and
 NuGet auditing for direct and transitive dependencies, format and analyzer
-verification at info severity, Release compilation, all tests, and TRX report validation.
+verification at info severity, Debug and Release compilation, all tests, and TRX report validation.
 Build warnings are errors. CI repeats the command on Linux, Windows, and macOS.
 The test stage clears `artifacts/test-results` before each run.
 Each test project writes `<project-name>.trx` in that directory.
@@ -99,6 +99,9 @@ Review and commit the lock files with the version change. Update
 Run full verification. Do not use `--force-evaluate` to bypass an unexpected locked-restore failure.
 
 ## Write code and tests
+
+[Coding standards](docs/coding-standards.md) defines the verified diagnostic set,
+C# conventions, presentation checks, and exception policy.
 
 Use the compiler, SDK analyzers, and `.editorconfig` as the enforceable C# baseline.
 Use nullable reference types, explicit accessibility, file-scoped namespaces, and

@@ -13,9 +13,12 @@
   <Target Name="Format" DependsOnTargets="Restore">
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet format Tangopad.slnx --verify-no-changes --no-restore --severity info" />
   </Target>
-  <Target Name="Compile" DependsOnTargets="Format;Build" />
+  <Target Name="Compile" DependsOnTargets="Format;BuildDebug;Build" />
+  <Target Name="BuildDebug">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Debug --no-restore --disable-build-servers -warnaserror" />
+  </Target>
   <Target Name="Build">
-    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore --disable-build-servers" />
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore --disable-build-servers -warnaserror" />
   </Target>
   <Target Name="Test" DependsOnTargets="Compile">
     <RemoveDir Directories="$(TestResultsDirectory)" />

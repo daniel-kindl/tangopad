@@ -102,17 +102,62 @@ public sealed class DependencyRulesTests
         foreach (JsonProperty project in policy.RootElement.EnumerateObject())
         {
             using JsonDocument evaluation = await EvaluateProjectAsync(root, project.Name, configuration).ConfigureAwait(true);
-            JsonElement items = evaluation.RootElement.GetProperty("Items");
-            string[] references = [.. items.GetProperty("ProjectReference").EnumerateArray()
-                .Select(item => Path.GetRelativePath(root, item.GetProperty("FullPath").GetString()!).Replace('\\', '/'))
-                .Order(StringComparer.Ordinal)];
+            CheckDependencies(root, project.Value, evaluation.RootElement.GetProperty("Items"));
+            JsonElement properties = evaluation.RootElement.GetProperty("Properties");
+            Assert.Equal("net10.0", properties.GetProperty("TargetFramework").GetString());
+            foreach (string name in (string[])["TreatWarningsAsErrors", "EnforceCodeStyleInBuild", "EnableNETAnalyzers", "RunAnalyzers", "RunAnalyzersDuringBuild", "GenerateDocumentationFile"])
+            {
+                Assert.Equal("true", properties.GetProperty(name).GetString());
+            }
 
-            Assert.Equal(ReadStrings(project.Value.GetProperty("projects")), references);
-            Assert.Equal(ReadStrings(project.Value.GetProperty("packages")), ReadIdentities(items.GetProperty("PackageReference")));
-            Assert.Empty(items.GetProperty("Reference").EnumerateArray());
-            Assert.Equal(["Microsoft.NETCore.App"], ReadIdentities(items.GetProperty("FrameworkReference")));
-            Assert.Equal("net10.0", evaluation.RootElement.GetProperty("Properties").GetProperty("TargetFramework").GetString());
+            Assert.Equal("enable", properties.GetProperty("Nullable").GetString());
+            Assert.Equal("14.0", properties.GetProperty("LangVersion").GetString());
+            Assert.Equal("10.0-all", properties.GetProperty("AnalysisLevel").GetString());
+            Assert.Equal(string.Empty, properties.GetProperty("WarningsNotAsErrors").GetString());
+            Assert.Equal("1701;1702", properties.GetProperty("NoWarn").GetString());
+            if (project.Name == "src/Editor.App/Editor.App.csproj")
+            {
+                Assert.Equal("true", properties.GetProperty("AvaloniaUseCompiledBindingsByDefault").GetString());
+            }
         }
+    }
+
+    /// <summary>The dependency gate rejects evaluated references outside the policy.</summary>
+    /// <param name="item">The forbidden MSBuild item.</param>
+    /// <returns>A task that completes after the fixture is checked.</returns>
+    [Theory]
+    [InlineData("ProjectReference")]
+    [InlineData("PackageReference")]
+    [InlineData("Reference")]
+    public async Task ForbiddenDependenciesAreRejected(string item)
+    {
+        string root = FindRepositoryRoot();
+        string directory = Directory.CreateTempSubdirectory("tangopad-dependency-").FullName;
+        try
+        {
+            string path = Path.Combine(directory, "Fixture.csproj");
+            await File.WriteAllTextAsync(path,
+                $"<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup><ItemGroup><{item} Include=\"Forbidden\" /></ItemGroup></Project>",
+                TestContext.Current.CancellationToken).ConfigureAwait(true);
+            using JsonDocument policy = JsonDocument.Parse("{\"projects\":[],\"packages\":[]}");
+            using JsonDocument evaluation = await EvaluateProjectAsync(root, path, "Release").ConfigureAwait(true);
+            _ = Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => CheckDependencies(root, policy.RootElement, evaluation.RootElement.GetProperty("Items")));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static void CheckDependencies(string root, JsonElement policy, JsonElement items)
+    {
+        string[] references = [.. items.GetProperty("ProjectReference").EnumerateArray()
+            .Select(item => Path.GetRelativePath(root, item.GetProperty("FullPath").GetString()!).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)];
+        Assert.Equal(ReadStrings(policy.GetProperty("projects")), references);
+        Assert.Equal(ReadStrings(policy.GetProperty("packages")), ReadIdentities(items.GetProperty("PackageReference")));
+        Assert.Empty(items.GetProperty("Reference").EnumerateArray());
+        Assert.Equal(["Microsoft.NETCore.App"], ReadIdentities(items.GetProperty("FrameworkReference")));
     }
 
     private static string[] ReadStrings(JsonElement array)
@@ -155,7 +200,7 @@ public sealed class DependencyRulesTests
             root,
             [
                 "msbuild", project, "-nologo", "-getItem:ProjectReference,PackageReference,Reference,FrameworkReference",
-                "-getProperty:TargetFramework", $"-property:Configuration={configuration}",
+                "-getProperty:TargetFramework,TreatWarningsAsErrors,EnforceCodeStyleInBuild,EnableNETAnalyzers,RunAnalyzers,RunAnalyzersDuringBuild,GenerateDocumentationFile,Nullable,LangVersion,AnalysisLevel,WarningsNotAsErrors,NoWarn,AvaloniaUseCompiledBindingsByDefault", $"-property:Configuration={configuration}",
             ]).ConfigureAwait(false);
         return JsonDocument.Parse(output);
     }
