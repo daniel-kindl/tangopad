@@ -41,10 +41,12 @@ Snapshot Git-tracked files and non-ignored untracked files from the working tree
 Exclude deleted files, `bin`, `obj`, `artifacts`, and Git metadata. Reject source
 file links. Copy the snapshot to two new temporary paths. Give each build its own
 NuGet package, HTTP, plugin, and scratch directories. Use locked restore without
-HTTP-cache reuse. Check that both builds use the pinned SDK.
+HTTP-cache reuse. Check that both builds use the pinned SDK. Disable Avalonia telemetry for the
+isolated builds so its background collector cannot prevent Windows cache cleanup.
 
 Compare each solution project's evaluated Release `TargetPath` DLL and adjacent
-portable PDB with SHA-256. Require managed assembly metadata and readable portable
+portable PDB with SHA-256. Compute relative outputs from the evaluated project
+directory so macOS temporary path aliases do not escape the comparison root. Require managed assembly metadata and readable portable
 PDB metadata. Missing outputs, mismatched hashes, an empty selection, overlapping
 build directories, output links, and paths outside a build directory fail the check.
 Exclude copied package DLLs, native libraries, apphosts, resources, and packaging

@@ -41,6 +41,7 @@ internal static class Reproducibility
                 Sources = inputs,
                 Builds = builds.Select((path, index) => new { Source = path, Cache = caches[index] }),
                 RestoreArguments,
+                AvaloniaTelemetryOptOut = "1",
             }).ConfigureAwait(false);
 
             List<string> outputs = [];
@@ -68,7 +69,7 @@ internal static class Reproducibility
                     foreach (XElement project in XDocument.Load(Path.Combine(build, "Tangopad.slnx")).Descendants("Project"))
                     {
                         string projectPath = project.Attribute("Path")!.Value;
-                        string evaluation = await RunAsync(build, caches[index], "dotnet", "msbuild", projectPath, "-nologo", "-property:Configuration=Release", "-getProperty:TargetPath,DebugType").ConfigureAwait(false);
+                        string evaluation = await RunAsync(build, caches[index], "dotnet", "msbuild", projectPath, "-nologo", "-property:Configuration=Release", "-getProperty:TargetPath,DebugType,MSBuildProjectDirectory").ConfigureAwait(false);
                         using JsonDocument properties = JsonDocument.Parse(evaluation);
                         JsonElement values = properties.RootElement.GetProperty("Properties");
                         if (values.GetProperty("DebugType").GetString() != "portable")
@@ -77,8 +78,9 @@ internal static class Reproducibility
                         }
 
                         string assembly = values.GetProperty("TargetPath").GetString()!;
-                        outputs.Add(Path.GetRelativePath(build, assembly));
-                        outputs.Add(Path.GetRelativePath(build, Path.ChangeExtension(assembly, ".pdb")));
+                        string directory = values.GetProperty("MSBuildProjectDirectory").GetString()!;
+                        outputs.Add(RelativeOutputPath(projectPath, directory, assembly));
+                        outputs.Add(RelativeOutputPath(projectPath, directory, Path.ChangeExtension(assembly, ".pdb")));
                     }
                 }
 
@@ -119,6 +121,11 @@ internal static class Reproducibility
         }
     }
 
+    internal static string RelativeOutputPath(string project, string evaluatedDirectory, string targetPath)
+    {
+        return Path.Combine(Path.GetDirectoryName(project)!, Path.GetRelativePath(evaluatedDirectory, targetPath));
+    }
+
     private static async Task WriteJsonAsync<T>(string path, T value)
     {
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(value, JsonOptions)).ConfigureAwait(false);
@@ -140,6 +147,7 @@ internal static class Reproducibility
 
         if (cache is not null)
         {
+            startInfo.Environment["AVALONIA_TELEMETRY_OPTOUT"] = "1";
             startInfo.Environment["NUGET_PACKAGES"] = Path.Combine(cache, "packages");
             startInfo.Environment["NUGET_HTTP_CACHE_PATH"] = Path.Combine(cache, "http");
             startInfo.Environment["NUGET_PLUGINS_CACHE_PATH"] = Path.Combine(cache, "plugins");

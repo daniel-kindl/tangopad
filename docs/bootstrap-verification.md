@@ -35,9 +35,9 @@ On the same Fedora 44 host, this command passed with SDK 10.0.402:
 TMPDIR=/var/tmp dotnet msbuild eng/verify.proj
 ```
 
-Locked restore and audit, format verification, Release compilation, all 17 tests,
+Locked restore and audit, format verification, Release compilation, all 18 tests,
 and the automated managed comparison passed. Compilation produced zero warnings
-and errors. The tests included three architecture cases, thirteen reproducibility
+and errors. The tests included three architecture cases, fourteen reproducibility
 cases, and native Linux startup.
 
 Two fresh source trees and two empty NuGet caches produced matching SHA-256
@@ -58,6 +58,14 @@ The first full run passed its existing stages but failed during isolated restore
 because this host's `/tmp` quota was too small. Setting `TMPDIR=/var/tmp` moved
 temporary files to the disk-backed filesystem. The successful run retained
 separate empty caches. It did not reuse the normal package cache.
+
+The [initial hosted run](https://github.com/daniel-kindl/tangopad/actions/runs/39038149179)
+passed Ubuntu. macOS rejected an output path after MSBuild resolved `/var` to
+`/private/var`. The path guard prevented an invalid comparison. Output selection
+now uses MSBuild's evaluated project directory, with a regression case for this
+path difference. Windows compared all twelve files successfully, then failed to
+delete `Avalonia.BuildServices.Collector.dll`. Isolated builds now set the package's
+documented `AVALONIA_TELEMETRY_OPTOUT=1` to prevent that background collector.
 
 This local record covers Linux only. Hosted results appear in the pull request's
 three Verify checks and per-host reproducibility artifacts. The comparison makes

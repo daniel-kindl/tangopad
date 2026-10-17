@@ -125,6 +125,16 @@ public sealed class ReproducibilityTests : IDisposable
         }
     }
 
+    /// <summary>Checks output selection when MSBuild resolves a different absolute source path.</summary>
+    [Fact]
+    public void EvaluatedProjectDirectoryAnchorsOutputPaths()
+    {
+        string evaluatedDirectory = Path.Combine(root, "canonical", "eng", "BuildVerification");
+        string targetPath = Path.Combine(evaluatedDirectory, "bin", "Release", "net10.0", "BuildVerification.dll");
+        string actual = Reproducibility.RelativeOutputPath(Path.Combine("eng", "BuildVerification", "BuildVerification.csproj"), evaluatedDirectory, targetPath);
+        Assert.Equal(Path.Combine("eng", "BuildVerification", "bin", "Release", "net10.0", "BuildVerification.dll"), actual);
+    }
+
     /// <summary>Removes temporary output files.</summary>
     public void Dispose()
     {
