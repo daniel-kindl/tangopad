@@ -57,6 +57,14 @@ public sealed class DependencyRulesTests
                 $"{module} cannot reference {typeNamespace}.{metadata.GetString(reference.Name)}. Review the module boundary before changing the API policy.");
         }
 
+        foreach (TypeDefinitionHandle handle in metadata.TypeDefinitions)
+        {
+            TypeDefinition definition = metadata.GetTypeDefinition(handle);
+            string typeNamespace = metadata.GetString(definition.Namespace);
+            Assert.True(typeNamespace.Length == 0 || typeNamespace == module || typeNamespace.StartsWith(module + ".", StringComparison.Ordinal),
+                $"{module} cannot define types in {typeNamespace}. Keep filesystem implementations in Editor.Infrastructure.");
+        }
+
         foreach (MethodDefinitionHandle handle in metadata.MethodDefinitions)
         {
             Assert.Equal((MethodAttributes)0, metadata.GetMethodDefinition(handle).Attributes & MethodAttributes.PinvokeImpl);
