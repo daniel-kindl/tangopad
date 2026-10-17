@@ -12,5 +12,4 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
-  <Import Project="$(MSBuildThisFileDirectory)../../eng/NormalizeAvaloniaPdbPath.targets" />
 </Project>

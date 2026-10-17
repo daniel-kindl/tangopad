@@ -32,7 +32,8 @@ AXAML is the only definition of those controls.
 DesktopEditorDialogs calls the platform file pickers.
 The project leaves Avalonia developer tools unloaded.
 The Avalonia XAML compiler writes absolute paths into the Editor.App debug output.
-A build target restores deterministic debug paths after that compiler runs.
+The byte-rewriting build target was removed after review.
+[Compiled AXAML path mapping](../avalonia-pathmap.md) records the remaining reproducibility blocker.
 View models and design tokens remain separate follow-up work.
 EditorWindow owns AvaloniaEdit, toolbar actions, shortcuts, and close handling.
 EditorWorkspace coordinates presentation state through DocumentSession.

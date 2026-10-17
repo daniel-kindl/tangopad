@@ -8,7 +8,7 @@ and [compiled AXAML issue #22](https://github.com/daniel-kindl/tangopad/issues/2
 
 ## Repository verification
 
-The full command passed on this host:
+The latest PR #26 run used this command:
 
 ```sh
 TMPDIR=/workspace/tangopad/artifacts/tmp dotnet msbuild eng/verify.proj
@@ -17,10 +17,14 @@ TMPDIR=/workspace/tangopad/artifacts/tmp dotnet msbuild eng/verify.proj
 Locked restore and audit, formatting, analyzers, and Release compilation passed
 with zero warnings or errors. Six distinct TRX reports contain 87 passed tests
 and one Windows-only skip. Native editor startup passed.
-Two isolated builds used fresh NuGet caches.
-All 22 managed DLL and portable PDB files had identical SHA-256 hashes.
+The full command failed at managed reproducibility because the two Editor.App.dll hashes differed.
+Managed reproducibility remains a merge blocker after removal of the custom
+DLL and PDB byte rewrite. The earlier matching hashes depended on that rewrite.
+[Compiled AXAML path mapping](avalonia-pathmap.md) records the upstream limitation
+and a minimal reproduction. [Issue #28](https://github.com/daniel-kindl/tangopad/issues/28)
+tracks a separate build solution. The verification check remains unchanged.
 
-The issue #19 verification first failed during reproducibility restore because the temporary
+The earlier issue #19 verification first failed during reproducibility restore because the temporary
 filesystem exceeded its quota. The successful rerun used the workspace disk
 for temporary files. It used the same verification entry point and checks.
 Reports and reproducibility manifests are in artifacts/test-results and
@@ -41,9 +45,9 @@ Save returns `UnsavedDecision.Save`.
 The error dialog returns `UnsavedDecision.Cancel`.
 
 This host ran the Linux native startup smoke test.
-It did not run `eng/check-native-editor.py` again.
+After removal of the binary rewrite, `eng/check-native-editor.py` passed all 11 groups.
+The evidence directory is `artifacts/native-editor-4vg2i5bq`.
 Windows and macOS interactive desktop checks remain NOT TESTED.
-The hosted CI job was not run on this host.
 The Windows-only filesystem test skipped on Linux.
 
 ## Automated evidence
