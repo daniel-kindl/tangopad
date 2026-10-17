@@ -100,5 +100,6 @@ Preserve exact API names, commands, quotations, and legal text.
 defines supported desktop systems and Linux native dependencies. A successful
 build does not prove native window behavior on every operating system. CI must
 build and test on Linux, Windows, and macOS. A blank-window startup check can verify
-the available local desktop environment. Packaging, signing, installers, and
+the available local desktop environment. The repository runs that check from
+`eng/verify.proj`. See [native startup](native-startup.md). Packaging, signing, installers, and
 broader native UI checks remain future work.

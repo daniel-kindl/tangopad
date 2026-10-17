@@ -33,6 +33,14 @@ verification at info severity, Release compilation, and all tests. Build warning
 are errors. CI repeats the command on Linux, Windows, and macOS. TRX files appear
 under `artifacts/test-results`.
 
+The test stage includes native startup of the blank shell.
+The test starts the built executable, closes its native window, and requires exit code 0.
+Linux needs an X11 display, or the `Xvfb` command when no display is open.
+Windows and macOS need an interactive desktop session.
+A missing display fails verification.
+The output starts with `NOT TESTED:` and states the follow-up.
+[Native startup](docs/native-startup.md) lists the host libraries and recorded results.
+
 To apply automatic C# formatting fixes, run:
 
 ```sh

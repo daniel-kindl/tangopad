@@ -24,6 +24,9 @@ M1 authorizes future features through separate issues. None are implemented by b
 | `feat(editor): connect AvaloniaEdit to a text document` | Recheck AvaloniaEdit compatibility. Isolate the control in App. Verify typing and change state without framework types in Core or Application. |
 | `feat(formats): identify plain text and Markdown` | Define one authoritative format registry for `.txt`, `.md`, and `.markdown`. Test casing and unknown-extension policy. Keep parsing and rendering out of this issue. |
 
+[Issue #5](https://github.com/daniel-kindl/tangopad/issues/5) tracks the native
+startup draft in the table above. Use that issue for the current acceptance criteria.
+
 Schedule Markdown parsing and rendering after the first document slice proves the
 contracts. Define separate acceptance criteria for parser adaptation and visual output.
 Recheck Markdig before adding it. Defer tabs, exports, plugins, and additional formats.

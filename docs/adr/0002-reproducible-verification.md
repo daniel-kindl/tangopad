@@ -40,6 +40,7 @@ a check against current advisory data, not proof that a dependency has no defect
 Determinism covers managed build outputs from the same inputs and pinned tooling.
 It does not claim reproducible signed installers or native dependencies. Those
 artifacts do not exist yet. A local build cannot prove native startup on another OS.
+[ADR 0003](0003-native-startup-verification.md) runs one native startup check on the current host.
 
 SDK updates require a coordinated `global.json` change. Package updates require
 central-version and lock-file changes. Formatting and compiler analysis share the

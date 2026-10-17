@@ -15,6 +15,7 @@ flowchart LR
     Application --> Core[Editor.Core]
     App --> Avalonia[Avalonia desktop and Fluent theme]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
+    SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
 
 | Module | Ownership | Current implementation |
@@ -23,10 +24,13 @@ flowchart LR
 | Editor.Application | Use cases and contracts needed by those use cases | Project reference to Core |
 | Editor.Core | Document rules and domain types | Project file only |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
+| Editor.Desktop.SmokeTests | Native startup of the blank shell | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
 `Program.Main` is the single composition root. `App` performs framework lifecycle
 setup only. No service container is necessary while there are no services.
 Application and Core reference no NuGet packages. Production code never references tests.
+`Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
+The test starts that executable. It does not call shell types.
 
 ## Future boundaries
 
