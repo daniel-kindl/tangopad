@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Xml.Linq;
 using Xunit;
@@ -8,6 +11,49 @@ namespace Editor.Architecture.Tests;
 /// <summary>Checks evaluated project dependencies against the repository policy.</summary>
 public sealed class DependencyRulesTests
 {
+    /// <summary>Limits compiled Core APIs to basic runtime types and assembly metadata.</summary>
+    /// <returns>A task that completes after the compiled Core assembly is checked.</returns>
+    [Fact]
+    public async Task CoreUsesOnlyDomainRuntimeApis()
+    {
+        string configuration = typeof(DependencyRulesTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string root = FindRepositoryRoot();
+        const string project = "src/Editor.Core/Editor.Core.csproj";
+        await BuildProjectAsync(root, project, configuration).ConfigureAwait(true);
+        string path = await EvaluateTargetPathAsync(root, project, configuration).ConfigureAwait(true);
+        Assert.True(File.Exists(path), $"The Core build did not produce the evaluated TargetPath: {path}");
+        using FileStream stream = File.OpenRead(path);
+        using PEReader assembly = new(stream);
+        MetadataReader metadata = assembly.GetMetadataReader();
+
+        Assert.Equal(["System.Runtime"], metadata.AssemblyReferences
+            .Select(handle => metadata.GetString(metadata.GetAssemblyReference(handle).Name)));
+
+        string[] permittedNamespaces =
+        [
+            "System", "System.Diagnostics", "System.Reflection",
+            "System.Runtime.CompilerServices", "System.Runtime.Versioning",
+        ];
+        foreach (TypeReferenceHandle handle in metadata.TypeReferences)
+        {
+            TypeReference reference = metadata.GetTypeReference(handle);
+            TypeReference declaringType = reference;
+            while (declaringType.ResolutionScope.Kind == HandleKind.TypeReference)
+            {
+                declaringType = metadata.GetTypeReference((TypeReferenceHandle)declaringType.ResolutionScope);
+            }
+
+            string typeNamespace = metadata.GetString(declaringType.Namespace);
+            Assert.True(permittedNamespaces.Contains(typeNamespace, StringComparer.Ordinal),
+                $"Core cannot reference {typeNamespace}.{metadata.GetString(reference.Name)}. Review the domain boundary before changing the API policy.");
+        }
+
+        foreach (MethodDefinitionHandle handle in metadata.MethodDefinitions)
+        {
+            Assert.Equal((MethodAttributes)0, metadata.GetMethodDefinition(handle).Attributes & MethodAttributes.PinvokeImpl);
+        }
+    }
+
     /// <summary>Checks that the policy and solution include every repository project.</summary>
     [Fact]
     public void EveryProjectIsInThePolicyAndSolution()
@@ -62,7 +108,42 @@ public sealed class DependencyRulesTests
         return [.. array.EnumerateArray().Select(item => item.GetProperty("Identity").GetString()!).Order(StringComparer.Ordinal)];
     }
 
+    private static async Task BuildProjectAsync(string root, string project, string configuration)
+    {
+        _ = await RunDotnetAsync(
+            root,
+            [
+                "build", project, "--nologo", "--disable-build-servers",
+                $"--configuration={configuration}",
+            ],
+            timeoutSeconds: 120).ConfigureAwait(false);
+    }
+
+    private static async Task<string> EvaluateTargetPathAsync(string root, string project, string configuration)
+    {
+        string output = await RunDotnetAsync(
+            root,
+            [
+                "msbuild", project, "-nologo", "-getProperty:TargetPath",
+                $"-property:Configuration={configuration}",
+            ]).ConfigureAwait(false);
+        string path = output.Trim();
+        Assert.True(Path.IsPathRooted(path), $"MSBuild did not return an absolute TargetPath: {path}");
+        return path;
+    }
+
     private static async Task<JsonDocument> EvaluateProjectAsync(string root, string project, string configuration)
+    {
+        string output = await RunDotnetAsync(
+            root,
+            [
+                "msbuild", project, "-nologo", "-getItem:ProjectReference,PackageReference,Reference,FrameworkReference",
+                "-getProperty:TargetFramework", $"-property:Configuration={configuration}",
+            ]).ConfigureAwait(false);
+        return JsonDocument.Parse(output);
+    }
+
+    private static async Task<string> RunDotnetAsync(string root, IReadOnlyList<string> arguments, int timeoutSeconds = 60)
     {
         ProcessStartInfo startInfo = new("dotnet")
         {
@@ -71,11 +152,7 @@ public sealed class DependencyRulesTests
             RedirectStandardError = true,
             UseShellExecute = false,
         };
-        foreach (string argument in new[]
-        {
-            "msbuild", project, "-nologo", "-getItem:ProjectReference,PackageReference,Reference,FrameworkReference",
-            "-getProperty:TargetFramework", $"-property:Configuration={configuration}",
-        })
+        foreach (string argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
@@ -84,7 +161,7 @@ public sealed class DependencyRulesTests
         Task<string> output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
         Task<string> error = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
         try
         {
             await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
@@ -96,7 +173,7 @@ public sealed class DependencyRulesTests
         }
 
         Assert.True(process.ExitCode == 0, await error.ConfigureAwait(false));
-        return JsonDocument.Parse(await output.ConfigureAwait(false));
+        return await output.ConfigureAwait(false);
     }
 
     private static string FindRepositoryRoot()
