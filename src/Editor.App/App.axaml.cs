@@ -1,5 +1,6 @@
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Editor.App.Views;
 using Editor.Application;
 
 namespace Editor.App;

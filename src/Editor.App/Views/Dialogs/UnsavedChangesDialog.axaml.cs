@@ -1,6 +1,7 @@
 using Avalonia.Controls;
+using Editor.App.Services;
 
-namespace Editor.App;
+namespace Editor.App.Views.Dialogs;
 
 internal sealed partial class UnsavedChangesDialog : Window
 {

@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Editor.App;
+namespace Editor.App.ViewModels;
 
 internal sealed partial class SearchViewModel : ObservableObject
 {

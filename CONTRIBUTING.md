@@ -6,7 +6,9 @@
 2. Assign the issue to an appropriate milestone from [the backlog](docs/backlog.md).
 3. Create a short-lived `feat/<issue>-<name>`, `fix/<issue>-<name>`, or `chore/<issue>-<name>` branch from `dev`.
 4. Read [architecture](docs/architecture.md) before changing module ownership or dependencies.
-5. Implement the smallest change that satisfies the issue.
+5. Choose the owning layer and directory from the [placement rules](docs/architecture.md#file-placement).
+6. Record directory and namespace placement in the issue.
+7. Implement the smallest change that satisfies the issue.
 
 `main` holds stable releases. `dev` integrates reviewed changes and is the default
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
@@ -128,6 +130,7 @@ then revise it for natural language without changing its meaning.
 ## Submit a pull request
 
 1. Link the issue and describe the resulting behavior.
+   State directory placement and any namespace or public API changes.
 2. Record verification results and platform limits.
 3. Update an ADR if the change alters architecture or tooling policy.
 4. Request review and wait for the required checks.

@@ -1,6 +1,7 @@
+using Editor.App.ViewModels;
 using Xunit;
 
-namespace Editor.App.Tests;
+namespace Editor.App.Tests.ViewModels;
 
 /// <summary>Checks literal search commands without visual controls.</summary>
 public sealed class SearchViewModelTests

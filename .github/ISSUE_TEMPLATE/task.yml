@@ -12,7 +12,7 @@ body:
     id: scope
     attributes:
       label: Scope
-      description: State the included work and explicit exclusions.
+      description: State the included work and explicit exclusions. Identify the owning layers, directories, and namespaces.
     validations:
       required: true
   - type: textarea

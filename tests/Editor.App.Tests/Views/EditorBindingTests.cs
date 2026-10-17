@@ -10,10 +10,13 @@ using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using AvaloniaEdit;
+using Editor.App.Services;
+using Editor.App.Views;
+using Editor.App.Views.Dialogs;
 using Editor.Infrastructure;
 using Xunit;
 
-namespace Editor.App.Tests;
+namespace Editor.App.Tests.Views;
 
 /// <summary>Checks compiled views and the AvaloniaEdit control on a headless UI dispatcher.</summary>
 public sealed class EditorBindingTests

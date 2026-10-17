@@ -1,4 +1,4 @@
-namespace Editor.App;
+namespace Editor.App.Services;
 
 internal enum UnsavedDecision { Cancel, Discard, Save }
 

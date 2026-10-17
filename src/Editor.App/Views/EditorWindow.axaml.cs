@@ -3,9 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using CommunityToolkit.Mvvm.Input;
+using Editor.App.Resources;
+using Editor.App.Services;
+using Editor.App.ViewModels;
 using Editor.Application;
 
-namespace Editor.App;
+namespace Editor.App.Views;
 
 internal sealed partial class EditorWindow : Window
 {

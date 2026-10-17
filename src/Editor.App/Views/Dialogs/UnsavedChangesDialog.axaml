@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        x:Class="Editor.App.UnsavedChangesDialog"
+        x:Class="Editor.App.Views.Dialogs.UnsavedChangesDialog"
         Classes="dialog"
         Title="{StaticResource Text.Dialog.Unsaved.Title}">
   <StackPanel Classes="dialog-body">
