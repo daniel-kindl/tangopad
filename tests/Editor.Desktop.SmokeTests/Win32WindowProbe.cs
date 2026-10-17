@@ -34,7 +34,7 @@ internal static partial class Win32WindowProbe
 
             foreach (IntPtr window in matches)
             {
-                _ = PostMessage(window, CloseMessage, IntPtr.Zero, IntPtr.Zero);
+                _ = PostMessageW(window, CloseMessage, IntPtr.Zero, IntPtr.Zero);
             }
 
             return true;
@@ -80,8 +80,9 @@ internal static partial class Win32WindowProbe
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool IsWindowVisible(IntPtr hwnd);
 
+    // user32.dll exports PostMessageW. PostMessage is a macro, not an entry point.
     [LibraryImport("user32.dll")]
     [DefaultDllImportSearchPaths(WindowLibrarySearch)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+    private static partial bool PostMessageW(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 }
