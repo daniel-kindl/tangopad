@@ -12,34 +12,37 @@ behavior. Application owns plain-text load and save orchestration and its persis
 ```mermaid
 flowchart LR
     App[Editor.App] --> Application[Editor.Application]
+    App --> Infrastructure
     Application --> Core[Editor.Core]
     Infrastructure[Editor.Infrastructure] --> Application
-    App --> Avalonia[Avalonia desktop and Fluent theme]
+    App --> Avalonia[Avalonia desktop, Fluent theme, and AvaloniaEdit]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
     ArchitectureTests --> BuildVerification[BuildVerification]
     ApplicationTests[Editor.Application.Tests] --> Application
     CoreTests[Editor.Core.Tests] --> Core
     InfrastructureTests[Editor.Infrastructure.Tests] --> Infrastructure
+    AppTests[Editor.App.Tests] --> App
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
 
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
-| Editor.App | Presentation and composition | Avalonia startup and an empty window |
+| Editor.App | Presentation and composition | Plain-text editing, desktop dialogs, and composition |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
 | Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
+| Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
 | Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
 | Editor.Core.Tests | Document behavior | Identity, edits, acknowledgement, reversion, Unicode, and null input |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
 | BuildVerification | Managed build reproducibility | Creates isolated builds and compares project DLL and portable PDB hashes |
-| Editor.Desktop.SmokeTests | Native startup of the blank shell | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
+| Editor.Desktop.SmokeTests | Native editor startup | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
 `Program.Main` is the single composition root. `App` performs framework lifecycle
 setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
-Infrastructure references Application only and adds no packages. App does not yet compose the adapter.
+Infrastructure references Application only and adds no packages. App composes the adapter through Program.Main.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
 
@@ -104,3 +107,5 @@ See [ADR 0001](adr/0001-module-boundaries.md) for the alternatives and decision.
 See [ADR 0004](adr/0004-plain-text-document.md) for document use cases and invariants.
 See [ADR 0005](adr/0005-document-persistence-use-cases.md) for persistence contracts and save concurrency limits.
 See [ADR 0006](adr/0006-local-text-persistence.md) for UTF-8, replacement, metadata, and platform limits.
+
+See [ADR 0007](adr/0007-plain-text-editor.md) for UI synchronization and desktop command behavior.

@@ -4,10 +4,9 @@ Tangopad is the foundation for an open-source, offline-first desktop text and
 document editor for Windows, Linux, and macOS. The first planned formats are plain
 text and Markdown. The design prioritizes performance, reliability, and independent modules.
 
-This repository currently contains build infrastructure and a blank Avalonia window.
-It has no editing, file access, parsing, rendering, highlighting, or export features.
-Core owns `TextDocument` for plain-text document behavior.
-Application contains no source types.
+Tangopad currently edits one plain-text document. New, Open, Save, and Save As
+use the existing document session and strict UTF-8 file store.
+Markdown, highlighting, export, and multiple tabs remain unimplemented.
 
 Install the exact .NET SDK from [global.json](global.json). Run the shared verification command from the repository root:
 
@@ -16,31 +15,55 @@ dotnet msbuild eng/verify.proj
 ```
 
 The command checks locked dependencies, known vulnerabilities, formatting, static
-analysis, the Release build, architecture tests, native startup of the blank shell, and managed build reproducibility.
+analysis, the Release build, architecture tests, native editor startup, and managed build reproducibility.
 It requires network access to NuGet.
 Linux native startup needs an X11 display.
 The check starts Xvfb when no display is open and the host has the Xvfb command.
 [Native startup](docs/native-startup.md) records the supported hosts, native libraries, and results.
 
-To open the blank window yourself, run:
+To start the editor, run:
 
 ```sh
 dotnet run --project src/Editor.App --configuration Release
 ```
 
-The app displays an empty window. Close the window to stop the app.
+Type in the new document. Use Open to select a UTF-8 file.
+Use Save to write the document, or Save As to select another destination.
+An asterisk in the title marks unsaved changes. The title shows the full file path.
+New, Open, and window close ask whether to save unsaved changes.
+Cancel leaves the document open. Errors appear in a dialog.
+
+| Action | Linux and Windows | macOS |
+| --- | --- | --- |
+| New | Ctrl+N | Command+N |
+| Open | Ctrl+O | Command+O |
+| Save | Ctrl+S | Command+S |
+| Save As | Ctrl+Shift+S | Command+Shift+S |
+
+You can continue editing during a save. Edits after the saved snapshot remain dirty.
+Cancel operation requests cancellation of pending file I/O.
+Close an open file picker to complete a cancellation request.
+
+Files load as strict UTF-8. Saves write UTF-8 without an added BOM.
+Text and line endings remain unchanged. See [persistence rules](docs/adr/0006-local-text-persistence.md)
+for BOM handling, file replacement, and metadata limits.
+[Editor verification](docs/editor-verification.md) records tested behavior and desktop limits.
 
 The repository contains these modules and support directories:
 
 ```text
 src/
   Editor.App/                 Desktop startup and presentation boundary
-  Editor.Application/         Application boundary, no types yet
+  Editor.Application/         Plain-text load and save use cases
   Editor.Core/                Plain-text document behavior
+  Editor.Infrastructure/      Local UTF-8 file persistence
 tests/
+  Editor.App.Tests/           Presentation commands and editor control
+  Editor.Application.Tests/   Document load and save behavior
+  Editor.Infrastructure.Tests/ Real filesystem integration
   Editor.Architecture.Tests/  Executable dependency policy
   Editor.Core.Tests/          Document identity, text, and baseline
-  Editor.Desktop.SmokeTests/  Native startup of the blank shell
+  Editor.Desktop.SmokeTests/  Native editor startup
 eng/                         Verification and dependency policy
 docs/                        Architecture, decisions, research, and planned issues
 .github/                     CI and contribution templates
@@ -51,6 +74,6 @@ diagram. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 [Tooling research](docs/tooling-research.md) records version checks and optional
 agent skills. [Planned issues](docs/backlog.md) define M0 and M1 work.
 [Verification results](docs/bootstrap-verification.md) record the bootstrap checks.
-[Native startup](docs/native-startup.md) records the blank-shell startup check and its platform limits.
+[Native startup](docs/native-startup.md) records the native startup check and its platform limits.
 
 Tangopad uses the [MIT license](LICENSE).

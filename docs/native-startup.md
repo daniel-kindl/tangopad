@@ -1,8 +1,8 @@
 # Native startup
 
-The blank shell must open a native window and close with exit code 0.
+The editor must open a native window and close with exit code 0.
 `dotnet msbuild eng/verify.proj` runs this check with the other tests.
-The check does not add editing, documents, parsing, or rendering.
+The check covers startup and clean close. It does not exercise editing or file dialogs.
 
 ## Baseline
 
@@ -63,7 +63,10 @@ A host that cannot open a window does not pass.
 The test output starts with `NOT TESTED:` and states a follow-up.
 A host that opens a window and then fails starts with `FAILED.`.
 
-## Results
+## Bootstrap results
+
+These results precede the editor integration.
+See [editor verification](editor-verification.md) for current results and dialog limits.
 
 Date: 2026-10-17.
 

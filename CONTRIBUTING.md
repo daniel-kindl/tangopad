@@ -72,7 +72,7 @@ Verification requires a readable report with results from each expected assembly
 Missing, empty, or overwritten reports fail verification.
 CI uploads the directory for each runner, including reports from failed runs.
 
-The test stage includes native startup of the blank shell.
+The test stage includes native editor startup.
 The test starts the built executable, closes its native window, and requires exit code 0.
 Linux needs an X11 display, or the `Xvfb` command when no display is open.
 Windows and macOS need an interactive desktop session.
@@ -120,8 +120,8 @@ Do not add placeholder tests or test counts as goals.
 Architecture tests validate repository policy and the evaluated graph. Add API
 constraints when domain behavior appears. Add adapter integration tests when an
 adapter exists. Native UI smoke checks and performance benchmarks need observable
-behavior and platform-specific acceptance criteria. The blank bootstrap window
-provides only a manual startup check.
+behavior and platform-specific acceptance criteria. Use native startup tests for
+lifecycle checks. Use headless tests for control behavior.
 
 Use ASD-STE100 principles for technical prose. Keep terms consistent and sentences
 short. State the actor and one instruction per sentence. Preserve uncertainty,
