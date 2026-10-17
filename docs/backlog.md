@@ -12,6 +12,10 @@ tracks the bootstrap in the M0 milestone. The further tasks below remain drafts.
 | `test(build): automate managed output reproducibility checks` | Turn the bootstrap two-path comparison into a repeatable check. Include different NuGet cache paths and supported hosts. Compare managed DLL and PDB hashes. Record native asset exclusions. |
 | `chore(quality): enforce contribution metadata` | Select a minimal check for Conventional Commit squash titles. Verify valid and invalid examples. Keep the workflow permission read-only. |
 
+[Issue #11](https://github.com/daniel-kindl/tangopad/issues/11) tracks the
+contribution metadata draft in the table above. Use that issue for the current
+acceptance criteria.
+
 ## M1: Deliver the first plain-text document slice
 
 M1 authorizes future features through separate issues. None are implemented by bootstrap.

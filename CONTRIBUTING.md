@@ -14,10 +14,40 @@ request from this repository's `dev` branch into `main`.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.
 
-Use Conventional Commits for commits and squash titles, such as
-`chore(build): pin the .NET SDK`. Mark a breaking change with `!` or a
-`BREAKING CHANGE:` footer. These naming rules receive human review during bootstrap.
-No release automation runs yet.
+Use Conventional Commits for commits and for the squash commit subject.
+The pull request title uses this form:
+
+```text
+type[optional scope][optional !]: description
+```
+
+`chore(build): pin the .NET SDK` matches the form.
+The square brackets in the form mark optional parts. Do not write the brackets in a title.
+These titles match the form:
+
+- `feat: add document identity`
+- `fix(parser): handle empty input`
+- `feat!: change document identity`
+- `fix(core)!: reject unknown encoding`
+
+The type is one of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, or `test`.
+A scope is optional. Put the scope in parentheses after the type.
+Use lowercase letters, digits, and hyphens in a scope.
+Put `!` immediately before the colon to mark a breaking change in the title.
+The description must contain visible text.
+Do not add leading or trailing whitespace to the description.
+The title must be one line.
+A commit body can also mark a breaking change with a `BREAKING CHANGE:` footer.
+The title check does not read a footer.
+The check accepts a title that matches this form.
+It does not judge whether the type describes the change.
+Reviewers still review the change.
+
+[eng/check-pr-title.sh](eng/check-pr-title.sh) is the title rule.
+The script runs the positive and negative examples.
+The script then checks one title.
+Do not copy the rule into a second checker.
+`dotnet msbuild eng/verify.proj` does not check pull request titles.
 
 ## Verify a change
 
@@ -115,13 +145,14 @@ resolved review threads, and these checks from the GitHub Actions app:
 - `Verify (ubuntu-24.04)`
 - `Verify (windows-2025)`
 - `Verify (macos-15)`
+- `Conventional Commit title`
 
 The PR source branch must be current with its target before merging. New reviewable commits
 dismiss previous approvals. The ruleset also blocks branch deletion and force pushes.
 
 The owner, `daniel-kindl`, can bypass the ruleset through a pull request. This
 exception includes review and check requirements. It does not permit direct pushes.
-Normal merges must wait for all three checks. The owner cannot approve their own
+Normal merges must wait for every check in the list above. The owner cannot approve their own
 pull request. An independent reviewer with write access must approve it, or the
 owner must explicitly use the bypass. A bypass is not evidence of review.
 
@@ -135,6 +166,22 @@ path filters. Fork pull requests need no secrets. The workflow uses `contents: r
 and does not persist checkout credentials. Repository token permissions are
 read-only, and Actions cannot create or approve pull requests. GitHub can require
 approval before a fork workflow runs. Workflow approval does not replace PR review.
+
+The [Pull request title workflow](.github/workflows/pr-title.yml) runs on pull
+requests to `main` and `dev`. GitHub starts the workflow for the pull request
+events `opened`, `edited`, `reopened`, `synchronize`, and `ready_for_review`.
+The job name is `Conventional Commit title`. The workflow permission is `contents: read`.
+It uses no secrets. It does not persist checkout credentials. Fork pull requests
+receive the same read-only token. The workflow reads the title from the pull
+request event file. A GitHub Actions expression does not receive the title.
+
+The repository default squash commit title is the pull request title.
+GitHub puts that title and the pull request number on the first line.
+The default squash commit body is the commit messages.
+The person who merges can edit the squash commit message before the merge.
+The ruleset cannot lock the squash subject to the reviewed pull request title.
+The person who merges must keep the reviewed pull request title as the squash subject.
+The title check does not read edits on the merge form.
 
 For [issue #3](https://github.com/daniel-kindl/tangopad/issues/3), `dev` initially
 pointed to accepted bootstrap commit `282d48b0e1c5fe4d28287f06666023e41bc19e7f`.
