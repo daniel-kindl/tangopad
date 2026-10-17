@@ -9,7 +9,7 @@ public sealed class AxamlResourceTests
     private static readonly HashSet<string> ResourceProperties = new(StringComparer.Ordinal)
     {
         "Content", "Text", "Title", "ToolTip.Tip", "Width", "Height", "MinWidth", "MinHeight",
-        "Spacing", "Margin", "Padding", "FontFamily", "FontSize", "CornerRadius", "Background",
+        "MaxHeight", "Watermark", "AutomationProperties.Name", "Spacing", "Margin", "Padding", "FontFamily", "FontSize", "CornerRadius", "Background",
         "Foreground", "BorderBrush", "SelectionBrush", "LineNumbersForeground",
     };
 
@@ -33,6 +33,9 @@ public sealed class AxamlResourceTests
     /// <param name="property">The property that must fail.</param>
     [Theory]
     [InlineData("<Button Content='Save' />", "Content")]
+    [InlineData("<TextBox Watermark='Find' />", "Watermark")]
+    [InlineData("<TextBox AutomationProperties.Name='Find' />", "AutomationProperties.Name")]
+    [InlineData("<TextBox MaxHeight='72' />", "MaxHeight")]
     [InlineData("<Setter Property='Spacing' Value='8' />", "Spacing")]
     [InlineData("<Window Background='{StaticResource Brush.Background}' />", "Background")]
     public void InvalidMarkupIsRejected(string markup, string property)

@@ -30,10 +30,17 @@ public sealed class EditorBindingTests
             window.Show();
             window.Editor.Document.Insert(0, "keep");
             window.Editor.CaretOffset = 2;
+            window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+            window.ViewModel.Search.Query = "keep";
+            window.ViewModel.Search.NextCommand.Execute(null);
+            Assert.True(window.ReplaceAllButton.IsEffectivelyEnabled);
+            window.Editor.CaretOffset = 2;
             Task opening = window.ViewModel.OpenCommand.ExecuteAsync(null);
             Assert.False(window.NewButton.IsEffectivelyEnabled);
             Assert.True(window.CancelOperation.IsVisible);
             Assert.True(window.Editor.IsReadOnly);
+            Assert.False(window.ReplaceAllButton.IsEffectivelyEnabled);
+            Assert.False(window.ReplaceCurrentButton.IsEffectivelyEnabled);
             Assert.True(window.Editor.Document.UndoStack.CanUndo);
             Assert.Equal(2, window.Editor.CaretOffset);
             window.CancelOperation.Command!.Execute(null);
@@ -44,6 +51,7 @@ public sealed class EditorBindingTests
             Assert.True(window.NewButton.IsEffectivelyEnabled);
             Assert.False(window.CancelOperation.IsVisible);
             Assert.False(window.Editor.IsReadOnly);
+            Assert.True(window.ReplaceAllButton.IsEffectivelyEnabled);
             window.Editor.Document.UndoStack.Undo();
             Assert.Equal(string.Empty, window.ViewModel.Text);
             window.Close();
@@ -63,6 +71,12 @@ public sealed class EditorBindingTests
             application.RequestedThemeVariant = ThemeVariant.Light;
             EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
             window.Show();
+            window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+            window.QueryInput.Text = "missing";
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(window.SearchPanel.IsVisible);
+            Assert.True(window.NoMatchesText.IsVisible);
+            Assert.Equal("No matches", window.NoMatchesText.Text);
             ErrorDialog error = new("cannot write");
             Task<UnsavedDecision> dialog = error.ShowDialog<UnsavedDecision>(window);
             Color lightBackground = Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color;
@@ -81,6 +95,8 @@ public sealed class EditorBindingTests
             application.RequestedThemeVariant = ThemeVariant.Dark;
             Dispatcher.UIThread.RunJobs();
             Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
+            Assert.Equal("No matches", window.NoMatchesText.Text);
+            Assert.Equal(window.Foreground, window.NoMatchesText.Foreground);
             Assert.Equal(Colors.White, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
             Assert.NotEqual(lightBackground, Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color);
             Assert.NotEqual(lightError, Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color);
@@ -172,7 +188,7 @@ public sealed class EditorBindingTests
             Assert.Equal("Untitled - Tangopad", window.Title);
 
             DockPanel layout = Assert.IsType<DockPanel>(window.Content);
-            Assert.Equal(2, layout.Children.Count);
+            Assert.Equal(3, layout.Children.Count);
             StackPanel toolbar = Assert.IsType<StackPanel>(layout.Children[0]);
             Assert.Equal(Dock.Top, DockPanel.GetDock(toolbar));
             Assert.Equal(Orientation.Horizontal, toolbar.Orientation);
@@ -183,7 +199,7 @@ public sealed class EditorBindingTests
             Button cancel = Assert.IsType<Button>(toolbar.Children[1]);
             Assert.Equal("Cancel operation", cancel.Content);
             Assert.False(cancel.IsVisible);
-            TextEditor editor = Assert.IsType<TextEditor>(layout.Children[1]);
+            TextEditor editor = Assert.IsType<TextEditor>(layout.Children[2]);
             Assert.Equal(FontFamily.Parse("monospace"), editor.FontFamily);
             Assert.Equal(15, editor.FontSize);
             Assert.True(editor.ShowLineNumbers);
@@ -285,6 +301,149 @@ public sealed class EditorBindingTests
             Task<UnsavedDecision> dismissing = error.ShowDialog<UnsavedDecision>(owner);
             ok.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(UnsavedDecision.Cancel, await dismissing.ConfigureAwait(true));
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Search shortcuts, compiled bindings, focus, and literal replacements use the real editor.</summary>
+    [Fact]
+    public async Task SearchPanelNavigatesReplacesAndUndoes()
+    {
+        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            window.Editor.Text = "😀 banana λ\r\nλ\nλ\rλ";
+            window.Editor.Document.UndoStack.ClearAll();
+            window.Editor.CaretOffset = 0;
+            RawInputModifiers modifier = OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+            window.KeyPressQwerty(PhysicalKey.F, modifier);
+            Assert.True(window.SearchPanel.IsVisible);
+            Assert.True(window.QueryInput.IsFocused);
+            Assert.Equal("Find", Avalonia.Automation.AutomationProperties.GetName(window.QueryInput));
+            window.KeyTextInput("ana");
+            Assert.Equal("ana", window.ViewModel.Search.Query);
+            Assert.Equal(2, window.ViewModel.Search.MatchCount);
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            Assert.Equal(4, window.Editor.SelectionStart);
+            Assert.Equal("ana", window.Editor.SelectedText);
+            Assert.True(window.QueryInput.IsFocused);
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.Shift);
+            Assert.Equal(6, window.Editor.SelectionStart);
+            window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            Assert.False(window.SearchPanel.IsVisible);
+            Assert.True(window.Editor.TextArea.IsFocused);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+
+            window.KeyPressQwerty(PhysicalKey.H, modifier);
+            Assert.True(window.ReplacementInput.IsVisible);
+            window.QueryInput.Text = "λ";
+            window.ReplacementInput.Text = "$1\\😀\r\n";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(4, window.ViewModel.Search.MatchCount);
+            Assert.True(window.ReplaceAllButton.IsEffectivelyEnabled);
+            _ = window.ReplaceAllButton.Focus();
+            window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+            Assert.Equal("😀 banana $1\\😀\r\n\r\n$1\\😀\r\n\n$1\\😀\r\n\r$1\\😀\r\n", window.Editor.Text);
+            Assert.Equal(window.Editor.Text, window.ViewModel.Session.Document.Text);
+            Assert.Equal(4, window.ViewModel.Search.ReplacementCount);
+            Assert.True(window.ViewModel.IsDirty);
+            Assert.True(window.NoMatchesText.IsVisible);
+            window.Editor.Document.UndoStack.Undo();
+            Assert.Equal("😀 banana λ\r\nλ\nλ\rλ", window.Editor.Text);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            Assert.Equal(4, window.ViewModel.Search.MatchCount);
+            window.Editor.Document.UndoStack.Redo();
+            Assert.Equal(0, window.ViewModel.Search.MatchCount);
+            _ = window.CloseSearchButton.Focus();
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            Assert.False(window.SearchPanel.IsVisible);
+            Assert.True(window.Editor.TextArea.IsFocused);
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Replace current rejects stale selections and replacement preserves Save and close protection.</summary>
+    [Fact]
+    public async Task ReplacementPreservesPersistenceAndCloseProtection()
+    {
+        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        _ = await ui.Dispatch(async () =>
+        {
+            string directory = Path.Combine(Path.GetTempPath(), $"tangopad-search-{Guid.NewGuid():N}");
+            _ = Directory.CreateDirectory(directory);
+            try
+            {
+                string path = Path.Combine(directory, "output.txt");
+                Dialogs dialogs = new() { SavePath = path, Decision = UnsavedDecision.Cancel };
+                EditorWindow window = new(new FileTextDocumentStore(), dialogs);
+                window.Show();
+                window.Editor.Text = "one one";
+                Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
+                window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+                window.QueryInput.Text = "one";
+                window.ReplacementInput.Text = "two";
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(window.ReplaceCurrentButton.IsEffectivelyEnabled);
+                window.ViewModel.Search.NextCommand.Execute(null);
+                Assert.True(window.ReplaceCurrentButton.IsEffectivelyEnabled);
+                window.Editor.Select(1, 2);
+                Assert.False(window.ReplaceCurrentButton.IsEffectivelyEnabled);
+                window.ViewModel.Search.NextCommand.Execute(null);
+                _ = window.ReplaceCurrentButton.Focus();
+                window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+                Assert.Equal("one two", window.Editor.Text);
+                Assert.Equal(1, window.ViewModel.Search.ReplacementCount);
+                Assert.True(window.ViewModel.IsDirty);
+                window.Close();
+                Assert.True(window.IsVisible);
+                Assert.Equal("one one", await File.ReadAllTextAsync(path).ConfigureAwait(true));
+                window.Editor.Document.UndoStack.Undo();
+                Assert.False(window.ViewModel.IsDirty);
+                window.Editor.Document.UndoStack.Redo();
+                Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
+                Assert.Equal("one two", await File.ReadAllTextAsync(path).ConfigureAwait(true));
+                Assert.False(window.ViewModel.IsDirty);
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(window.IsVisible);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Navigation brings a result on a long line into view without moving keyboard focus.</summary>
+    [Fact]
+    public async Task SearchRevealsMatchesBeyondTheHorizontalViewport()
+    {
+        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            window.Editor.Text = new string('x', 300) + "needle";
+            window.Editor.CaretOffset = 0;
+            RawInputModifiers modifier = OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+            window.KeyPressQwerty(PhysicalKey.F, modifier);
+            window.QueryInput.Text = "needle";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(0, window.Editor.HorizontalOffset);
+            window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("needle", window.Editor.SelectedText);
+            Assert.True(window.Editor.HorizontalOffset > 0);
+            Assert.True(window.QueryInput.IsFocused);
+            window.Close();
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }

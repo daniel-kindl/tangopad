@@ -10,6 +10,10 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 {
     private CancellationTokenSource? operation;
 
+    public SearchViewModel Search { get; } = new();
+
+    partial void OnCanEditChanged(bool value) { Search.CanEdit = value; }
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand))]
     public partial bool IsBusy { get; private set; }

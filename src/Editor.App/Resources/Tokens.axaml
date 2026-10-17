@@ -18,4 +18,6 @@
   <StaticResource x:Key="Font.Body" ResourceKey="ContentControlThemeFontFamily" />
   <StaticResource x:Key="FontSize.Body" ResourceKey="ControlContentThemeFontSize" />
   <StaticResource x:Key="Radius.Control" ResourceKey="ControlCornerRadius" />
+  <x:Double x:Key="Size.Search.InputMaxHeight">72</x:Double>
+  <Thickness x:Key="Inset.Search.Status">8,0</Thickness>
 </ResourceDictionary>
