@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="using:AvaloniaEdit"
+        x:Class="Editor.App.EditorWindow"
+        Width="960"
+        Height="680"
+        MinWidth="400"
+        MinHeight="250"
+        Title="Untitled - Tangopad">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+      <StackPanel x:Name="Actions" Orientation="Horizontal" Spacing="8" Margin="8">
+        <Button x:Name="NewButton" Content="New" />
+        <Button x:Name="OpenButton" Content="Open" />
+        <Button x:Name="SaveButton" Content="Save" />
+        <Button x:Name="SaveAsButton" Content="Save As" />
+      </StackPanel>
+      <Button x:Name="CancelOperation" Content="Cancel operation" IsVisible="False" />
+    </StackPanel>
+    <edit:TextEditor x:Name="Editor"
+                     FontFamily="monospace"
+                     FontSize="15"
+                     ShowLineNumbers="True"
+                     HorizontalScrollBarVisibility="Auto"
+                     VerticalScrollBarVisibility="Auto" />
+  </DockPanel>
+</Window>

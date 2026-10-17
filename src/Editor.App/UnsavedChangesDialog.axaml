@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Editor.App.UnsavedChangesDialog"
+        Title="Unsaved changes"
+        Width="460"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="20" Spacing="20">
+    <TextBlock Text="Save changes before continuing?" TextWrapping="Wrap" />
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="SaveButton" Content="Save" />
+      <Button x:Name="DiscardButton" Content="Discard" />
+      <Button x:Name="CancelButton" Content="Cancel" IsCancel="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

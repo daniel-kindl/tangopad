@@ -1,40 +1,23 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Layout;
-using Avalonia.Media;
-using AvaloniaEdit;
 using Editor.Application;
 
 namespace Editor.App;
 
-internal sealed class EditorWindow : Window
+internal sealed partial class EditorWindow : Window
 {
-    private readonly StackPanel actions = new() { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(8) };
-    private readonly Button cancel = new() { Content = "Cancel operation", IsVisible = false };
     private Guid documentId;
     private bool closingApproved;
 
     internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null)
     {
-        Width = 960;
-        Height = 680;
-        MinWidth = 400;
-        MinHeight = 250;
+        InitializeComponent();
         Workspace = new EditorWorkspace(store, dialogs ?? new DesktopEditorDialogs(this));
-        AddAction("New", "N", Workspace.NewAsync);
-        AddAction("Open", "O", Workspace.OpenAsync);
-        AddAction("Save", "S", () => Workspace.SaveAsync());
-        AddAction("Save As", "Shift+S", () => Workspace.SaveAsync(saveAs: true));
-        cancel.Click += (_, _) => Workspace.Cancel();
-        StackPanel toolbar = new() { Orientation = Orientation.Horizontal };
-        toolbar.Children.Add(actions);
-        toolbar.Children.Add(cancel);
-        DockPanel.SetDock(toolbar, Dock.Top);
-        DockPanel layout = new();
-        layout.Children.Add(toolbar);
-        layout.Children.Add(Editor);
-        Content = layout;
+        WireAction(NewButton, "N", Workspace.NewAsync);
+        WireAction(OpenButton, "O", Workspace.OpenAsync);
+        WireAction(SaveButton, "S", () => Workspace.SaveAsync());
+        WireAction(SaveAsButton, "Shift+S", () => Workspace.SaveAsync(saveAs: true));
+        CancelOperation.Click += (_, _) => Workspace.Cancel();
         Editor.TextChanged += (_, _) => Workspace.Edit(Editor.Text);
         Workspace.Changed += (_, _) => Refresh();
         Closing += OnClosing;
@@ -42,31 +25,21 @@ internal sealed class EditorWindow : Window
         Refresh();
     }
 
-    internal TextEditor Editor { get; } = new()
-    {
-        FontFamily = FontFamily.Parse("monospace"),
-        FontSize = 15,
-        ShowLineNumbers = true,
-        HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-        VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-    };
     internal EditorWorkspace Workspace { get; }
 
-    private void AddAction(string label, string key, Func<Task<bool>> action)
+    private void WireAction(Button button, string key, Func<Task<bool>> action)
     {
         KeyGesture gesture = KeyGesture.Parse($"{(OperatingSystem.IsMacOS() ? "Meta" : "Control")}+{key}");
-        Button button = new() { Content = label };
         ToolTip.SetTip(button, gesture.ToString());
         button.Click += async (_, _) => _ = await action().ConfigureAwait(true);
-        actions.Children.Add(button);
         KeyBindings.Add(new KeyBinding { Gesture = gesture, Command = new EditorCommand(action) });
     }
 
     private void Refresh()
     {
         Title = Workspace.Title;
-        actions.IsEnabled = !Workspace.IsBusy;
-        cancel.IsVisible = Workspace.IsBusy;
+        Actions.IsEnabled = !Workspace.IsBusy;
+        CancelOperation.IsVisible = Workspace.IsBusy;
         Editor.IsReadOnly = !Workspace.CanEdit;
         if (documentId != Workspace.Session.Document.Id)
         {
@@ -89,7 +62,7 @@ internal sealed class EditorWindow : Window
         {
             closingApproved = true;
             Editor.IsReadOnly = true;
-            actions.IsEnabled = false;
+            Actions.IsEnabled = false;
             Avalonia.Threading.Dispatcher.UIThread.Post(Close);
         }
     }

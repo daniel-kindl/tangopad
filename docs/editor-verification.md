@@ -2,8 +2,9 @@
 
 Date: 2026-10-17
 
-Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19) and
-[native acceptance issue #21](https://github.com/daniel-kindl/tangopad/issues/21).
+Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),
+[native acceptance issue #21](https://github.com/daniel-kindl/tangopad/issues/21),
+and [compiled AXAML issue #22](https://github.com/daniel-kindl/tangopad/issues/22).
 
 ## Repository verification
 
@@ -14,7 +15,7 @@ TMPDIR=/workspace/tangopad/artifacts/tmp dotnet msbuild eng/verify.proj
 ```
 
 Locked restore and audit, formatting, analyzers, and Release compilation passed
-with zero warnings or errors. Six distinct TRX reports contain 85 passed tests
+with zero warnings or errors. Six distinct TRX reports contain 87 passed tests
 and one Windows-only skip. Native editor startup passed.
 Two isolated builds used fresh NuGet caches.
 All 22 managed DLL and portable PDB files had identical SHA-256 hashes.
@@ -24,6 +25,26 @@ filesystem exceeded its quota. The successful rerun used the workspace disk
 for temporary files. It used the same verification entry point and checks.
 Reports and reproducibility manifests are in artifacts/test-results and
 artifacts/reproducibility.
+
+## Compiled AXAML views
+
+[Issue #22](https://github.com/daniel-kindl/tangopad/issues/22) moved the editor
+views into compiled AXAML. The repository command above includes that change.
+
+Editor.App.Tests passed 9 tests.
+One test checks the window size, title, named toolbar buttons, editor control,
+shortcuts, and Fluent theme resources.
+One test checks the unsaved-changes dialog and the error dialog.
+The unsaved-changes dialog stays 460 pixels wide.
+Its buttons stay Save, Discard, and Cancel, in that order.
+Save returns `UnsavedDecision.Save`.
+The error dialog returns `UnsavedDecision.Cancel`.
+
+This host ran the Linux native startup smoke test.
+It did not run `eng/check-native-editor.py` again.
+Windows and macOS interactive desktop checks remain NOT TESTED.
+The hosted CI job was not run on this host.
+The Windows-only filesystem test skipped on Linux.
 
 ## Automated evidence
 

@@ -45,6 +45,11 @@ file links. Copy the snapshot to two new temporary paths. Give each build its ow
 NuGet package, HTTP, plugin, and scratch directories. Use locked restore without
 HTTP-cache reuse. Check that both builds use the pinned SDK. Disable Avalonia telemetry for the
 isolated builds so its background collector cannot prevent Windows cache cleanup.
+The Avalonia XAML compiler writes an absolute directory into the Editor.App debug directory.
+It also records absolute AXAML document paths in the portable PDB.
+A build target restores the CodeView path with PathMap.
+The same target replaces each source-root path part in those documents with the same number of underscore characters.
+It then restores the deterministic PDB identifier and the assembly debug checksum.
 
 Compare each solution project's evaluated Release `TargetPath` DLL and adjacent
 portable PDB with SHA-256. Compute relative outputs from the evaluated project

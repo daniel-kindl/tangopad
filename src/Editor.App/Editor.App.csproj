@@ -2,6 +2,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Debug InitializeComponent calls AttachDevTools. This project does not reference Avalonia.Diagnostics. -->
+    <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
@@ -10,4 +12,5 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
+  <Import Project="$(MSBuildThisFileDirectory)../../eng/NormalizeAvaloniaPdbPath.targets" />
 </Project>

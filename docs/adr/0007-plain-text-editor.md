@@ -20,7 +20,20 @@ Only this editor package enters production. Avalonia.Headless 12.1.4 supports
 control tests without adding a second test framework.
 
 Program.Main composes FileTextDocumentStore and the application.
-App initializes styles and the desktop lifecycle.
+App.axaml owns the Fluent theme and the AvaloniaEdit Fluent theme.
+App code-behind loads that markup.
+App code-behind opens the desktop window.
+EditorWindow.axaml owns the window size, toolbar, editor control, and their fixed properties.
+UnsavedChangesDialog.axaml owns the unsaved-changes prompt.
+ErrorDialog.axaml owns the file-operation error prompt.
+Code-behind loads each view.
+Code-behind keeps shortcut selection, tooltips, commands, text synchronization, cancellation, and close behavior.
+AXAML is the only definition of those controls.
+DesktopEditorDialogs calls the platform file pickers.
+The project leaves Avalonia developer tools unloaded.
+The Avalonia XAML compiler writes absolute paths into the Editor.App debug output.
+A build target restores deterministic debug paths after that compiler runs.
+View models and design tokens remain separate follow-up work.
 EditorWindow owns AvaloniaEdit, toolbar actions, shortcuts, and close handling.
 EditorWorkspace coordinates presentation state through DocumentSession.
 IEditorDialogs isolates the file pickers and confirmation dialogs for tests.
@@ -78,5 +91,6 @@ Editor.App.Tests drives workspace commands with controlled stores and dialogs.
 A headless test uses the production styles, the actual editor control, and
 FileTextDocumentStore. It checks keyboard text input, exact mixed line endings,
 Save As output, dirty state, and undo history.
+The same fixture checks compiled view names, theme resources, and dialog decisions.
 Native startup remains a separate process test on each supported CI host.
 See [editor verification](../editor-verification.md) for results and platform limits.

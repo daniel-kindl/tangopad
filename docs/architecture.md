@@ -27,7 +27,7 @@ flowchart LR
 
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
-| Editor.App | Presentation and composition | Plain-text editing, desktop dialogs, and composition |
+| Editor.App | Presentation and composition | Plain-text editing, compiled AXAML views, desktop dialogs, and composition |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
 | Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
@@ -39,8 +39,8 @@ flowchart LR
 | BuildVerification | Managed build reproducibility | Creates isolated builds and compares project DLL and portable PDB hashes |
 | Editor.Desktop.SmokeTests | Native editor startup | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
-`Program.Main` is the single composition root. `App` performs framework lifecycle
-setup only. The document service receives its persistence port directly. No service container is necessary.
+`Program.Main` is the single composition root. `App.axaml` owns the theme resources.
+App code-behind performs framework lifecycle setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
 Infrastructure references Application only and adds no packages. App composes the adapter through Program.Main.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.

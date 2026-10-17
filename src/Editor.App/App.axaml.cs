@@ -1,19 +1,14 @@
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml.Styling;
-using Avalonia.Themes.Fluent;
+using Avalonia.Markup.Xaml;
 using Editor.Application;
 
 namespace Editor.App;
 
-internal sealed class App(ITextDocumentStore store) : Avalonia.Application
+internal sealed partial class App(ITextDocumentStore store) : Avalonia.Application
 {
     public override void Initialize()
     {
-        Styles.Add(new FluentTheme());
-        Styles.Add(new StyleInclude(new Uri("avares://Editor.App/"))
-        {
-            Source = new Uri("avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"),
-        });
+        AvaloniaXamlLoader.Load(this);
     }
 
     public override void OnFrameworkInitializationCompleted()
