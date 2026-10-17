@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Xml.Linq;
 using Xunit;
@@ -8,6 +11,44 @@ namespace Editor.Architecture.Tests;
 /// <summary>Checks evaluated project dependencies against the repository policy.</summary>
 public sealed class DependencyRulesTests
 {
+    /// <summary>Limits compiled Core APIs to basic runtime types and assembly metadata.</summary>
+    [Fact]
+    public void CoreUsesOnlyDomainRuntimeApis()
+    {
+        string configuration = typeof(DependencyRulesTests).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
+        string path = Path.Combine(FindRepositoryRoot(), "src", "Editor.Core", "bin", configuration, "net10.0", "Editor.Core.dll");
+        using FileStream stream = File.OpenRead(path);
+        using PEReader assembly = new(stream);
+        MetadataReader metadata = assembly.GetMetadataReader();
+
+        Assert.Equal(["System.Runtime"], metadata.AssemblyReferences
+            .Select(handle => metadata.GetString(metadata.GetAssemblyReference(handle).Name)));
+
+        string[] permittedNamespaces =
+        [
+            "System", "System.Diagnostics", "System.Reflection",
+            "System.Runtime.CompilerServices", "System.Runtime.Versioning",
+        ];
+        foreach (TypeReferenceHandle handle in metadata.TypeReferences)
+        {
+            TypeReference reference = metadata.GetTypeReference(handle);
+            TypeReference declaringType = reference;
+            while (declaringType.ResolutionScope.Kind == HandleKind.TypeReference)
+            {
+                declaringType = metadata.GetTypeReference((TypeReferenceHandle)declaringType.ResolutionScope);
+            }
+
+            string typeNamespace = metadata.GetString(declaringType.Namespace);
+            Assert.True(permittedNamespaces.Contains(typeNamespace, StringComparer.Ordinal),
+                $"Core cannot reference {typeNamespace}.{metadata.GetString(reference.Name)}. Review the domain boundary before changing the API policy.");
+        }
+
+        foreach (MethodDefinitionHandle handle in metadata.MethodDefinitions)
+        {
+            Assert.Equal((MethodAttributes)0, metadata.GetMethodDefinition(handle).Attributes & MethodAttributes.PinvokeImpl);
+        }
+    }
+
     /// <summary>Checks that the policy and solution include every repository project.</summary>
     [Fact]
     public void EveryProjectIsInThePolicyAndSolution()
