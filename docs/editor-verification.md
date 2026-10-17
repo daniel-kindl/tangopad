@@ -2,7 +2,8 @@
 
 Date: 2026-10-17
 
-Change: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19)
+Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19) and
+[native acceptance issue #21](https://github.com/daniel-kindl/tangopad/issues/21).
 
 ## Repository verification
 
@@ -18,7 +19,7 @@ and one Windows-only skip. Native editor startup passed.
 Two isolated builds used fresh NuGet caches.
 All 22 managed DLL and portable PDB files had identical SHA-256 hashes.
 
-The first full run failed during reproducibility restore because the temporary
+The issue #19 verification first failed during reproducibility restore because the temporary
 filesystem exceeded its quota. The successful rerun used the workspace disk
 for temporary files. It used the same verification entry point and checks.
 Reports and reproducibility manifests are in artifacts/test-results and
@@ -50,24 +51,86 @@ The existing Windows-only filesystem test remains untested on Linux.
 
 ## Native desktop evidence
 
-Host: Fedora Linux 44 container, x64, X11 display :0 through Xwayland.
+The first integration check used Fedora Linux 44, x64, and XWayland `:0`.
+Native startup, synthetic typing, and the dirty title passed.
+The desktop picker was outside the X11 input connection.
+Picker completion on that desktop remains NOT TESTED.
 
-The native smoke test launched the built editor, requested native window close,
-and observed exit code 0.
-A separate native session accepted synthetic X11 text input.
-Its title changed from Untitled to Untitled *.
-A captured image showed the toolbar, line numbers, and entered text.
-The image is a local artifact at artifacts/editor-acceptance/editor.png.
+| Host and session | Result | Follow-up |
+| --- | --- | --- |
+| Fedora Linux 44 container, x64, .NET 10.0.13, Xvfb `:1`, private D-Bus, GTK portal | PASS. All 11 native acceptance groups passed. | Repeat on the hosted Ubuntu runner. |
+| Fedora Linux 44 container, XWayland `:0` on a Wayland desktop | PASS for startup, typing, and dirty title. Native picker completion is NOT TESTED. | Repeat the interactive procedure with input access to the desktop picker. |
+| Windows desktop | NOT TESTED. This host cannot run a Windows desktop session. | Run the interactive procedure on Windows. Check Ctrl shortcuts and record OS, session, and results. |
+| macOS desktop | NOT TESTED. This host cannot run a macOS desktop session. | Run the interactive procedure on macOS. Check Command shortcuts and record OS, session, and results. |
 
-The native Save action entered a pending picker operation.
-The desktop picker was outside the windows accessible through this Xwayland bridge.
-Native picker selection, cancellation, and overwrite confirmation remain untested here.
-The headless control test uses controlled picker responses and real file persistence.
-It does not prove native dialog behavior.
+The Fedora Xvfb run used GTK 3.24.52, portal 1.22.1, and GTK portal backend 1.15.3.
+Two consecutive native runs passed. Local evidence is in
+`artifacts/native-editor-jqai_48f` and `artifacts/native-editor-_sobywq6`.
+The `result.json` report lists these completed groups:
 
-Windows and macOS desktop acceptance remains untested locally.
-CI repeats the full verification command, including native startup, on all three platforms.
-CI startup does not prove each platform's native picker interactions.
+- Native typing and dirty title.
+- Open, Save, and Save As picker cancellation with unchanged document state.
+- Save and Save As through usable local paths, with exact UTF-8 output.
+- Native overwrite prompt.
+- Overwrite cancellation and confirmed replacement of a test file.
+- Open and Save As with Unicode, spaces in paths, and CRLF, LF, and CR newlines.
+- New with Cancel, Save, and Discard.
+- Invalid UTF-8 error with the unsaved document preserved.
+- Permission error with the old file and dirty state preserved, followed by a successful Save As.
+- Close with Cancel, a cancelled Save picker, and successful Save.
+- Close with Discard.
+
+The script invokes Ctrl+N, Ctrl+O, Ctrl+S, and Ctrl+Shift+S through X11 input.
+The output assertions include text typed after cancelled dialogs and failed operations.
+No application defect required a production change in this acceptance run.
+Slow file I/O and edits during pending I/O retain their existing automated evidence.
+Those interactions remain NOT TESTED in native desktop windows.
+The interactive procedure below supplies their follow-up.
+
+The native acceptance script starts the unchanged Release executable on Xvfb.
+It starts a private D-Bus session and the real GTK file-picker portal.
+X11 input drives the editor and dialogs. No dialog responses are mocked.
+The script checks exact output bytes and window titles.
+Screenshots show the prompts and error messages.
+It creates all test files in a private temporary directory.
+The script removes that directory after the run.
+It does not select existing user files.
+
+[eng/check-native-editor.py](../eng/check-native-editor.py) is separate from the
+headless control tests and native startup test.
+The Linux hosted Verify job runs this script after repository verification.
+That job uploads screenshots, process logs, and `result.json` as `native-editor-ubuntu-24.04`.
+The artifact retention is seven days.
+
+## Repeat the Linux native check
+
+Use a non-root account on 64-bit Linux. Build the Release executable first.
+The check requires Python 3 with Pillow, `xdotool`, `Xvfb`, `dbus-daemon`,
+`xdg-desktop-portal`, and `xdg-desktop-portal-gtk`.
+The portal executables must be in `/usr/libexec`.
+The GTK dialog text must use English. The script sets the test locale.
+
+On Ubuntu, install the packages with this command:
+
+```sh
+sudo apt-get install --no-install-recommends python3-pil xdotool xvfb dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk
+```
+
+Run these commands from the repository root:
+
+```sh
+dotnet build Tangopad.slnx --configuration Release
+python3 eng/check-native-editor.py
+```
+
+A successful run prints `PASS` for each completed group.
+A failure exits with a nonzero code and captures `failure.png`.
+The final line identifies the evidence directory under `artifacts/native-editor-*`.
+The check uses a separate X server. It does not send input to your desktop.
+It uses GTK 3 dialog controls and fixed positions in the app's confirmation dialog.
+A dialog layout change can require a script update.
+This check does not prove behavior through a Wayland portal, a window manager,
+a physical keyboard, or another operating system.
 
 ## Desktop acceptance procedure
 
@@ -87,6 +150,14 @@ Perform these checks in an interactive desktop session on each supported platfor
 12. Check the shortcuts in README, including Save As.
 13. During a slow save, make another edit. Check that the edit remains dirty.
 14. During a slow load, request cancellation. Check that the original document remains.
+15. Use Save As with an existing test file. Cancel overwrite. Check the file and unsaved edits.
+16. Repeat Save As. Confirm overwrite. Check the new bytes and clean title.
+17. Cancel Open and Save As separately. Check that the text, destination, and title remain unchanged.
+
+Create a temporary directory for the procedure. Use only files in that directory.
+Record the OS version, architecture, runtime, display session, and result for each step.
+For a permissions check, save a test file first. Remove write access from its directory.
+Attempt Save after another edit. Restore access after the check.
 
 A failed save can leave complete output if cancellation races with file replacement.
 See ADR 0006 for that persistence limit.
