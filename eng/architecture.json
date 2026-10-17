@@ -22,6 +22,12 @@
     "projects": [],
     "packages": []
   },
+  "src/Editor.Infrastructure/Editor.Infrastructure.csproj": {
+    "projects": [
+      "src/Editor.Application/Editor.Application.csproj"
+    ],
+    "packages": []
+  },
   "tests/Editor.Application.Tests/Editor.Application.Tests.csproj": {
     "projects": [
       "src/Editor.Application/Editor.Application.csproj"
@@ -41,6 +47,14 @@
   "tests/Editor.Core.Tests/Editor.Core.Tests.csproj": {
     "projects": [
       "src/Editor.Core/Editor.Core.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "tests/Editor.Infrastructure.Tests/Editor.Infrastructure.Tests.csproj": {
+    "projects": [
+      "src/Editor.Infrastructure/Editor.Infrastructure.csproj"
     ],
     "packages": [
       "xunit.v3"

@@ -13,11 +13,13 @@ behavior. Application owns plain-text load and save orchestration and its persis
 flowchart LR
     App[Editor.App] --> Application[Editor.Application]
     Application --> Core[Editor.Core]
+    Infrastructure[Editor.Infrastructure] --> Application
     App --> Avalonia[Avalonia desktop and Fluent theme]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
     ArchitectureTests --> BuildVerification[BuildVerification]
     ApplicationTests[Editor.Application.Tests] --> Application
     CoreTests[Editor.Core.Tests] --> Core
+    InfrastructureTests[Editor.Infrastructure.Tests] --> Infrastructure
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
 
@@ -26,6 +28,8 @@ flowchart LR
 | Editor.App | Presentation and composition | Avalonia startup and an empty window |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
+| Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
+| Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
 | Editor.Core.Tests | Document behavior | Identity, edits, acknowledgement, reversion, Unicode, and null input |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
@@ -35,6 +39,7 @@ flowchart LR
 `Program.Main` is the single composition root. `App` performs framework lifecycle
 setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
+Infrastructure references Application only and adds no packages. App does not yet compose the adapter.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
 
@@ -43,7 +48,6 @@ The test starts that executable. It does not call shell types.
 Create a module when a real use case requires it. Update the dependency policy
 and ADR before adding its implementation. These are intended permissions, not existing references:
 
-- `Editor.Infrastructure` may reference Application and Core. It owns persistence adapters.
 - `Editor.Formats.Markdown` may reference Application and Core. It owns Markdown format policy and parser adaptation.
 - App may reference concrete adapters to compose them.
 - Adapters cannot reference App or one another.
@@ -77,6 +81,7 @@ That check rejects Avalonia, rendering libraries, and external format parsers.
 The namespace check permits only the allowlists in ADR 0004 and ADR 0005.
 That check rejects `System.IO`, including filesystem types from the base runtime.
 The native-import check rejects methods that import native code.
+The type-definition check requires inner modules to define types in their own namespaces.
 See [ADR 0004](adr/0004-plain-text-document.md) and
 [ADR 0005](adr/0005-document-persistence-use-cases.md) for the allowlists and their limits.
 Review semantic ownership alongside automated dependency checks.
@@ -98,3 +103,4 @@ callers together. Avoid permanent compatibility layers inside this monolith.
 See [ADR 0001](adr/0001-module-boundaries.md) for the alternatives and decision.
 See [ADR 0004](adr/0004-plain-text-document.md) for document use cases and invariants.
 See [ADR 0005](adr/0005-document-persistence-use-cases.md) for persistence contracts and save concurrency limits.
+See [ADR 0006](adr/0006-local-text-persistence.md) for UTF-8, replacement, metadata, and platform limits.
