@@ -8,6 +8,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../eng/BuildVerification/BuildVerification.csproj" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 </Project>

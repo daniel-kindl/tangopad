@@ -29,10 +29,15 @@ dotnet msbuild eng/verify.proj
 
 The command stops at the first failing stage. It performs locked restore and
 NuGet auditing for direct and transitive dependencies, format and analyzer
-verification at info severity, Release compilation, and all tests. Build warnings
+verification at info severity, Release compilation, all tests, and two isolated builds for managed output
+reproducibility. Build warnings
 are errors. CI repeats the command on Linux, Windows, and macOS.
 The test stage clears `artifacts/test-results` before each run.
 Each test project writes `<project-name>.trx` in that directory.
+The reproducibility stage requires Git and two fresh NuGet downloads.
+It writes inputs, build logs, and SHA-256 manifests to `artifacts/reproducibility`.
+See [managed reproducibility](docs/managed-reproducibility.md) for output scope and limits.
+
 Verification requires a readable report with results from each expected assembly.
 Missing, empty, or overwritten reports fail verification.
 CI uploads the directory for each runner, including reports from failed runs.

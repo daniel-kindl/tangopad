@@ -15,7 +15,7 @@ public sealed class DependencyRulesTests
         string root = FindRepositoryRoot();
         using JsonDocument policy = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "eng", "architecture.json")));
         string[] expected = [.. policy.RootElement.EnumerateObject().Select(project => project.Name).Order(StringComparer.Ordinal)];
-        string[] actual = [.. ((string[])["src", "tests"])
+        string[] actual = [.. ((string[])["src", "tests", "eng"])
             .SelectMany(directory => Directory.EnumerateFiles(Path.Combine(root, directory), "*.csproj", SearchOption.AllDirectories))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .Order(StringComparer.Ordinal)];
