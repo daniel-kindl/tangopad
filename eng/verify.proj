@@ -1,0 +1,18 @@
+<Project DefaultTargets="Verify">
+  <PropertyGroup>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepositoryRoot>
+  </PropertyGroup>
+  <Target Name="Verify" DependsOnTargets="Restore;Format;Compile;Test" />
+  <Target Name="Restore">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet restore Tangopad.slnx --locked-mode --force --no-http-cache" />
+  </Target>
+  <Target Name="Format" DependsOnTargets="Restore">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet format Tangopad.slnx --verify-no-changes --no-restore --severity info" />
+  </Target>
+  <Target Name="Compile" DependsOnTargets="Format">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore" />
+  </Target>
+  <Target Name="Test" DependsOnTargets="Compile">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet test --solution Tangopad.slnx --configuration Release --no-build --no-restore --report-xunit-trx --results-directory &quot;$(RepositoryRoot)/artifacts/test-results&quot;" />
+  </Target>
+</Project>
