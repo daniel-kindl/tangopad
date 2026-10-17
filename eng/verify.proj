@@ -6,19 +6,23 @@
   <ItemGroup>
     <TestProject Include="$(RepositoryRoot)/tests/*/*.csproj" />
   </ItemGroup>
-  <Target Name="Verify" DependsOnTargets="Restore;Format;Compile;Test;VerifyTestReports" />
+  <Target Name="Verify" DependsOnTargets="Restore;Format;Compile;Test;VerifyTestReports;Reproducibility" />
   <Target Name="Restore">
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet restore Tangopad.slnx --locked-mode --force --no-http-cache" />
   </Target>
   <Target Name="Format" DependsOnTargets="Restore">
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet format Tangopad.slnx --verify-no-changes --no-restore --severity info" />
   </Target>
-  <Target Name="Compile" DependsOnTargets="Format">
-    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore" />
+  <Target Name="Compile" DependsOnTargets="Format;Build" />
+  <Target Name="Build">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore --disable-build-servers" />
   </Target>
   <Target Name="Test" DependsOnTargets="Compile">
     <RemoveDir Directories="$(TestResultsDirectory)" />
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet test --project &quot;%(TestProject.Identity)&quot; --configuration Release --no-build --no-restore --report-xunit-trx --report-xunit-trx-filename &quot;%(TestProject.Filename).trx&quot; --results-directory &quot;$(TestResultsDirectory)&quot;" />
+  </Target>
+  <Target Name="Reproducibility">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet run --project eng/BuildVerification --configuration Release --no-build --no-restore -- &quot;$(RepositoryRoot)&quot;" />
   </Target>
   <Target Name="VerifyTestReports">
     <Error Condition="!Exists('$(TestResultsDirectory)/%(TestProject.Filename).trx')"

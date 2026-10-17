@@ -1,4 +1,8 @@
 {
+  "eng/BuildVerification/BuildVerification.csproj": {
+    "projects": [],
+    "packages": []
+  },
   "src/Editor.App/Editor.App.csproj": {
     "projects": [
       "src/Editor.Application/Editor.Application.csproj"
@@ -19,7 +23,9 @@
     "packages": []
   },
   "tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj": {
-    "projects": [],
+    "projects": [
+      "eng/BuildVerification/BuildVerification.csproj"
+    ],
     "packages": [
       "xunit.v3"
     ]

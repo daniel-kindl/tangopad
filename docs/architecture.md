@@ -15,6 +15,7 @@ flowchart LR
     Application --> Core[Editor.Core]
     App --> Avalonia[Avalonia desktop and Fluent theme]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
+    ArchitectureTests --> BuildVerification[BuildVerification]
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
 
@@ -24,6 +25,7 @@ flowchart LR
 | Editor.Application | Use cases and contracts needed by those use cases | Project reference to Core |
 | Editor.Core | Document rules and domain types | Project file only |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
+| BuildVerification | Managed build reproducibility | Creates isolated builds and compares project DLL and portable PDB hashes |
 | Editor.Desktop.SmokeTests | Native startup of the blank shell | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
 `Program.Main` is the single composition root. `App` performs framework lifecycle
@@ -55,8 +57,11 @@ its actual consumers establish the boundary. Plain text does not need a format m
 project and direct-package graph. Architecture tests evaluate MSBuild in Debug
 and Release. They compare exact project and package references with the policy.
 They reject direct assembly references and framework references beyond the .NET base framework.
-They also require the solution and policy to contain every project under `src` and `tests`.
+They also require the solution and policy to contain every project under `src`, `tests`, and `eng`.
 The exact acyclic policy excludes cycles and production references to tests.
+
+`BuildVerification` is an engineering tool with no package or production project references.
+Architecture tests reference the tool to test its comparison behavior.
 
 These checks include imported and conditional MSBuild items for the evaluated
 configurations on the host OS. The CI matrix evaluates all three host systems.

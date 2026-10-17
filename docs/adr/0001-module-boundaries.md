@@ -28,7 +28,8 @@ An independent comparison selected the same base after considering Candidate B.
 
 Adopt Candidate B's evaluated MSBuild checks, strict project inventory, deferred
 packages, and single cross-platform verification entry point. Keep architecture
-tests independent of production assemblies. Test repository policy through its
+tests independent of production assemblies. Architecture tests may reference
+engineering tools to test verification behavior. Test repository policy through its
 actual MSBuild consumer rather than through XML text alone.
 
 ## Consequences
