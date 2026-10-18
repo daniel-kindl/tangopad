@@ -91,6 +91,11 @@
                     AutomationProperties.Name="{StaticResource Text.Preview.Name}">
         <StackPanel x:Name="PreviewBlocks" Classes="preview-body" />
       </ScrollViewer>
+      <Border x:Name="DropHint" Grid.ColumnSpan="3" VerticalAlignment="Top" HorizontalAlignment="Center"
+              IsVisible="False" IsHitTestVisible="False" Background="{DynamicResource Brush.Surface}"
+              Padding="{StaticResource Inset.Toolbar}">
+        <TextBlock Text="{StaticResource Text.Drop.Open}" AutomationProperties.LiveSetting="Polite" />
+      </Border>
     </Grid>
   </DockPanel>
 </Window>

@@ -153,6 +153,81 @@ class Desktop:
             x11.XCloseDisplay(display)
 
 
+def exercise_drops(ui, files, launch):
+    original = files / "drop λ space.MD"
+    original.write_bytes(b"# Dropped\r\ntext")
+    other = files / "drop-next.txt"
+    other.write_bytes(b"next document")
+    invalid = files / "drop-invalid.txt"
+    invalid.write_bytes(b"\xff\xfe")
+
+    def drop(window, payload, mime="text/uri-list"):
+        source = launch([sys.executable, str(ROOT / "eng/native-drag-source.py"), mime, payload], "drag-source")
+        try:
+            drag = ui.window("Tangopad drag source")
+            ui.xdo("windowmove", window, 0, 0)
+            ui.xdo("windowmove", drag, 1030, 700)
+            ui.focus(drag)
+            ui.xdo("mousemove", "--window", drag, 100, 40, "mousedown", 1)
+            for x, y in ((1120, 740), (1000, 500), (800, 200), (100, 120)):
+                ui.xdo("mousemove", x, y)
+                time.sleep(0.2)
+            if not ui.steps:
+                ui.record("drop-affordance")
+            ui.xdo("mouseup", 1)
+            time.sleep(0.5)
+        finally:
+            source.terminate()
+            source.wait(timeout=5)
+
+    def uri(path):
+        return path.as_uri() + "\r\n"
+
+    drop(ui.editor(), uri(original))
+    window = ui.editor(original)
+    ui.record("drop-local-unicode-markdown")
+    ui.key("ctrl+End")
+    ui.type("!")
+    drop(ui.editor(original, dirty=True), uri(other))
+    ui.decision("Cancel")
+    ui.editor(original, dirty=True)
+    ui.key("ctrl+z")
+    ui.editor(original)
+    ui.record("drop-cancel-preserves-undo")
+
+    for name, payload, mime in (
+        ("multiple", uri(original) + uri(other), "text/uri-list"),
+        ("folder", uri(files), "text/uri-list"),
+        ("remote-uri", "https://example.com/a.md\r\n", "text/uri-list"),
+        ("url-text", "https://example.com/a.md", "text/plain"),
+    ):
+        drop(window, payload, mime)
+        ui.editor(original)
+        ui.record("drop-reject-" + name)
+
+    drop(window, uri(invalid))
+    ui.focus(ui.window("File operation failed"))
+    ui.key("Escape")
+    ui.gone("File operation failed")
+    ui.editor(original)
+    ui.record("drop-invalid-utf8")
+    ui.key("ctrl+End")
+    ui.type("!")
+    drop(ui.editor(original, dirty=True), uri(other))
+    ui.decision("Save")
+    ui.bytes(original, b"# Dropped\r\ntext!")
+    ui.editor(other)
+    ui.record("drop-save-and-format-transition")
+    ui.type("!")
+    drop(ui.editor(other, dirty=True), uri(original))
+    ui.decision("Discard")
+    ui.editor(original)
+    ui.bytes(other, b"next document")
+    ui.record("drop-discard")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def exercise(ui, files, app):
     first, second, output = (files / name for name in ("first.txt", "second.MD", "round trip.markdown"))
     fixture = files / "Unicode input.MARKDOWN"
@@ -539,6 +614,7 @@ def main():
         try:
             files = scratch / "files"
             files.mkdir()
+            exercise_drops(ui, files, launch)
             exercise(ui, files, app)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")

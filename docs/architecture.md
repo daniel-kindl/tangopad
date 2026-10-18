@@ -80,6 +80,8 @@ Editor.App uses these directories:
 
 - `Views/` contains `EditorWindow.axaml` and its code-behind. `EditorBufferAdapter`
   stays beside its consuming view because it connects that window to AvaloniaEdit.
+  `EditorWindow` also owns desktop file-drop validation and routes accepted paths
+  to the existing ViewModel Open workflow. See [file drops](file-drop.md).
   `MarkdownPreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text.
   `MarkdownHighlightingAdapter` and its embedded `Markdown.xshd` definition also stay
   here. They select visual highlighting from the session format.

@@ -446,6 +446,50 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         output.WriteLine($"{text.Length:N0} UTF-16 code units: {editMilliseconds:F3} ms/update, {editBytes / 100} bytes/update; 100,000 caret changes: {watch.Elapsed.TotalMilliseconds:F3} ms.");
     }
 
+    /// <summary>A dropped path shares the operation guard and cancellation behavior of picker Open.</summary>
+    [Fact]
+    public async Task PathOpenRejectsReentryAndPreservesSessionOnCancellation()
+    {
+        Store store = new() { PendingLoad = new() };
+        Dialogs dialogs = new() { Decision = UnsavedDecision.Discard };
+        EditorViewModel viewModel = new(store, dialogs, new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"))
+        {
+            Text = "keep me"
+        };
+        Guid identity = viewModel.DocumentId;
+        Task<bool> pending = viewModel.OpenPathAsync("next.md");
+        Assert.True(viewModel.IsBusy);
+        Assert.False(viewModel.CanEdit);
+        Assert.False(await viewModel.OpenPathAsync("another.txt").ConfigureAwait(true));
+        Assert.False(await viewModel.OpenAsync().ConfigureAwait(true));
+        viewModel.CancelCommand.Execute(null);
+        store.PendingLoad.SetResult("replacement");
+        Assert.False(await pending.ConfigureAwait(true));
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal("keep me", viewModel.Text);
+        Assert.Null(viewModel.Session.Destination);
+        Assert.True(viewModel.IsDirty);
+        Assert.False(viewModel.IsBusy);
+        Assert.True(viewModel.CanEdit);
+    }
+
+    /// <summary>Cancelled Save As prevents a path-based replacement.</summary>
+    [Fact]
+    public async Task PathOpenPreservesDocumentWhenSavePickerIsCancelled()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs { Decision = UnsavedDecision.Save },
+            new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"))
+        {
+            Text = "keep me"
+        };
+        Guid identity = viewModel.DocumentId;
+        Assert.False(await viewModel.OpenPathAsync("next.md").ConfigureAwait(true));
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal("keep me", viewModel.Text);
+        Assert.Null(viewModel.Session.Destination);
+        Assert.True(viewModel.IsDirty);
+    }
+
     private sealed class Store : ITextDocumentStore
     {
         internal TaskCompletionSource PendingSave { get; } = new();
