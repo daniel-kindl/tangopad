@@ -48,7 +48,8 @@ The settings file is `Tangopad/recent-files.json` under the per-user data direct
 
 Linux and Windows use .NET's `LocalApplicationData` directory. macOS explicitly
 uses the user's `Library/Application Support` directory. No administrator access
-is required. A missing per-user directory produces memory-only history.
+is required. Tangopad creates the settings directory on the first update.
+An unavailable per-user location produces memory-only history.
 
 The UTF-8 JSON format has two properties, `version` with integer value `1`, and
 `paths` with an array of absolute local path strings. No timestamps, document
@@ -88,6 +89,8 @@ On 2026-10-18, native acceptance on Fedora 44 under Xvfb reopened a persisted
 Markdown path from the menu and showed syntax highlighting. Clear wrote an empty
 stored list and preserved the active document. The editor then closed through
 `WM_DELETE_WINDOW`. This was native X11 acceptance, not a Wayland session.
+An isolated Linux process also verified that the per-user factory persists history
+when `$XDG_DATA_HOME` points to a directory that does not yet exist.
 Windows and macOS native feature interaction remains untested locally.
 The existing CI matrix runs the same unit, headless, and native startup checks on
 Linux, Windows, and macOS. Native startup checks do not cover every menu interaction.
