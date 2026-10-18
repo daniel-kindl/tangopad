@@ -6,6 +6,7 @@
     <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Views/Markdown.xshd" />
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />

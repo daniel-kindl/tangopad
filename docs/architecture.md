@@ -74,6 +74,8 @@ Editor.App uses these directories:
 
 - `Views/` contains `EditorWindow.axaml` and its code-behind. `EditorBufferAdapter`
   stays beside its consuming view because it connects that window to AvaloniaEdit.
+  `MarkdownHighlightingAdapter` and its embedded `Markdown.xshd` definition also stay
+  here. They select visual highlighting from the session format.
 - `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
 - `ViewModels/` contains `EditorViewModel`, `SearchViewModel`, and the search
   consumer's `ISearchBuffer` contract and `SearchMatch` value.

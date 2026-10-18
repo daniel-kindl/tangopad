@@ -22,6 +22,7 @@ internal sealed partial class EditorWindow : Window
         ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels);
         DataContext = ViewModel;
         EditorBufferAdapter buffer = new(Editor, ViewModel);
+        MarkdownHighlightingAdapter highlighting = new(Editor, ViewModel);
         ViewModel.Search.Attach(buffer);
         ViewModel.Search.PropertyChanged += (_, args) =>
         {
@@ -44,7 +45,7 @@ internal sealed partial class EditorWindow : Window
         AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnGoToLineKeyDown, RoutingStrategies.Tunnel);
         Closing += OnClosing;
-        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); };
+        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); };
         Opened += (_, _) => Editor.TextArea.Focus();
     }
 
