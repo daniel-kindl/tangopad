@@ -8,7 +8,9 @@ Date: 2026-10-17
 
 [Issue #13](https://github.com/daniel-kindl/tangopad/issues/13) introduces the first
 Core behavior. A document needs identity, exact text, and a clean baseline.
-Core must not read files, interpret formats, or depend on the desktop framework.
+Core must not read files, parse content, or depend on the desktop framework.
+[Issue #35](https://github.com/daniel-kindl/tangopad/issues/35) later adds
+[filename-based format identification](../document-formats.md) in Core.
 
 ## Use cases and invariants
 

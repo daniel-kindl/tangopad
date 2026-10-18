@@ -30,6 +30,11 @@ M1 authorizes future features through separate issues. None are implemented by b
 [Issue #5](https://github.com/daniel-kindl/tangopad/issues/5) tracks the native
 startup draft in the table above. Use that issue for the current acceptance criteria.
 
+[Issue #35](https://github.com/daniel-kindl/tangopad/issues/35) tracks format
+identification. [Document formats](document-formats.md) records the policy.
+Follow identification with a separate syntax-highlighting issue, then a separate
+Markdig preview issue.
+
 Schedule Markdown parsing and rendering after the first document slice proves the
 contracts. Define separate acceptance criteria for parser adaptation and visual output.
 Recheck Markdig before adding it. Defer tabs, exports, plugins, and additional formats.

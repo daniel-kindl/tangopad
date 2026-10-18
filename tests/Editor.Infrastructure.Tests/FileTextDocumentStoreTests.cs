@@ -1,5 +1,6 @@
 using System.Text;
 using Editor.Application;
+using Editor.Core;
 using Xunit;
 
 namespace Editor.Infrastructure.Tests;
@@ -25,6 +26,37 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         Assert.Equal(Encoding.UTF8.GetBytes(text), await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
         Assert.Equal(text, await store.LoadAsync(path, TestContext.Current.CancellationToken));
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
+    }
+
+    /// <summary>Checks that format transitions preserve persisted bytes and document state.</summary>
+    /// <param name="extension">The extension of the new destination.</param>
+    /// <param name="format">The expected format after save-as.</param>
+    [Theory]
+    [InlineData(".md", DocumentFormat.Markdown)]
+    [InlineData(".MARKDOWN", DocumentFormat.Markdown)]
+    [InlineData(".unknown", DocumentFormat.PlainText)]
+    [InlineData("", DocumentFormat.PlainText)]
+    public async Task FormatTransitionsPreserveUtf8Bytes(string extension, DocumentFormat format)
+    {
+        const string text = "# Příliš 🐈\r\n漢字\n\0e\u0301";
+        string original = Path.Combine(directory, "original.txt");
+        string destination = Path.Combine(directory, "renamed" + extension);
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        await File.WriteAllBytesAsync(original, bytes, TestContext.Current.CancellationToken);
+        DocumentSession session = await DocumentSession.LoadAsync(store, original, TestContext.Current.CancellationToken);
+        Guid identity = session.Document.Id;
+
+        await session.SaveAsAsync(destination, TestContext.Current.CancellationToken);
+
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(original, TestContext.Current.CancellationToken));
+        Assert.Equal(bytes, await File.ReadAllBytesAsync(destination, TestContext.Current.CancellationToken));
+        Assert.Equal(format, session.Format);
+        Assert.Equal(identity, session.Document.Id);
+        Assert.Equal(text, session.Document.Text);
+        Assert.False(session.Document.IsDirty);
+        DocumentSession reopened = await DocumentSession.LoadAsync(store, destination, TestContext.Current.CancellationToken);
+        Assert.Equal(format, reopened.Format);
+        Assert.Equal(text, reopened.Document.Text);
     }
 
     /// <summary>Checks that one initial UTF-8 BOM is metadata and all other characters remain text.</summary>
