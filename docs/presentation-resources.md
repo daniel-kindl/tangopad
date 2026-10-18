@@ -5,7 +5,7 @@ The editor keeps its existing layout, commands, text rules, and dialog decisions
 
 ## Ownership
 
-EditorViewModel owns observable text, title, dirty state, busy state, edit availability, and commands.
+EditorViewModel owns observable text, title, dirty state, busy state, edit availability, caret line and column, and commands.
 It uses CommunityToolkit.Mvvm's ObservableObject and generated properties and relay commands.
 It serializes document operations and retains the caller's synchronization context.
 The desktop caller runs commands and edits on the UI thread.
@@ -15,6 +15,9 @@ EditorWindow binds its controls with compiled bindings and `x:DataType`.
 Its code-behind sets the DataContext, platform shortcuts, native focus, and close integration.
 EditorBufferAdapter transfers exact text and resets caret and undo for a new document identity.
 It checks text equality before assigning the buffer, so typing and undo do not replace their own buffer.
+The adapter copies AvaloniaEdit caret positions into one-based numeric ViewModel properties when the caret position changes.
+The bottom status row uses compiled bindings and `Text.Status.CaretFormat` to display `Ln 1, Col 1` for an empty document.
+Position updates do not write to the editor. The adapter removes its event handlers when the window closes.
 A close request uses the same ViewModel operation guard as other replacement requests.
 
 IEditorDialogs isolates platform pickers, unsaved confirmation, and errors.

@@ -57,6 +57,17 @@
         </TextBlock>
       </WrapPanel>
     </StackPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
+            Padding="{StaticResource Inset.Toolbar}">
+      <TextBlock x:Name="CaretStatus" Classes="editor-status">
+        <TextBlock.Text>
+          <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
+            <Binding Path="CaretLine" />
+            <Binding Path="CaretColumn" />
+          </MultiBinding>
+        </TextBlock.Text>
+      </TextBlock>
+    </Border>
     <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"
                      HorizontalScrollBarVisibility="Auto"

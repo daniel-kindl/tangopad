@@ -41,6 +41,9 @@
   <Style Selector="editing|TextArea">
     <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Selection}" />
   </Style>
+  <Style Selector="TextBlock.editor-status">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
   <Style Selector="TextBlock.error-message">
     <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
   </Style>

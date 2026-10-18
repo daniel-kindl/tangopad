@@ -30,4 +30,5 @@
   <x:String x:Key="Text.Search.Empty">Enter text to find</x:String>
   <x:String x:Key="Text.Search.MatchCount" xml:space="preserve">Matches: </x:String>
   <x:String x:Key="Text.Search.ReplacementCount" xml:space="preserve">Replaced: </x:String>
+  <x:String x:Key="Text.Status.CaretFormat">Ln {0}, Col {1}</x:String>
 </ResourceDictionary>
