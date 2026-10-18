@@ -237,6 +237,26 @@ def exercise(ui, files, app):
         ui.editor()
         ui.record("new-cancel-save-discard")
 
+        markdown = files / "highlighting.md"
+        markdown_text = b"# Heading\r\n**strong** and *emphasis* and `code`\n[link](https://example.com)\n> quote\n- item\n1. item\n```\n# fenced code\n```\nordinary text"
+        markdown.write_bytes(markdown_text)
+        ui.picker("ctrl+o", "Open text file")
+        ui.choose(markdown, saving=False)
+        ui.editor(markdown)
+        ui.record("markdown-highlighting")
+        plain = files / "highlighting.txt"
+        ui.picker("ctrl+shift+s", "Save text file")
+        ui.choose(plain, saving=True)
+        ui.editor(plain)
+        ui.bytes(plain, markdown_text)
+        ui.record("markdown-to-plain-text")
+        ui.key("ctrl+End")
+        ui.type("!")
+        ui.key("ctrl+z")
+        ui.key("ctrl+s")
+        ui.bytes(plain, markdown_text)
+        ui.key("ctrl+n")
+        ui.editor()
         ui.type("retain me")
         ui.picker("ctrl+o", "Open text file")
         ui.choose(invalid, saving=False)

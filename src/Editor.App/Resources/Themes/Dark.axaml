@@ -10,4 +10,11 @@
   <StaticResource x:Key="Brush.Focus" ResourceKey="SystemControlRevealFocusVisualBrush" />
   <StaticResource x:Key="Brush.Error" ResourceKey="SystemControlErrorTextForegroundBrush" />
   <StaticResource x:Key="Brush.Selection" ResourceKey="TextAreaSelectionBrush" />
+  <SolidColorBrush x:Key="Brush.Markdown.Heading" Color="#9CDCFE" />
+  <StaticResource x:Key="Brush.Markdown.Strong" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.Markdown.Emphasis" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <SolidColorBrush x:Key="Brush.Markdown.Code" Color="#DCAFE9" />
+  <SolidColorBrush x:Key="Brush.Markdown.Link" Color="#9CDCFE" />
+  <StaticResource x:Key="Brush.Markdown.Quote" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Markdown.List" ResourceKey="SystemControlForegroundBaseMediumBrush" />
 </ResourceDictionary>

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Editor.App.Resources;
 using Editor.App.Services;
 using Editor.Application;
+using Editor.Core;
 
 namespace Editor.App.ViewModels;
 
@@ -63,6 +64,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public partial int CaretColumn { get; internal set; } = 1;
 
     internal DocumentSession Session { get; private set; } = DocumentSession.CreateUntitled(store);
+    public DocumentFormat Format => Session.Format;
     public Guid DocumentId => Session.Document.Id;
     public bool IsDirty => Session.Document.IsDirty;
     public string Title => string.Format(CultureInfo.CurrentCulture, labels.WindowTitleFormat,
@@ -94,6 +96,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
             Session = DocumentSession.CreateUntitled(store);
             Text = Session.Document.Text;
             OnPropertyChanged(nameof(DocumentId));
+            OnPropertyChanged(nameof(Format));
             return true;
         }, allowEditing: false);
     }
@@ -114,6 +117,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
             Session = loaded;
             Text = Session.Document.Text;
             OnPropertyChanged(nameof(DocumentId));
+            OnPropertyChanged(nameof(Format));
             return true;
         }, allowEditing: false);
     }
@@ -170,6 +174,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 
         token.ThrowIfCancellationRequested();
         await Session.SaveAsAsync(path, token).ConfigureAwait(true);
+        OnPropertyChanged(nameof(Format));
         return true;
     }
 

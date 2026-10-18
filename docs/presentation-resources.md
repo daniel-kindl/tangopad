@@ -45,8 +45,9 @@ App.axaml merges two application resource dictionaries:
 
 Keys describe their role, such as `Size.Dialog.Width`, `Spacing.Actions`, and `Brush.Text.Primary`.
 The Light and Dark dictionaries define the same semantic brush roles.
-Each role aliases an existing Fluent or AvaloniaEdit resource.
-There is no second raw palette. Fluent retains its platform accent and control states.
+General control roles alias existing Fluent or AvaloniaEdit resources.
+Markdown Heading, Code, and Link roles define source colors for each theme.
+Fluent retains its platform accent and control states.
 App requests `ThemeVariant.Default`, so the platform theme applies by default.
 Changing the application theme updates existing controls through DynamicResource references.
 
@@ -76,6 +77,9 @@ These code-behind values are deliberate exceptions to static AXAML text resource
 Names, classes, binding paths, orientation, docking, wrapping, booleans, and scrollbar behavior remain local declarations.
 These declarations define structure or behavior rather than shared visual values.
 No localization framework or translated copy is added.
+
+Markdown source highlighting uses named theme brush roles and the native XSHD adapter.
+See [Markdown highlighting](markdown-highlighting.md) for the baseline and state guarantees.
 
 ## Verification
 

@@ -1,0 +1,29 @@
+<SyntaxDefinition name="Markdown" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Heading" fontWeight="bold" />
+  <Color name="Strong" fontWeight="bold" />
+  <Color name="Emphasis" fontStyle="italic" />
+  <Color name="Code" />
+  <Color name="Link" underline="true" />
+  <Color name="Quote" />
+  <Color name="List" />
+  <RuleSet>
+    <Span color="Code" multiline="true">
+      <Begin>^ {0,3}```[^`]*$</Begin>
+      <End>^ {0,3}```[ \t]*$</End>
+    </Span>
+    <Span color="Code" multiline="true">
+      <Begin>^ {0,3}~~~(?!~).*$</Begin>
+      <End>^ {0,3}~~~[ \t]*$</End>
+    </Span>
+    <Span color="Code">
+      <Begin>(?&lt;!`)`(?!`)</Begin>
+      <End>`</End>
+    </Span>
+    <Rule color="Heading">^ {0,3}\#{1,6}(?:[ \t]+.*|$)</Rule>
+    <Rule color="Quote">^ {0,3}&gt;[ \t]?.*</Rule>
+    <Rule color="List">^ {0,3}(?:[-+*]|[0-9]+[.)])[ \t]+</Rule>
+    <Rule color="Link">!?\[[^\]\r\n]+\]\([^()\r\n]+\)</Rule>
+    <Rule color="Strong">(?&lt;!\\)\*\*(?=\S).+?(?&lt;!\s)\*\*|(?&lt;![\w\\])__(?=\S).+?(?&lt;!\s)__(?!\w)</Rule>
+    <Rule color="Emphasis">(?&lt;![*\\])\*(?!\*)(?=\S).+?(?&lt;!\s)\*(?!\*)|(?&lt;![\w\\])_(?!_)(?=\S).+?(?&lt;!\s)_(?!\w)</Rule>
+  </RuleSet>
+</SyntaxDefinition>
