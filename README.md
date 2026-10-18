@@ -42,6 +42,10 @@ Cancel leaves the document open. Errors appear in a dialog.
 | Find | Ctrl+F | Command+F |
 | Replace | Ctrl+H | Command+H |
 
+Word Wrap in the toolbar fits long lines to the editor width. It starts off and
+stays selected across New and Open until you change it or close the window.
+Wrapping changes only the display. It preserves text, saved line endings, and undo history.
+
 Find searches literal text with optional case sensitivity. Enter finds the next match
 while focus is in a search field. Shift+Enter finds the previous match.
 Both directions wrap. Escape closes the panel and returns focus to the editor.

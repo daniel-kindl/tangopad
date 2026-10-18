@@ -12,6 +12,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 {
     private CancellationTokenSource? operation;
 
+    [ObservableProperty]
+    public partial bool WordWrap { get; set; }
+
     public SearchViewModel Search { get; } = new();
 
     partial void OnCanEditChanged(bool value) { Search.CanEdit = value; }

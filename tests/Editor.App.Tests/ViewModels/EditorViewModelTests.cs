@@ -201,6 +201,42 @@ public sealed class EditorViewModelTests
         Assert.False(viewModel.Session.Document.IsDirty);
     }
 
+    /// <summary>Word Wrap is observable presentation state that survives document replacement.</summary>
+    [Fact]
+    public async Task WordWrapPreservesDocumentStateAcrossNewAndOpen()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs
+        {
+            Decision = UnsavedDecision.Discard,
+            OpenPath = "/input.md"
+        }, new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Assert.False(viewModel.WordWrap);
+        Guid identity = viewModel.DocumentId;
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.WordWrap = true;
+        Assert.Equal(["WordWrap"], notifications);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal(string.Empty, viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+        viewModel.Text = "λ😀\r\nline\nlast\r";
+        notifications.Clear();
+        viewModel.WordWrap = false;
+        Assert.Equal(["WordWrap"], notifications);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal("λ😀\r\nline\nlast\r", viewModel.Session.Document.Text);
+        Assert.True(viewModel.IsDirty);
+        viewModel.WordWrap = true;
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.True(viewModel.WordWrap);
+        Assert.Equal(string.Empty, viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+        Assert.True(await viewModel.OpenAsync().ConfigureAwait(true));
+        Assert.True(viewModel.WordWrap);
+        Assert.Equal("loaded\r\n\n", viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+    }
+
     private sealed class Store : ITextDocumentStore
     {
         internal TaskCompletionSource PendingSave { get; } = new();

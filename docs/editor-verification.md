@@ -9,6 +9,28 @@ Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),
 [semantic themes issue #24](https://github.com/daniel-kindl/tangopad/issues/24),
 and [resource convention issue #27](https://github.com/daniel-kindl/tangopad/issues/27).
 
+## Word Wrap verification
+
+Date: 2026-10-18. [Issue #39](https://github.com/daniel-kindl/tangopad/issues/39).
+
+`dotnet msbuild eng/verify.proj` passed on Linux. Locked restore and audit,
+formatting, analyzers, Debug and Release builds, tests, and all six TRX report checks passed.
+Both builds reported zero warnings and errors.
+
+The focused headless tests first failed because the Word Wrap checkbox was absent.
+The ViewModel test and both headless theme cases pass with the compiled bindings.
+The cases cover long Unicode lines, mixed newlines, horizontal scrolling, selection,
+caret positions, dirty state, identity, undo and redo, exact UTF-8 save bytes,
+theme changes, and New and Open.
+
+`python3 eng/check-native-editor.py` passed all 16 native acceptance groups on
+Fedora Linux 44, x64, .NET 10.0.13, with Xvfb, a private D-Bus session, and the GTK portal.
+Local evidence is in `artifacts/native-editor-0uq0ggcx`.
+Screenshots show a wrapped Unicode line, wrapping disabled after an edit, and
+wrapping retained after New and Open. Output checks confirm exact bytes after undo,
+redo, and Save. Existing native shortcut, search, picker, and close checks pass.
+Windows and macOS native interaction remain untested on this host.
+
 ## Folder refactor verification
 
 [Issue #30](https://github.com/daniel-kindl/tangopad/issues/30) reorganizes

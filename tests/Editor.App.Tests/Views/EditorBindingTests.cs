@@ -586,6 +586,102 @@ public sealed class EditorBindingTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>Wrapping changes visual lines and scrolling while preserving text, selection, and undo history.</summary>
+    /// <param name="dark">Whether to use the dark theme.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WordWrapPreservesEditingAndPersistence(bool dark)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            string directory = Path.Combine(Path.GetTempPath(), $"tangopad-wrap-{Guid.NewGuid():N}");
+            _ = Directory.CreateDirectory(directory);
+            try
+            {
+                string path = Path.Combine(directory, "input.md");
+                string original = string.Concat(Enumerable.Repeat("word λ😀 ", 100)) + "\r\nsecond\nthird\rfourth";
+                await File.WriteAllTextAsync(path, original).ConfigureAwait(true);
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = path })
+                {
+                    RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light
+                };
+                window.Show();
+                CheckBox toggle = Assert.IsType<CheckBox>(window.FindControl<CheckBox>("WordWrapToggle"));
+                Assert.Equal("Word Wrap", toggle.Content);
+                Assert.False(toggle.IsChecked);
+                Assert.False(window.Editor.WordWrap);
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                Guid identity = window.ViewModel.DocumentId;
+                window.Editor.Document.Insert(window.Editor.Document.TextLength, "!");
+                window.Editor.Select(700, 3);
+                int caret = window.Editor.CaretOffset;
+                Assert.True(window.ViewModel.IsDirty);
+                Dispatcher.UIThread.RunJobs();
+                window.Editor.TextArea.Caret.BringCaretToView();
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(window.Editor.HorizontalOffset > 0);
+                _ = toggle.Focus();
+                window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(window.ViewModel.WordWrap);
+                Assert.True(window.Editor.WordWrap);
+                Assert.Equal(ScrollBarVisibility.Disabled, window.Editor.HorizontalScrollBarVisibility);
+                Assert.Equal(0, window.Editor.HorizontalOffset);
+                Assert.True(window.Editor.TextArea.TextView.GetVisualLine(1).TextLines.Count > 1);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.Equal(original + "!", window.ViewModel.Session.Document.Text);
+                Assert.Equal(identity, window.ViewModel.DocumentId);
+                Assert.Equal(700, window.Editor.SelectionStart);
+                Assert.Equal(3, window.Editor.SelectionLength);
+                Assert.Equal(caret, window.Editor.CaretOffset);
+                AssertCaretStatus(window, 1, caret + 1);
+                Assert.True(window.ViewModel.IsDirty);
+                window.Editor.Document.UndoStack.Undo();
+                Assert.Equal(original, window.Editor.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                window.RequestedThemeVariant = dark ? ThemeVariant.Light : ThemeVariant.Dark;
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(toggle.IsChecked);
+                Assert.True(window.Editor.WordWrap);
+                window.ViewModel.WordWrap = false;
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(toggle.IsChecked);
+                Assert.False(window.Editor.WordWrap);
+                Assert.Equal(ScrollBarVisibility.Auto, window.Editor.HorizontalScrollBarVisibility);
+                _ = Assert.Single(window.Editor.TextArea.TextView.GetVisualLine(1).TextLines);
+                Assert.True(window.Editor.Document.UndoStack.CanRedo);
+                window.Editor.Document.UndoStack.Redo();
+                Assert.Equal(original + "!", window.Editor.Text);
+                window.ViewModel.WordWrap = true;
+                Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
+                Assert.Equal(System.Text.Encoding.UTF8.GetBytes(original + "!"), await File.ReadAllBytesAsync(path).ConfigureAwait(true));
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.True(await window.ViewModel.NewAsync().ConfigureAwait(true));
+                Assert.True(window.Editor.WordWrap);
+                Assert.True(toggle.IsChecked);
+                Assert.Equal(string.Empty, window.Editor.Text);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                Assert.True(window.Editor.WordWrap);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>Creates the same styles as production with a headless platform.</summary>
     /// <returns>The headless application builder.</returns>
     public static AppBuilder BuildAvaloniaApp()
