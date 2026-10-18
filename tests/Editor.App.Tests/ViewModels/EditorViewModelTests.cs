@@ -237,6 +237,50 @@ public sealed class EditorViewModelTests
         Assert.False(viewModel.IsDirty);
     }
 
+    /// <summary>Font commands clamp size and notify only presentation changes.</summary>
+    [Fact]
+    public async Task FontSizeIsBoundedObservableWindowState()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs { OpenPath = "/input.md" },
+            new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Assert.Equal(15, viewModel.FontSize);
+        Guid identity = viewModel.DocumentId;
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.IncreaseFontSizeCommand.Execute(null);
+        Assert.Equal(16, viewModel.FontSize);
+        Assert.Equal(["FontSize"], notifications);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal(string.Empty, viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+        for (int index = 0; index < 100; index++)
+        {
+            viewModel.IncreaseFontSizeCommand.Execute(null);
+        }
+
+        Assert.Equal(48, viewModel.FontSize);
+        notifications.Clear();
+        viewModel.IncreaseFontSizeCommand.Execute(null);
+        Assert.Empty(notifications);
+        for (int index = 0; index < 100; index++)
+        {
+            viewModel.DecreaseFontSizeCommand.Execute(null);
+        }
+
+        Assert.Equal(8, viewModel.FontSize);
+        notifications.Clear();
+        viewModel.DecreaseFontSizeCommand.Execute(null);
+        Assert.Empty(notifications);
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.Equal(8, viewModel.FontSize);
+        Assert.True(await viewModel.OpenAsync().ConfigureAwait(true));
+        Assert.Equal(8, viewModel.FontSize);
+        viewModel.ResetFontSizeCommand.Execute(null);
+        Assert.Equal(15, viewModel.FontSize);
+        Assert.Equal("loaded\r\n\n", viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+    }
+
     private sealed class Store : ITextDocumentStore
     {
         internal TaskCompletionSource PendingSave { get; } = new();

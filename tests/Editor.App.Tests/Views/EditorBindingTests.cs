@@ -690,6 +690,154 @@ public sealed class EditorBindingTests
             .UseHeadless(new AvaloniaHeadlessPlatformOptions());
     }
 
+    /// <summary>Font shortcuts change the compiled binding only while the editor has focus.</summary>
+    /// <param name="key">The logical shortcut key.</param>
+    /// <param name="shift">Whether the shortcut includes Shift.</param>
+    /// <param name="expected">The resulting font size.</param>
+    [Theory]
+    [InlineData(Key.OemPlus, false, 16)]
+    [InlineData(Key.OemPlus, true, 16)]
+    [InlineData(Key.Add, false, 16)]
+    [InlineData(Key.OemMinus, false, 14)]
+    [InlineData(Key.Subtract, false, 14)]
+    [InlineData(Key.D0, false, 15)]
+    [InlineData(Key.NumPad0, false, 15)]
+    public async Task FontShortcutsRespectFocusAndPlatform(Key key, bool shift, double expected)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            KeyModifiers modifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+            KeyEventArgs Send(KeyModifiers modifiers)
+            {
+                KeyEventArgs args = new() { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = modifiers };
+                window.Editor.TextArea.RaiseEvent(args);
+                Dispatcher.UIThread.RunJobs();
+                return args;
+            }
+
+            _ = window.Editor.TextArea.Focus();
+            Assert.Equal(15, window.Editor.FontSize);
+            Assert.False(Send(OperatingSystem.IsMacOS() ? KeyModifiers.Control : KeyModifiers.Meta).Handled);
+            Assert.False(Send(modifier | KeyModifiers.Alt).Handled);
+            Assert.Equal(15, window.Editor.FontSize);
+            if (key is Key.D0 or Key.NumPad0)
+            {
+                window.ViewModel.IncreaseFontSizeCommand.Execute(null);
+                Assert.Equal(16, window.Editor.FontSize);
+            }
+
+            Assert.True(Send(modifier | (shift ? KeyModifiers.Shift : KeyModifiers.None)).Handled);
+            Assert.Equal(expected, window.Editor.FontSize);
+            window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+            _ = window.QueryInput.Focus();
+            Assert.False(Send(modifier).Handled);
+            _ = window.ReplacementInput.Focus();
+            Assert.False(Send(modifier).Handled);
+            Assert.Equal(expected, window.Editor.FontSize);
+            Assert.Equal(string.Empty, window.Editor.Text);
+            Assert.False(window.ViewModel.IsDirty);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Real keyboard input preserves editing state and exact save bytes across document changes.</summary>
+    /// <param name="dark">Whether the window starts with the dark theme.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FontSizePreservesEditingAndPersistence(bool dark)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                string original = string.Concat(Enumerable.Repeat("word λ😀 ", 100)) + "\r\nsecond\nthird\rfourth";
+                await File.WriteAllTextAsync(path, original).ConfigureAwait(true);
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = path })
+                {
+                    RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light
+                };
+                window.Show();
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                Guid identity = window.ViewModel.DocumentId;
+                window.Editor.Document.Insert(window.Editor.Document.TextLength, "!");
+                window.Editor.Select(700, 3);
+                int caret = window.Editor.CaretOffset;
+                Dispatcher.UIThread.RunJobs();
+                window.Editor.TextArea.Caret.BringCaretToView();
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(window.Editor.HorizontalOffset > 0);
+                double lineHeight = window.Editor.TextArea.TextView.DefaultLineHeight;
+                RawInputModifiers modifier = OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+                _ = window.Editor.TextArea.Focus();
+                for (int index = 0; index < 5; index++)
+                {
+                    window.KeyPressQwerty(PhysicalKey.Equal, modifier | RawInputModifiers.Shift);
+                    window.KeyReleaseQwerty(PhysicalKey.Equal, modifier | RawInputModifiers.Shift);
+                }
+
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(20, window.Editor.FontSize);
+                Assert.True(window.Editor.TextArea.TextView.DefaultLineHeight > lineHeight);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.Equal(identity, window.ViewModel.DocumentId);
+                Assert.Equal(700, window.Editor.SelectionStart);
+                Assert.Equal(3, window.Editor.SelectionLength);
+                Assert.Equal(caret, window.Editor.CaretOffset);
+                AssertCaretStatus(window, 1, caret + 1);
+                Assert.True(window.ViewModel.IsDirty);
+                window.Editor.TextArea.Caret.BringCaretToView();
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(window.Editor.HorizontalOffset > 0);
+                window.Editor.Document.UndoStack.Undo();
+                Assert.Equal(original, window.Editor.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.True(window.Editor.Document.UndoStack.CanRedo);
+                window.RequestedThemeVariant = dark ? ThemeVariant.Light : ThemeVariant.Dark;
+                window.ViewModel.WordWrap = true;
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(20, window.Editor.FontSize);
+                Assert.True(window.Editor.WordWrap);
+                window.Editor.Document.UndoStack.Redo();
+                Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
+                Assert.Equal(System.Text.Encoding.UTF8.GetBytes(original + "!"), await File.ReadAllBytesAsync(path).ConfigureAwait(true));
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.True(await window.ViewModel.NewAsync().ConfigureAwait(true));
+                Assert.Equal(20, window.Editor.FontSize);
+                Assert.Equal(string.Empty, window.Editor.Text);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                Assert.Equal(20, window.Editor.FontSize);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                _ = window.Editor.TextArea.Focus();
+                window.KeyPressQwerty(PhysicalKey.Digit0, modifier);
+                window.KeyReleaseQwerty(PhysicalKey.Digit0, modifier);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(15, window.Editor.FontSize);
+                window.Close();
+                EditorWindow nextWindow = new(new FileTextDocumentStore(), new Dialogs());
+                Assert.Equal(15, nextWindow.Editor.FontSize);
+                nextWindow.Close();
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     private static void AssertCaretStatus(EditorWindow window, int line, int column)
     {
         Dispatcher.UIThread.RunJobs();

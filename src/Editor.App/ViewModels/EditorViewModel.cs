@@ -10,7 +10,33 @@ namespace Editor.App.ViewModels;
 // All calls and continuations use the UI thread, as required by DocumentSession.
 internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels) : ObservableObject
 {
+    private const double DefaultFontSize = 15;
+    private const double MinimumFontSize = 8;
+    private const double MaximumFontSize = 48;
+    private const double FontSizeStep = 1;
+
     private CancellationTokenSource? operation;
+
+    [ObservableProperty]
+    public partial double FontSize { get; private set; } = DefaultFontSize;
+
+    [RelayCommand]
+    private void IncreaseFontSize()
+    {
+        FontSize = Math.Min(MaximumFontSize, FontSize + FontSizeStep);
+    }
+
+    [RelayCommand]
+    private void DecreaseFontSize()
+    {
+        FontSize = Math.Max(MinimumFontSize, FontSize - FontSizeStep);
+    }
+
+    [RelayCommand]
+    private void ResetFontSize()
+    {
+        FontSize = DefaultFontSize;
+    }
 
     [ObservableProperty]
     public partial bool WordWrap { get; set; }

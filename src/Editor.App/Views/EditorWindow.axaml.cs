@@ -39,6 +39,7 @@ internal sealed partial class EditorWindow : Window
         AddShortcut(FindButton, "F", find);
         AddShortcut(ReplaceButton, "H", replace);
         AddHandler(KeyDownEvent, OnSearchKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
         Closing += OnClosing;
         Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); };
         Opened += (_, _) => Editor.TextArea.Focus();
@@ -81,6 +82,29 @@ internal sealed partial class EditorWindow : Window
                 command.Execute(null);
             }
 
+            args.Handled = true;
+        }
+    }
+
+    private void OnFontSizeKeyDown(object? sender, KeyEventArgs args)
+    {
+        if (!Editor.IsKeyboardFocusWithin)
+        {
+            return;
+        }
+
+        KeyModifiers modifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        ICommand? command = (args.Key, args.KeyModifiers) switch
+        {
+            (Key.OemPlus or Key.Add, var modifiers) when modifiers == modifier || modifiers == (modifier | KeyModifiers.Shift)
+                => ViewModel.IncreaseFontSizeCommand,
+            (Key.OemMinus or Key.Subtract, var modifiers) when modifiers == modifier => ViewModel.DecreaseFontSizeCommand,
+            (Key.D0 or Key.NumPad0, var modifiers) when modifiers == modifier => ViewModel.ResetFontSizeCommand,
+            _ => null,
+        };
+        if (command is not null)
+        {
+            command.Execute(null);
             args.Handled = true;
         }
     }
