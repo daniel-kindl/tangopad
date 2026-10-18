@@ -50,6 +50,14 @@ Hide and format transitions invalidate pending results. Close cancels delays,
 removes event subscriptions, and discards active results. Markdig parsing itself
 is synchronous and cannot be cancelled after it starts.
 
+Each update attempt handles recoverable parser and renderer exceptions at the preview
+boundary. A current failure clears partial output and shows a localized, accessible
+message. Stale failures produce no output. The serial loop continues with newer
+pending work. A subsequent edit, visibility change, or document transition can retry.
+Parser cancellation without window-close cancellation is a recoverable failure.
+Window-close cancellation remains silent. Process-fatal exceptions, including
+memory exhaustion, remain outside recovery.
+
 Reject input longer than 32,768 UTF-16 code units before parsing. Limit nesting to
 32, display blocks to 256, and text runs to 2,048. Show a resource-limit message
 when a limit prevents a complete preview. These limits bound input and display work.
