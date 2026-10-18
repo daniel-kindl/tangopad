@@ -1,7 +1,9 @@
 # Recent files
 
 Select Recent Files in the toolbar to reopen a local document. Each entry shows
-its full path, so files with the same name remain distinguishable. The list holds
+the filename first, followed by its directory. A tooltip shows the full path.
+Files with the same name remain distinguishable, and long directories do not
+hide the filename. The list holds
 up to ten successfully opened or saved destinations, with the most recent first.
 Picker Open, file drops, Save, Save As, and recent-file selection update the same list.
 New and failed or cancelled operations do not add paths. A successful save before
@@ -34,7 +36,8 @@ Clearing does not erase filesystem backups or guarantee recovery-proof deletion.
 
 `Editor.Infrastructure/RecentFileHistory.cs`, namespace `Editor.Infrastructure`,
 owns the bounded history and filesystem storage. `EditorViewModel` exposes its
-paths and commands. `Program.Main` composes persistent history for the desktop app.
+paths and commands. `ViewModels/RecentFileEntry.cs` in `Editor.App.ViewModels`
+formats each menu label. `Program.Main` composes persistent history for the desktop app.
 Tests can supply memory-only history or an isolated settings path.
 No Core or Application API or dependency changes are required.
 
@@ -91,6 +94,8 @@ stored list and preserved the active document. The editor then closed through
 `WM_DELETE_WINDOW`. This was native X11 acceptance, not a Wayland session.
 An isolated Linux process also verified that the per-user factory persists history
 when `$XDG_DATA_HOME` points to a directory that does not yet exist.
+`eng/check-native-editor.py` repeats the recent-file reopen and persisted Clear
+checks through native input. It checks that Clear preserves dirty text and Undo.
 Windows and macOS native feature interaction remains untested locally.
 The existing CI matrix runs the same unit, headless, and native startup checks on
 Linux, Windows, and macOS. Native startup checks do not cover every menu interaction.

@@ -23,12 +23,12 @@
                 <TextBlock Text="{StaticResource Text.Recent.Privacy}" />
                 <TextBlock Text="{StaticResource Text.Recent.StorageFailed}" IsVisible="{Binding HistoryStorageFailed}"
                            AutomationProperties.LiveSetting="Polite" />
-                <ItemsControl x:Name="RecentFilesItems" ItemsSource="{Binding RecentPaths}">
+                <ItemsControl x:Name="RecentFilesItems" ItemsSource="{Binding RecentFiles}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                      <Button Content="{Binding}" HorizontalAlignment="Stretch"
+                    <DataTemplate x:DataType="vm:RecentFileEntry">
+                      <Button Content="{Binding Label}" ToolTip.Tip="{Binding Path}" HorizontalAlignment="Stretch"
                               Command="{Binding $parent[ItemsControl].((vm:EditorViewModel)DataContext).OpenRecentCommand}"
-                              CommandParameter="{Binding}" />
+                              CommandParameter="{Binding Path}" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>

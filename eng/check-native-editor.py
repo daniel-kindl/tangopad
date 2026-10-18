@@ -228,6 +228,43 @@ def exercise_drops(ui, files, launch):
     ui.editor()
 
 
+def exercise_recent(ui, files):
+    fixture = files / "recent.md"
+    fixture.write_bytes(b"# Recent file\r\ntext")
+    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "recent-files.json"
+
+    def paths():
+        return json.loads(settings.read_text())["paths"] if settings.exists() else []
+
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(fixture, saving=False)
+    ui.editor(fixture)
+    wait("recent path persisted in the fresh profile", lambda: paths() and paths()[0] == str(fixture))
+    ui.key("ctrl+n")
+    window = ui.editor()
+    ui.click(window, 185, 25)
+    # The first row follows the privacy notice. Keep focus in the popup.
+    ui.xdo("mousemove", "--window", window, 180, 107, "click", 1)
+    window = ui.editor(fixture)
+    ui.record("recent-file-reopen")
+    ui.key("ctrl+End")
+    ui.type("!")
+    window = ui.editor(fixture, dirty=True)
+    count = len(paths())
+    ui.click(window, 185, 25)
+    # Each ItemsControl row occupies 32 pixels. The clear button follows the list.
+    ui.xdo("mousemove", "--window", window, 100, 107 + (32 * count), "click", 1)
+    wait("cleared recent paths persisted", lambda: paths() == [])
+    ui.key("Escape")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+z")
+    ui.editor(fixture)
+    ui.bytes(fixture, b"# Recent file\r\ntext")
+    ui.record("recent-clear-preserves-document-and-undo")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def exercise(ui, files, app):
     first, second, output = (files / name for name in ("first.txt", "second.MD", "round trip.markdown"))
     fixture = files / "Unicode input.MARKDOWN"
@@ -335,7 +372,7 @@ def exercise(ui, files, app):
                 # IN_ACCESS and IN_OPEN detect reads of the referenced local asset.
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the preview asset.")
-                ui.click(window, 550, 25)
+                ui.click(window, 654, 25)
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Preview accessed a network or local-file resource.")
@@ -358,9 +395,9 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.bytes(markdown, markdown_text)
-        ui.click(window, 550, 25)
+        ui.click(window, 654, 25)
         ui.record("markdown-preview-hidden-with-undo-and-find")
-        ui.click(window, 550, 25)
+        ui.click(window, 654, 25)
         time.sleep(0.5)
         plain = files / "highlighting.txt"
         ui.picker("ctrl+shift+s", "Save text file")
@@ -464,14 +501,14 @@ def exercise(ui, files, app):
         for _ in range(5):
             ui.key("ctrl+plus")
         # Word Wrap follows Replace in the existing toolbar.
-        ui.click(window, 400, 25)
+        ui.click(window, 504, 25)
         ui.editor(wrapped)
         ui.record("word-wrap-enabled-long-unicode-line")
         ui.click(window, 120, 150)
         ui.key("ctrl+End")
         ui.type("!")
         ui.editor(wrapped, dirty=True)
-        ui.click(window, 400, 25)
+        ui.click(window, 504, 25)
         ui.record("word-wrap-disabled-after-edit")
         ui.click(window, 120, 150)
         ui.key("ctrl+z")
@@ -483,7 +520,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.bytes(wrapped, long_text + b"!")
         ui.editor(wrapped)
-        ui.click(window, 400, 25)
+        ui.click(window, 504, 25)
         ui.key("ctrl+n")
         ui.editor()
         ui.picker("ctrl+o", "Open text file")
@@ -526,7 +563,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.bytes(wrapped, long_text + b"!")
         ui.record("go-to-line-cancel-preserves-selection-and-bytes")
-        ui.click(window, 400, 25)
+        ui.click(window, 504, 25)
         ui.click(window, 120, 150)
         ui.key("ctrl+0")
         ui.key("ctrl+n")
@@ -615,6 +652,7 @@ def main():
             files = scratch / "files"
             files.mkdir()
             exercise_drops(ui, files, launch)
+            exercise_recent(ui, files)
             exercise(ui, files, app)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")

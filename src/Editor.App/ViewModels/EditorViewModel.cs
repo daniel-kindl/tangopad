@@ -22,11 +22,13 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     private readonly RecentFileHistory history = recentFiles ?? new();
 
     public IReadOnlyList<string> RecentPaths => history.Paths;
+    public IReadOnlyList<RecentFileEntry> RecentFiles => [.. history.Paths.Select(path => new RecentFileEntry(path))];
 
     internal async Task InitializeHistoryAsync()
     {
         await history.Ready.ConfigureAwait(true);
         OnPropertyChanged(nameof(RecentPaths));
+        OnPropertyChanged(nameof(RecentFiles));
     }
 
     [RelayCommand(CanExecute = nameof(CanStartOperation))]
@@ -40,6 +42,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     {
         history.Clear();
         OnPropertyChanged(nameof(RecentPaths));
+        OnPropertyChanged(nameof(RecentFiles));
         await UpdateHistoryStatusAsync().ConfigureAwait(true);
     }
 
@@ -47,6 +50,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     {
         history.Record(path);
         OnPropertyChanged(nameof(RecentPaths));
+        OnPropertyChanged(nameof(RecentFiles));
         _ = UpdateHistoryStatusAsync();
     }
 

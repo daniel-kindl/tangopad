@@ -210,7 +210,10 @@ public sealed class RecentFilesTests
     {
         window.RecentFilesButton.Flyout!.ShowAt(window.RecentFilesButton);
         Dispatcher.UIThread.RunJobs();
-        return Assert.Single(window.RecentFilesItems.GetVisualDescendants().OfType<Button>(), button => Equals(button.Content, path));
+        Button item = Assert.Single(window.RecentFilesItems.GetVisualDescendants().OfType<Button>(), button => Equals(button.CommandParameter, path));
+        Assert.Equal($"{Path.GetFileName(path)} ({Path.GetDirectoryName(path)})", item.Content);
+        Assert.Equal(path, ToolTip.GetTip(item));
+        return item;
     }
 
     private sealed class Dialogs : IEditorDialogs
