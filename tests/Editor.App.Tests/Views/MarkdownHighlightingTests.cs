@@ -190,19 +190,17 @@ public sealed class MarkdownHighlightingTests
 
     private static double Contrast(Color first, Color second)
     {
-        static double Linear(byte channel)
+        static double Linear(double value)
         {
-            double value = channel / 255.0;
             return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
         }
 
-        static double Luminance(Color color)
-        {
-            return (0.2126 * Linear(color.R)) + (0.7152 * Linear(color.G)) + (0.0722 * Linear(color.B));
-        }
-
-        double a = Luminance(first);
-        double b = Luminance(second);
+        double alpha = first.A / 255.0;
+        double red = ((first.R * alpha) + (second.R * (1 - alpha))) / 255.0;
+        double green = ((first.G * alpha) + (second.G * (1 - alpha))) / 255.0;
+        double blue = ((first.B * alpha) + (second.B * (1 - alpha))) / 255.0;
+        double a = (0.2126 * Linear(red)) + (0.7152 * Linear(green)) + (0.0722 * Linear(blue));
+        double b = (0.2126 * Linear(second.R / 255.0)) + (0.7152 * Linear(second.G / 255.0)) + (0.0722 * Linear(second.B / 255.0));
         return (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
     }
 
