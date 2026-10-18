@@ -6,8 +6,9 @@ application contracts. The domain owns no UI, parser, renderer, or filesystem im
 
 ## Current boundaries
 
-The solid arrows below are project references. Core owns plain-text document
-behavior. Application owns plain-text load and save orchestration and its persistence port.
+The solid arrows below are project references. Core owns document text behavior
+and filename-based format identification. Application owns plain-text load and
+save orchestration and its persistence port.
 
 ```mermaid
 flowchart LR
@@ -28,8 +29,8 @@ flowchart LR
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
 | Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
-| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore |
-| Editor.Core | Document rules and domain types | TextDocument identity, exact text, and clean baseline |
+| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format |
+| Editor.Core | Document rules and domain types | TextDocument identity, exact text, clean baseline, and document format identification |
 | Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
 | Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
 | Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
@@ -59,7 +60,7 @@ layers or change the dependency policy in `eng/architecture.json`.
 
 | Project | Current placement | Rule as the project grows |
 | --- | --- | --- |
-| Editor.Core | `TextDocument.cs` at the root | Group related domain types under a feature such as `Documents/`. |
+| Editor.Core | `TextDocument.cs`, `DocumentFormat.cs`, and `DocumentFormats.cs` at the root | Group related domain types under a feature such as `Documents/`. |
 | Editor.Application | `DocumentSession.cs` and `ITextDocumentStore.cs` at the root | Group use cases and their contracts under a feature such as `Documents/`. |
 | Editor.Infrastructure | `FileTextDocumentStore.cs` at the root | Group external-system implementations by capability, such as `Persistence/`, `Logging/`, or `Metadata/`. |
 | Editor.App | Presentation directories below | Use responsibility directories now. Add feature directories within them when a feature needs a distinct group. |
@@ -119,7 +120,7 @@ native acceptance scripts, and build tooling. Update affected references togethe
 Create a module when a real use case requires it. Update the dependency policy
 and ADR before adding its implementation. These are intended permissions, not existing references:
 
-- `Editor.Formats.Markdown` may reference Application and Core. It owns Markdown format policy and parser adaptation.
+- `Editor.Formats.Markdown` may reference Application and Core. It may own Markdown capabilities and parser adaptation. Filename classification remains in Core.
 - App may reference concrete adapters to compose them.
 - Adapters cannot reference App or one another.
 - Core references no project. Application references only Core.
@@ -174,3 +175,5 @@ See [ADR 0005](adr/0005-document-persistence-use-cases.md) for persistence contr
 See [ADR 0006](adr/0006-local-text-persistence.md) for UTF-8, replacement, metadata, and platform limits.
 
 See [ADR 0007](adr/0007-plain-text-editor.md) for UI synchronization and desktop command behavior.
+
+[Document formats](document-formats.md) defines extension mapping and session format transitions.

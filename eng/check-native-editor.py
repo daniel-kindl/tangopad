@@ -152,8 +152,8 @@ class Desktop:
 
 
 def exercise(ui, files, app):
-    first, second, output = (files / name for name in ("first.txt", "second.txt", "round trip.txt"))
-    fixture = files / "Unicode input.txt"
+    first, second, output = (files / name for name in ("first.txt", "second.MD", "round trip.markdown"))
+    fixture = files / "Unicode input.MARKDOWN"
     fixture.write_bytes("λ café 😀\r\nsecond\nthird\rfourth".encode("utf-8"))
     invalid = files / "invalid.txt"
     invalid.write_bytes(b"\xff\xfeinvalid")

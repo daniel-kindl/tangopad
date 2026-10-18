@@ -27,6 +27,9 @@ public sealed class DocumentSession
     /// <remarks>The destination is opaque. The session does not normalize paths or test file existence.</remarks>
     public string? Destination { get; private set; }
 
+    /// <summary>Gets the format identified from the last successful destination, or plain text when untitled.</summary>
+    public DocumentFormat Format => DocumentFormats.Identify(Destination);
+
     /// <summary>Creates an empty, clean document without a destination.</summary>
     /// <param name="store">The persistence adapter for this session.</param>
     /// <returns>The untitled session.</returns>

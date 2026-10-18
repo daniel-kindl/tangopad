@@ -1,3 +1,4 @@
+using Editor.Core;
 using Xunit;
 
 namespace Editor.Application.Tests;
@@ -43,6 +44,7 @@ public sealed class DocumentSessionTests
         Guid identity = session.Document.Id;
 
         Assert.Null(session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.False(session.Document.IsDirty);
         _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
         Assert.Empty(store.Writes);
@@ -70,18 +72,20 @@ public sealed class DocumentSessionTests
         session.Document.ReplaceText("snapshot");
         store.Save = _ => completion.Task;
 
-        Task save = session.SaveAsAsync("new.txt", TestContext.Current.CancellationToken);
+        Task save = session.SaveAsAsync("new.md", TestContext.Current.CancellationToken);
         Assert.False(save.IsCompleted);
         Assert.Equal("old.txt", session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         session.Document.ReplaceText("newer edit");
         _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
         _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsAsync("overlap.txt", TestContext.Current.CancellationToken));
-        Assert.Equal(("new.txt", "snapshot"), Assert.Single(store.Writes));
+        Assert.Equal(("new.md", "snapshot"), Assert.Single(store.Writes));
 
         completion.SetResult();
         await save.ConfigureAwait(true);
 
-        Assert.Equal("new.txt", session.Destination);
+        Assert.Equal("new.md", session.Destination);
+        Assert.Equal(DocumentFormat.Markdown, session.Format);
         Assert.Equal("newer edit", session.Document.Text);
         Assert.Equal(identity, session.Document.Id);
         Assert.True(session.Document.IsDirty);
@@ -109,11 +113,12 @@ public sealed class DocumentSessionTests
         store.Save = _ => Task.FromException(failure);
 
         Exception actual = await Assert.ThrowsAsync<InvalidOperationException>(() => saveAs
-            ? session.SaveAsAsync("new.txt", TestContext.Current.CancellationToken)
+            ? session.SaveAsAsync("new.md", TestContext.Current.CancellationToken)
             : session.SaveAsync(TestContext.Current.CancellationToken));
 
         Assert.Same(failure, actual);
         Assert.Equal("old.txt", session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.Equal(identity, session.Document.Id);
         Assert.Equal("draft", session.Document.Text);
         Assert.True(session.Document.IsDirty);
@@ -132,13 +137,14 @@ public sealed class DocumentSessionTests
         MemoryStore store = new() { Save = token => Task.Delay(Timeout.Infinite, token) };
         DocumentSession session = DocumentSession.CreateUntitled(store);
         session.Document.ReplaceText("draft");
-        Task save = session.SaveAsAsync("cancelled.txt", cancellation.Token);
+        Task save = session.SaveAsAsync("cancelled.md", cancellation.Token);
         Assert.False(save.IsCompleted);
         await cancellation.CancelAsync();
 
         OperationCanceledException error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => save);
         Assert.Equal(cancellation.Token, error.CancellationToken);
         Assert.Null(session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.Equal("draft", session.Document.Text);
         Assert.True(session.Document.IsDirty);
         session.Document.ReplaceText("");
@@ -161,6 +167,7 @@ public sealed class DocumentSessionTests
         Assert.Null(store.LoadDestination);
         Assert.Empty(store.Writes);
         Assert.Null(session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
     }
 
     /// <summary>Checks that an adapter cannot force acknowledgement after cancellation.</summary>
@@ -172,7 +179,7 @@ public sealed class DocumentSessionTests
         MemoryStore store = new() { Save = _ => completion.Task };
         DocumentSession session = await DocumentSession.LoadAsync(store, "old.txt", TestContext.Current.CancellationToken);
         session.Document.ReplaceText("snapshot");
-        Task save = session.SaveAsAsync("new.txt", cancellation.Token);
+        Task save = session.SaveAsAsync("new.md", cancellation.Token);
         session.Document.ReplaceText("newer edit");
         await cancellation.CancelAsync();
         completion.SetResult();
@@ -180,6 +187,7 @@ public sealed class DocumentSessionTests
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => save);
 
         Assert.Equal("old.txt", session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.Equal("newer edit", session.Document.Text);
         Assert.True(session.Document.IsDirty);
         session.Document.ReplaceText("snapshot");
@@ -262,8 +270,63 @@ public sealed class DocumentSessionTests
         _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => DocumentSession.LoadAsync(store, destination!, TestContext.Current.CancellationToken));
         _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => session.SaveAsAsync(destination!, TestContext.Current.CancellationToken));
         Assert.Null(session.Destination);
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.Null(store.LoadDestination);
         Assert.Empty(store.Writes);
+    }
+
+    /// <summary>Checks format transitions without changes to document identity or exact text.</summary>
+    /// <param name="original">The loaded destination.</param>
+    /// <param name="renamed">The saved destination.</param>
+    /// <param name="initialFormat">The format before save-as.</param>
+    /// <param name="savedFormat">The format after save-as.</param>
+    [Theory]
+    [InlineData("old.txt", "new.MD", DocumentFormat.PlainText, DocumentFormat.Markdown)]
+    [InlineData("old.md", "new.txt", DocumentFormat.Markdown, DocumentFormat.PlainText)]
+    [InlineData("old.markdown", "new.unknown", DocumentFormat.Markdown, DocumentFormat.PlainText)]
+    [InlineData("old.unknown", "new.MARKDOWN", DocumentFormat.PlainText, DocumentFormat.Markdown)]
+    [InlineData("old.md", "new", DocumentFormat.Markdown, DocumentFormat.PlainText)]
+    public async Task SaveAsUpdatesFormatAfterSuccess(string original, string renamed,
+        DocumentFormat initialFormat, DocumentFormat savedFormat)
+    {
+        const string text = "# Příliš 🐈\r\n漢字\n\0e\u0301";
+        MemoryStore store = new() { Text = text };
+        DocumentSession session = await DocumentSession.LoadAsync(store, original, TestContext.Current.CancellationToken);
+        Guid identity = session.Document.Id;
+        Assert.Equal(initialFormat, session.Format);
+        Assert.False(session.Document.IsDirty);
+
+        await session.SaveAsAsync(renamed, TestContext.Current.CancellationToken);
+
+        Assert.Equal(savedFormat, session.Format);
+        Assert.Equal(renamed, session.Destination);
+        Assert.Equal(identity, session.Document.Id);
+        Assert.Equal(text, session.Document.Text);
+        Assert.False(session.Document.IsDirty);
+        Assert.Equal((renamed, text), Assert.Single(store.Writes));
+        await session.SaveAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(savedFormat, session.Format);
+        Assert.Equal((renamed, text), store.Writes[1]);
+    }
+
+    /// <summary>Checks that the first successful save identifies an untitled document.</summary>
+    [Fact]
+    public async Task UntitledFormatChangesOnlyAfterSave()
+    {
+        MemoryStore store = new();
+        DocumentSession session = DocumentSession.CreateUntitled(store);
+        Guid identity = session.Document.Id;
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
+        session.Document.ReplaceText("# draft");
+        Assert.Equal(DocumentFormat.PlainText, session.Format);
+        Assert.True(session.Document.IsDirty);
+
+        await session.SaveAsAsync("first.md", TestContext.Current.CancellationToken);
+
+        Assert.Equal(DocumentFormat.Markdown, session.Format);
+        Assert.Equal(identity, session.Document.Id);
+        Assert.Equal("# draft", session.Document.Text);
+        Assert.False(session.Document.IsDirty);
     }
 
     private sealed class MemoryStore : ITextDocumentStore
