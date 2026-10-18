@@ -6,11 +6,12 @@ using Editor.App.Resources;
 using Editor.App.Services;
 using Editor.Application;
 using Editor.Core;
+using Editor.Infrastructure;
 
 namespace Editor.App.ViewModels;
 
 // All calls and continuations use the UI thread, as required by DocumentSession.
-internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels) : ObservableObject
+internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels, RecentFileHistory? recentFiles = null) : ObservableObject
 {
     private const double DefaultFontSize = 15;
     private const double MinimumFontSize = 8;
@@ -18,6 +19,45 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     private const double FontSizeStep = 1;
 
     private CancellationTokenSource? operation;
+    private readonly RecentFileHistory history = recentFiles ?? new();
+
+    public IReadOnlyList<string> RecentPaths => history.Paths;
+
+    internal async Task InitializeHistoryAsync()
+    {
+        await history.Ready.ConfigureAwait(true);
+        OnPropertyChanged(nameof(RecentPaths));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    private Task<bool> OpenRecentAsync(string path)
+    {
+        return OpenPathAsync(path);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartOperation))]
+    private async Task ClearRecentFilesAsync()
+    {
+        history.Clear();
+        OnPropertyChanged(nameof(RecentPaths));
+        await UpdateHistoryStatusAsync().ConfigureAwait(true);
+    }
+
+    private void RecordRecent(string path)
+    {
+        history.Record(path);
+        OnPropertyChanged(nameof(RecentPaths));
+        _ = UpdateHistoryStatusAsync();
+    }
+
+    [ObservableProperty]
+    public partial bool HistoryStorageFailed { get; private set; }
+
+    private async Task UpdateHistoryStatusAsync()
+    {
+        await history.FlushAsync().ConfigureAwait(true);
+        HistoryStorageFailed = history.StorageFailed;
+    }
 
     [ObservableProperty]
     public partial double FontSize { get; private set; } = DefaultFontSize;
@@ -48,7 +88,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     partial void OnCanEditChanged(bool value) { Search.CanEdit = value; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand), nameof(OpenRecentCommand), nameof(ClearRecentFilesCommand))]
     public partial bool IsBusy { get; private set; }
 
     [ObservableProperty]
@@ -151,6 +191,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 
         CanEdit = false;
         DocumentSession loaded = await DocumentSession.LoadAsync(store, path, token).ConfigureAwait(true);
+        RecordRecent(path);
         Session = loaded;
         Text = Session.Document.Text;
         OnPropertyChanged(nameof(DocumentId));
@@ -210,6 +251,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 
         token.ThrowIfCancellationRequested();
         await Session.SaveAsAsync(path, token).ConfigureAwait(true);
+        RecordRecent(path);
         OnPropertyChanged(nameof(Format));
         return true;
     }

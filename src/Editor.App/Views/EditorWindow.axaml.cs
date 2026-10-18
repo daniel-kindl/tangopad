@@ -12,6 +12,7 @@ using Editor.App.ViewModels;
 using Editor.App.Views.Dialogs;
 using Editor.Application;
 using Editor.Formats.Markdown;
+using Editor.Infrastructure;
 
 namespace Editor.App.Views;
 
@@ -22,11 +23,16 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null)
     {
         InitializeComponent();
-        ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels);
+        ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles);
         DataContext = ViewModel;
+        RecentFilesItems.AddHandler(Button.ClickEvent, (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            RecentFilesButton.Flyout?.Hide();
+            _ = Editor.TextArea.Focus();
+        }));
         Preview = new MarkdownPreviewAdapter(this, previewParser);
         EditorBufferAdapter buffer = new(Editor, ViewModel);
         MarkdownHighlightingAdapter highlighting = new(Editor, ViewModel);
@@ -60,7 +66,11 @@ internal sealed partial class EditorWindow : Window
         RegisterDropHandlers(this);
         Closing += OnClosing;
         Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); };
-        Opened += (_, _) => Editor.TextArea.Focus();
+        Opened += async (_, _) =>
+        {
+            _ = Editor.TextArea.Focus();
+            await ViewModel.InitializeHistoryAsync().ConfigureAwait(true);
+        };
     }
 
     internal EditorViewModel ViewModel { get; }
