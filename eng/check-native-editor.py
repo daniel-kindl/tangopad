@@ -543,7 +543,9 @@ def main():
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()
+            ui.click(window, 120, 100)
             ui.type("discard on close")
+            window = ui.editor(dirty=True)
             ui.close(window)
             ui.decision("Discard")
             wait("exit after Discard", lambda: app.poll() is not None)
