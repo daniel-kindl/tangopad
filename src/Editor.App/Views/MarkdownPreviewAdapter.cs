@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Interactivity;
@@ -101,10 +102,27 @@ internal sealed class MarkdownPreviewAdapter : IDisposable
                 pending = false;
                 Guid identity = viewModel.DocumentId;
                 string source = viewModel.Text;
-                PreviewDocument document = await Task.Run(() => parse(source), lifetime.Token).ConfigureAwait(true);
-                if (!detached && requested == revision && identity == viewModel.DocumentId && window.PreviewScroll.IsVisible)
+                try
                 {
-                    Render(document);
+                    PreviewDocument document = await Task.Run(() => parse(source), lifetime.Token).ConfigureAwait(true);
+                    if (IsCurrent(requested, identity))
+                    {
+                        Render(document);
+                    }
+                }
+                catch (Exception error) when (error is not (OutOfMemoryException or StackOverflowException or AccessViolationException)
+                    && !(error is OperationCanceledException && lifetime.IsCancellationRequested))
+                {
+                    // A failed attempt must not stop newer requests in this serial loop.
+                    if (IsCurrent(requested, identity))
+                    {
+                        window.PreviewBlocks.Children.Clear();
+                        TextBlock message = new() { Text = PresentationResources.Text("Text.Preview.Unavailable") };
+                        message.Classes.Add("preview-block");
+                        AutomationProperties.SetName(message, message.Text);
+                        AutomationProperties.SetLiveSetting(message, AutomationLiveSetting.Polite);
+                        window.PreviewBlocks.Children.Add(message);
+                    }
                 }
             }
         }
@@ -112,6 +130,11 @@ internal sealed class MarkdownPreviewAdapter : IDisposable
         {
             // Closing the window cancels delays and discards any parser result.
         }
+    }
+
+    private bool IsCurrent(long requested, Guid identity)
+    {
+        return !detached && requested == revision && identity == viewModel.DocumentId && window.PreviewScroll.IsVisible;
     }
 
     private void Render(PreviewDocument document)
