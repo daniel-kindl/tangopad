@@ -73,6 +73,8 @@
         </TextBlock>
         <TextBlock x:Name="CharacterStatus" Classes="editor-status"
                    Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
+        <TextBlock x:Name="WordStatus" Classes="editor-status"
+                   Text="{Binding WordCount, StringFormat={StaticResource Text.Status.WordCountFormat}}" />
       </StackPanel>
     </Border>
     <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">

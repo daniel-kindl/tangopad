@@ -56,6 +56,83 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.Equal(["CaretLine", "CaretColumn"], notifications);
     }
 
+    /// <summary>Words are maximal runs of non-whitespace Unicode scalars in exact source text.</summary>
+    /// <param name="text">The document text.</param>
+    /// <param name="characters">The expected scalar count.</param>
+    /// <param name="words">The expected word count.</param>
+    [Theory]
+    [InlineData("", 0, 0)]
+    [InlineData("hello world", 11, 2)]
+    [InlineData("  one  two ", 11, 2)]
+    [InlineData(" \t\r\n\v\f\u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000", 25, 0)]
+    [InlineData("a\r\nb\nc\rd\te", 10, 5)]
+    [InlineData("a\u00a0b\u2003c\u2028d\u2029e\u0085f\u3000g", 13, 7)]
+    [InlineData("😀🚀 e\u0301 \u0301", 7, 3)]
+    [InlineData("a\u200bb\ufeffc", 5, 1)]
+    [InlineData("# Heading\n**bold text** [link](url)\n- item", 42, 7)]
+    [InlineData("```\ncode\tvalue\n```", 18, 4)]
+    [InlineData("--- ***", 7, 2)]
+    public void WordCountUsesSourceWhitespace(string text, int characters, int words)
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Guid identity = viewModel.DocumentId;
+        Assert.Equal(0, viewModel.WordCount);
+        viewModel.Text = text;
+        Assert.Equal(words, viewModel.WordCount);
+        Assert.Equal(characters, viewModel.CharacterCount);
+        Assert.Equal(text, viewModel.Session.Document.Text);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal(characters != 0, viewModel.IsDirty);
+    }
+
+    /// <summary>Malformed UTF-16 retains the character policy and does not create word boundaries.</summary>
+    [Fact]
+    public void CountsPreserveUnpairedSurrogates()
+    {
+        const string text = "a\ud800 b\udc00";
+        EditorViewModel viewModel = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *")) { Text = text };
+        Assert.Equal(5, viewModel.CharacterCount);
+        Assert.Equal(2, viewModel.WordCount);
+        Assert.Equal(text, viewModel.Session.Document.Text);
+    }
+
+    /// <summary>Text edits and document commands notify word changes. Navigation preserves both counts.</summary>
+    [Fact]
+    public async Task WordCountNotificationsFollowTextAndDocumentChanges()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs { OpenPath = "/open.md", Decision = UnsavedDecision.Discard },
+            new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.Text = "a b";
+        Assert.Equal(2, viewModel.WordCount);
+        Assert.Contains("WordCount", notifications);
+        notifications.Clear();
+        viewModel.Text = "abc";
+        Assert.Equal(1, viewModel.WordCount);
+        Assert.Contains("WordCount", notifications);
+        Assert.DoesNotContain("CharacterCount", notifications);
+        notifications.Clear();
+        viewModel.Text = "xyz";
+        Assert.DoesNotContain("WordCount", notifications);
+        notifications.Clear();
+        viewModel.CaretLine = 2;
+        viewModel.CaretColumn = 3;
+        Assert.Equal(["CaretLine", "CaretColumn"], notifications);
+        Assert.Equal(1, viewModel.WordCount);
+        Assert.Equal(3, viewModel.CharacterCount);
+        notifications.Clear();
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.Equal(0, viewModel.WordCount);
+        Assert.Contains("WordCount", notifications);
+        notifications.Clear();
+        Assert.True(await viewModel.OpenAsync().ConfigureAwait(true));
+        Assert.Equal(1, viewModel.WordCount);
+        Assert.Equal(9, viewModel.CharacterCount);
+        Assert.Contains("WordCount", notifications);
+        Assert.False(viewModel.IsDirty);
+    }
+
     /// <summary>Generated commands notify consumers and reject overlapping document operations.</summary>
     [Fact]
     public async Task CommandsPublishBusyStateAndPreservePendingEdits()
@@ -328,12 +405,12 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.False(viewModel.IsDirty);
     }
 
-    /// <summary>Large updates keep the scalar count correct and caret navigation leaves the text unchanged.</summary>
+    /// <summary>Large updates keep the document counts correct and caret navigation leaves the text unchanged.</summary>
     /// <param name="repetitions">The number of eight-code-unit tokens.</param>
     [Theory]
     [InlineData(125_000)]
     [InlineData(1_250_000)]
-    public void CharacterCountLargeInputs(int repetitions)
+    public void DocumentCountsLargeInputs(int repetitions)
     {
         string text = string.Concat(Enumerable.Repeat("a😀e\u0301\r\nx", repetitions));
         string edited = text + "!";
@@ -355,6 +432,7 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         long editBytes = GC.GetAllocatedBytesForCurrentThread() - allocated;
         double editMilliseconds = watch.Elapsed.TotalMilliseconds / 100;
         Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
+        Assert.Equal(repetitions + 1, viewModel.WordCount);
         watch.Restart();
         for (int index = 0; index < 100_000; index++)
         {
@@ -363,6 +441,7 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
 
         watch.Stop();
         Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
+        Assert.Equal(repetitions + 1, viewModel.WordCount);
         Assert.Same(edited, viewModel.Text);
         output.WriteLine($"{text.Length:N0} UTF-16 code units: {editMilliseconds:F3} ms/update, {editBytes / 100} bytes/update; 100,000 caret changes: {watch.Elapsed.TotalMilliseconds:F3} ms.");
     }

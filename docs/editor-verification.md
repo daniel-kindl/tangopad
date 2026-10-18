@@ -361,7 +361,7 @@ JIT warmup and concurrent host activity can affect these measurements.
 Repeat the profile from the repository root:
 
 ```sh
-dotnet test --project tests/Editor.App.Tests --configuration Release -- --filter-method '*CharacterCountLargeInputs' --show-live-output on
+dotnet test --project tests/Editor.App.Tests --configuration Release -- --filter-method '*DocumentCountsLargeInputs' --show-live-output on
 ```
 
 `python3 eng/check-native-editor.py` passed all 29 groups on Fedora Linux 44,
@@ -374,3 +374,68 @@ file operations, exact saved bytes, and close checks pass.
 
 Windows and macOS native interaction remains untested on this Linux host.
 Hosted Linux, Windows, and macOS checks must pass before a normal merge.
+
+## Word count, issue #59
+
+`Editor.App/ViewModels/EditorViewModel.cs` owns the cached `WordCount` property in
+`Editor.App.ViewModels`. Its text-change handler counts characters and words in one
+Unicode-scalar loop. `Views/EditorWindow.axaml` uses a compiled binding and the
+shared `Text.Status.WordCountFormat` resource in `Resources/Text.axaml`.
+The status label reuses the current style and spacing. No module, dependency,
+namespace, public API, or persistence change is required.
+
+A word is a maximal sequence of non-whitespace Unicode scalar values.
+Unicode whitespace separates words, including tabs, CRLF, LF, CR, non-breaking
+spaces, and Unicode line separators. Empty and whitespace-only text has zero
+words. The policy applies to plain text and Markdown source. Markdown punctuation
+remains part of the count. The count uses no linguistic or rendered-Markdown
+segmentation. The character-count policy remains unchanged. Counting does not
+normalize or replace text, including unpaired UTF-16 surrogates.
+
+The first headless test failed because `WordStatus` was absent.
+Table-driven ViewModel tests cover the word policy and existing character counts.
+Notification tests cover equal-length edits that change word boundaries, edits
+that preserve counts, caret movement, New, and Open. Headless tests exercise both
+themes, typing, clipboard paste, Find/Replace, undo, redo, New, and Open.
+They check selection, caret, document identity, dirty state, undo history, and
+exact UTF-8 save bytes. Selection, scrolling, font size, Word Wrap, and a live
+theme change send no text or count notifications. Source inspection confirms
+that only the text-change handler performs the recount.
+
+The isolated Release profile uses the existing large-input test, now with word
+assertions. It alternates preallocated text and text plus `!` for 100 updates
+after 20 warmup updates. Each token contains ASCII, a supplementary character,
+a combining mark, and CRLF. The measurements include document synchronization
+and ViewModel count updates. They exclude string creation, AvaloniaEdit buffer
+updates, layout, highlighting, and Markdown preview. No timing threshold applies.
+
+| UTF-16 code units | Mean time per text update | Allocated bytes per text update |
+| --- | --- | --- |
+| 1,000,000 | 2.014 ms | 0 |
+| 10,000,000 | 20.367 ms | 0 |
+
+The corresponding 100,000 caret changes took 0.222 ms and 6.259 ms.
+The count performs linear work on the UI thread. At ten million code units,
+counting alone exceeds a 16.7 ms frame interval on this host. Large edits can
+therefore delay input or rendering. The smaller fixture takes about 2 ms for
+counting and ViewModel synchronization. These results do not measure complete
+keystroke latency. Keep the single correct pass for this version. Reassess
+scheduling or incremental counts if measured document workloads require them.
+
+After a Release build, repeat the isolated profile from the repository root:
+
+```sh
+dotnet tests/Editor.App.Tests/bin/Release/net10.0/Editor.App.Tests.dll --filter-method '*DocumentCountsLargeInputs' --output Detailed --show-live-output on
+```
+
+`dotnet msbuild eng/verify.proj` passed on Fedora Linux 44, x64, with SDK 10.0.402.
+Locked restore, formatting, analyzers, and Debug and Release builds passed with
+zero diagnostics. Tests passed 234 cases and skipped one Windows-only filesystem
+case. All seven TRX reports passed validation. Native startup passed.
+`python3 eng/check-native-editor.py` passed all 29 native workflow groups with
+Xvfb, a private D-Bus session, and the GTK portal. Local evidence is in
+`artifacts/native-editor-durhz178`. The inspected Unicode fixture screenshot
+shows `Characters: 29` and `Words: 6` beside the caret status.
+
+Windows and macOS native interaction remains untested on this Linux host.
+Hosted Linux, Windows, and macOS verification must pass before a normal merge.

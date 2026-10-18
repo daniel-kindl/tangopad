@@ -63,11 +63,16 @@ Go To Line accepts whole numbers from 1 to 2147483647. Numbers beyond the last
 line go to the beginning of the last logical line. Wrapping does not change line numbers.
 Enter confirms the line. Escape, Cancel, or closing the dialog preserves the caret and selection.
 
-The bottom status bar shows the caret line and column and the document character count.
+The bottom status bar shows the caret line and column, character count, and word count.
 Characters are Unicode scalar values. A supplementary character such as `😀` counts as one.
 A base letter and a combining mark count separately. CRLF counts as two characters.
 LF and CR each count as one. This is not a count of visible glyphs or grapheme clusters.
-The count updates after edits, undo, redo, Open, and New.
+Words are maximal sequences of non-whitespace Unicode scalar values separated by Unicode whitespace.
+Empty and whitespace-only documents have zero words. Tabs, CRLF, LF, CR, and other Unicode whitespace separate words.
+The policy counts plain text and Markdown source, including punctuation. It does not count rendered Markdown words or use language-aware segmentation.
+Both counts update after typing, paste, Find/Replace, undo, redo, Open, and New.
+Caret movement, selection, theme changes, and scrolling reuse the cached counts.
+Counting preserves the exact text without normalization.
 
 You can continue editing during a save. Edits after the saved snapshot remain dirty.
 Cancel operation requests cancellation of pending file I/O.
