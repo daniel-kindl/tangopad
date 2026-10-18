@@ -59,8 +59,9 @@ package, or namespace dependency changes are required. The UI needs no format la
 and cancellation. `FileTextDocumentStoreTests` checks exact UTF-8 bytes during
 filename transitions and reopens the saved documents.
 
-## Next Markdown tasks
+## Markdown presentation
 
-Syntax highlighting is a separate issue. Markdig preview follows in another issue,
-with separate parser and rendering acceptance criteria. Neither task is part of
-format identification. Recheck Markdig before adding a dependency.
+Source highlighting and the optional preview consume the authoritative session
+format. Neither feature checks file extensions.
+[ADR 0008](adr/0008-safe-markdown-preview.md) defines parser ownership, rendering,
+security, and resource limits.

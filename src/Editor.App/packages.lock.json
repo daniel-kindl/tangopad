@@ -212,11 +212,23 @@
       "editor.core": {
         "type": "Project"
       },
+      "editor.formats.markdown": {
+        "type": "Project",
+        "dependencies": {
+          "Markdig": "[1.4.1, )"
+        }
+      },
       "editor.infrastructure": {
         "type": "Project",
         "dependencies": {
           "Editor.Application": "[0.1.0, )"
         }
+      },
+      "Markdig": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "laiWlBRnwVqQlY9eWR56+uteUVtR+LpGw0doMSpirFuxdplSi3V59UOGRTepJaE8hJvfKGcCoguIZ8jmUHcEnA=="
       }
     }
   }

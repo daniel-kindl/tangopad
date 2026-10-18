@@ -37,4 +37,8 @@
   <x:String x:Key="Text.GoToLine.Prompt">Enter a line number. Larger numbers go to the last line.</x:String>
   <x:String x:Key="Text.GoToLine.Invalid">Enter a whole number from 1 to 2147483647.</x:String>
   <x:String x:Key="Text.GoToLine.Go">Go</x:String>
+  <x:String x:Key="Text.Preview.Show">Show Preview</x:String>
+  <x:String x:Key="Text.Preview.Hide">Hide Preview</x:String>
+  <x:String x:Key="Text.Preview.Name">Markdown preview</x:String>
+  <x:String x:Key="Text.Preview.Limited">Preview limit reached. Continue editing in the source pane.</x:String>
 </ResourceDictionary>

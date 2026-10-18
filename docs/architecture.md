@@ -17,11 +17,14 @@ flowchart LR
     Application --> Core[Editor.Core]
     Infrastructure[Editor.Infrastructure] --> Application
     App --> Avalonia[Avalonia desktop, Fluent theme, and AvaloniaEdit]
+    App --> Markdown[Editor.Formats.Markdown]
+    Markdown --> Markdig
     App --> Toolkit[CommunityToolkit.Mvvm]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
     ApplicationTests[Editor.Application.Tests] --> Application
     CoreTests[Editor.Core.Tests] --> Core
     InfrastructureTests[Editor.Infrastructure.Tests] --> Infrastructure
+    MarkdownTests[Editor.Formats.Markdown.Tests] --> Markdown
     AppTests[Editor.App.Tests] --> App
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
@@ -31,7 +34,9 @@ flowchart LR
 | Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, clean baseline, and document format identification |
+| Editor.Formats.Markdown | Markdown parsing and inert preview records | Bounded Markdig adapter without UI or resource loading |
 | Editor.Infrastructure | Local persistence | Strict UTF-8 load and save through same-directory replacement |
+| Editor.Formats.Markdown.Tests | Parser behavior | Baseline syntax, hostile text, and resource limits without Avalonia |
 | Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
 | Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
@@ -48,7 +53,8 @@ DesktopEditorDialogs owns native pickers and owned dialogs.
 `Program.Main` is the single composition root. `App.axaml` owns the theme resources.
 App code-behind performs framework lifecycle setup only. The document service receives its persistence port directly. No service container is necessary.
 Application and Core reference no NuGet packages. Production code never references tests.
-Infrastructure references Application only and adds no packages. App composes the adapter through Program.Main.
+Infrastructure references Application only and adds no packages.
+Editor.Formats.Markdown references Markdig only. App renders its inert records with native controls. App composes the adapter through Program.Main.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
 
@@ -74,6 +80,7 @@ Editor.App uses these directories:
 
 - `Views/` contains `EditorWindow.axaml` and its code-behind. `EditorBufferAdapter`
   stays beside its consuming view because it connects that window to AvaloniaEdit.
+  `MarkdownPreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text.
   `MarkdownHighlightingAdapter` and its embedded `Markdown.xshd` definition also stay
   here. They select visual highlighting from the session format.
 - `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
@@ -117,12 +124,18 @@ Record directory and namespace placement in new issues and pull request reviews.
 For each move, check consumers, compiled bindings, resource URIs, test fixtures,
 native acceptance scripts, and build tooling. Update affected references together.
 
+## Markdown boundary
+
+Editor.Formats.Markdown owns parser adaptation and preview records at its project root.
+Its namespace is `Editor.Formats.Markdown`. It has no project references.
+See [ADR 0008](adr/0008-safe-markdown-preview.md) for limits, security, and dependency rationale.
+
 ## Future boundaries
 
 Create a module when a real use case requires it. Update the dependency policy
 and ADR before adding its implementation. These are intended permissions, not existing references:
 
-- `Editor.Formats.Markdown` may reference Application and Core. It may own Markdown capabilities and parser adaptation. Filename classification remains in Core.
+- `Editor.Formats.Markdown` may reference Application and Core when a use case needs their contracts. It currently references neither. Filename classification remains in Core.
 - App may reference concrete adapters to compose them.
 - Adapters cannot reference App or one another.
 - Core references no project. Application references only Core.

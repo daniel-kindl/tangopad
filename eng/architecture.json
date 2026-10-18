@@ -2,7 +2,8 @@
   "src/Editor.App/Editor.App.csproj": {
     "projects": [
       "src/Editor.Application/Editor.Application.csproj",
-      "src/Editor.Infrastructure/Editor.Infrastructure.csproj"
+      "src/Editor.Infrastructure/Editor.Infrastructure.csproj",
+      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj"
     ],
     "packages": [
       "Avalonia.Desktop",
@@ -71,6 +72,20 @@
     ],
     "packages": [
       "Avalonia.Headless",
+      "xunit.v3"
+    ]
+  },
+  "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj": {
+    "projects": [],
+    "packages": [
+      "Markdig"
+    ]
+  },
+  "tests/Editor.Formats.Markdown.Tests/Editor.Formats.Markdown.Tests.csproj": {
+    "projects": [
+      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj"
+    ],
+    "packages": [
       "xunit.v3"
     ]
   }

@@ -6,6 +6,8 @@ import ctypes
 import json
 import os
 import platform
+import select
+import socket
 from pathlib import Path
 import shutil
 import subprocess
@@ -237,13 +239,54 @@ def exercise(ui, files, app):
         ui.editor()
         ui.record("new-cancel-save-discard")
 
-        markdown = files / "highlighting.md"
-        markdown_text = b"# Heading\r\n**strong** and *emphasis* and `code`\n[link](https://example.com)\n> quote\n- item\n1. item\n```\n# fenced code\n```\nordinary text"
-        markdown.write_bytes(markdown_text)
-        ui.picker("ctrl+o", "Open text file")
-        ui.choose(markdown, saving=False)
-        ui.editor(markdown)
-        ui.record("markdown-highlighting")
+        with socket.socket() as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen()
+            asset = ui.evidence / "preview-local.svg"
+            asset.write_text('<svg xmlns="http://www.w3.org/2000/svg"><text>local secret</text></svg>')
+            markdown = files / "highlighting.md"
+            markdown_text = b"# Heading\r\n**strong** and *emphasis* and `code`\n[link](https://example.com)\n> quote\n- item\n1. item\n```\n# fenced code\n```\nordinary text"
+            markdown_text += f"\n\n![remote](http://127.0.0.1:{server.getsockname()[1]}/image) ![local]({asset.as_uri()})\n\n<script>alert(1)</script>".encode()
+            markdown.write_bytes(markdown_text)
+            ui.picker("ctrl+o", "Open text file")
+            ui.choose(markdown, saving=False)
+            window = ui.editor(markdown)
+            ui.record("markdown-highlighting")
+            libc = ctypes.CDLL(None, use_errno=True)
+            watch = libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+            if watch < 0:
+                raise OSError(ctypes.get_errno(), "Cannot create the preview file-access monitor.")
+            try:
+                # IN_ACCESS and IN_OPEN detect reads of the referenced local asset.
+                if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
+                    raise OSError(ctypes.get_errno(), "Cannot monitor the preview asset.")
+                ui.click(window, 550, 25)
+                time.sleep(0.5)
+                if select.select([server, watch], [], [], 0)[0]:
+                    raise RuntimeError("Preview accessed a network or local-file resource.")
+                ui.record("markdown-preview-shown-without-resource-access")
+            finally:
+                os.close(watch)
+        ui.click(window, 120, 100)
+        ui.key("ctrl+End")
+        addition = "!"
+        ui.type(addition)
+        ui.key("ctrl+s")
+        ui.bytes(markdown, markdown_text + addition.encode())
+        time.sleep(0.5)
+        ui.record("markdown-preview-live-edit-and-save")
+        ui.key("ctrl+f")
+        ui.type("Heading")
+        ui.key("Escape")
+        ui.key("ctrl+plus")
+        ui.key("ctrl+0")
+        ui.key("ctrl+z")
+        ui.key("ctrl+s")
+        ui.bytes(markdown, markdown_text)
+        ui.click(window, 550, 25)
+        ui.record("markdown-preview-hidden-with-undo-and-find")
+        ui.click(window, 550, 25)
+        time.sleep(0.5)
         plain = files / "highlighting.txt"
         ui.picker("ctrl+shift+s", "Save text file")
         ui.choose(plain, saving=True)
@@ -500,7 +543,9 @@ def main():
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()
+            ui.click(window, 120, 100)
             ui.type("discard on close")
+            window = ui.editor(dirty=True)
             ui.close(window)
             ui.decision("Discard")
             wait("exit after Discard", lambda: app.poll() is not None)

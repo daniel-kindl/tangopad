@@ -335,7 +335,10 @@ public sealed class EditorBindingTests
             Border status = Assert.IsType<Border>(layout.Children[2]);
             Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
             Assert.Same(window.CaretStatus, status.Child);
-            TextEditor editor = Assert.IsType<TextEditor>(layout.Children[3]);
+            Grid documentLayout = Assert.IsType<Grid>(layout.Children[3]);
+            TextEditor editor = Assert.IsType<TextEditor>(documentLayout.Children[0]);
+            Assert.Equal(0, Grid.GetColumn(editor));
+            Assert.False(window.PreviewScroll.IsVisible);
             Assert.Equal(FontFamily.Parse("monospace"), editor.FontFamily);
             Assert.Equal(15, editor.FontSize);
             Assert.True(editor.ShowLineNumbers);

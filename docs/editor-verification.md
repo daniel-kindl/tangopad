@@ -292,3 +292,32 @@ identity, dirty state, and undo history. The Linux script checks navigation thro
 saved insertion offsets, mixed line endings, clamping, invalid input, cancellation,
 and exact bytes with wrapping enabled. Native Windows and macOS interaction requires
 this procedure. Hosted CI runs the headless tests and native startup on all three platforms.
+
+## Markdown preview verification
+
+Date: 2026-10-18. [Issue #53](https://github.com/daniel-kindl/tangopad/issues/53).
+
+`python3 eng/check-native-editor.py` passed all 29 groups on Fedora Linux 44,
+x64, with Xvfb, a private D-Bus session, and the GTK portal.
+Local evidence is in `artifacts/native-editor-nfdwx8f7`.
+The preview screenshot shows rendered headings, emphasis, lists, code, inactive
+link labels, image descriptions, and literal script text.
+A local listening socket detected no image request. An inotify monitor detected
+no open or read of the referenced local SVG while preview rendered.
+Native editing, live updates, exact saved bytes, Find, undo, Hide Preview,
+Save As to plain text, Word Wrap, font shortcuts, Go To Line, and close all passed.
+
+The initial focus regression test failed because the preview button retained focus.
+It passes after the toggle returns focus to the editor.
+Four framework-independent parser tests cover the baseline, hostile text,
+malformed text, and input, nesting, block, and run limits.
+Nine headless preview cases cover toggles, save success/failure/cancellation,
+format and theme transitions, New/Open, serial background work, debounce,
+stale results, close cancellation, offline rendering, exact bytes, and undo/dirty state.
+
+Native Windows and macOS interaction remains untested on this Linux host.
+Hosted CI repeats the shared verification command and native startup on all three
+platforms. For native desktop acceptance, repeat the editor procedure above with
+Show Preview enabled. Check that links remain inactive, images remain descriptions,
+and Save As to plain text hides the preview without interrupting source editing.
+[ADR 0008](adr/0008-safe-markdown-preview.md) records renderer limits and deferred behavior.

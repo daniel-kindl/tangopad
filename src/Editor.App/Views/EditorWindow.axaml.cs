@@ -8,6 +8,7 @@ using Editor.App.Services;
 using Editor.App.ViewModels;
 using Editor.App.Views.Dialogs;
 using Editor.Application;
+using Editor.Formats.Markdown;
 
 namespace Editor.App.Views;
 
@@ -16,11 +17,12 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null)
     {
         InitializeComponent();
         ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels);
         DataContext = ViewModel;
+        Preview = new MarkdownPreviewAdapter(this, previewParser);
         EditorBufferAdapter buffer = new(Editor, ViewModel);
         MarkdownHighlightingAdapter highlighting = new(Editor, ViewModel);
         ViewModel.Search.Attach(buffer);
@@ -45,11 +47,12 @@ internal sealed partial class EditorWindow : Window
         AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnGoToLineKeyDown, RoutingStrategies.Tunnel);
         Closing += OnClosing;
-        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); };
+        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); };
         Opened += (_, _) => Editor.TextArea.Focus();
     }
 
     internal EditorViewModel ViewModel { get; }
+    internal MarkdownPreviewAdapter Preview { get; }
 
     private void OpenSearch(bool replace)
     {
