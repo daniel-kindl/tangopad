@@ -32,4 +32,9 @@
   <x:String x:Key="Text.Search.ReplacementCount" xml:space="preserve">Replaced: </x:String>
   <x:String x:Key="Text.Status.CaretFormat">Ln {0}, Col {1}</x:String>
   <x:String x:Key="Text.Editor.WordWrap">Word Wrap</x:String>
+  <x:String x:Key="Text.GoToLine.Title">Go To Line</x:String>
+  <x:String x:Key="Text.GoToLine.LineNumber">Line number</x:String>
+  <x:String x:Key="Text.GoToLine.Prompt">Enter a line number. Larger numbers go to the last line.</x:String>
+  <x:String x:Key="Text.GoToLine.Invalid">Enter a whole number from 1 to 2147483647.</x:String>
+  <x:String x:Key="Text.GoToLine.Go">Go</x:String>
 </ResourceDictionary>

@@ -838,6 +838,153 @@ public sealed class EditorBindingTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
+    /// <summary>Go To Line preserves selection on invalid input and cancel, then navigates to logical line starts.</summary>
+    /// <param name="wrap">Whether the editor wraps visual lines.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GoToLineUsesLogicalLinesAndPreservesDocument(bool wrap)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            string original = new string('x', 1000) + "\r\nsecond\nthird\rfourth\n";
+            window.Editor.Text = original;
+            window.ViewModel.WordWrap = wrap;
+            window.Editor.Document.Insert(0, "!");
+            Guid identity = window.ViewModel.DocumentId;
+            window.Editor.Select(4, 6);
+            int caret = window.Editor.CaretOffset;
+            RawInputModifiers modifier = OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+            Window OpenPrompt()
+            {
+                _ = window.Editor.TextArea.Focus();
+                window.KeyPressQwerty(PhysicalKey.G, modifier);
+                window.KeyReleaseQwerty(PhysicalKey.G, modifier);
+                Dispatcher.UIThread.RunJobs();
+                Window prompt = Assert.Single(window.OwnedWindows);
+                Assert.True(prompt.FindControl<TextBox>("LineInput")!.IsFocused);
+                Assert.Equal(4, window.Editor.SelectionStart);
+                Assert.Equal(6, window.Editor.SelectionLength);
+                Assert.Equal(caret, window.Editor.CaretOffset);
+                return prompt;
+            }
+
+            Window dialog = OpenPrompt();
+            TextBox input = dialog.FindControl<TextBox>("LineInput")!;
+            string[] invalidEntries = ["", "0", "-1", "1.5", "abc", "2147483648"];
+            foreach (string invalid in invalidEntries)
+            {
+                input.Text = invalid;
+                dialog.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                dialog.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(dialog.IsVisible);
+                Assert.True(dialog.FindControl<TextBlock>("ValidationMessage")!.IsVisible);
+                Assert.Equal(caret, window.Editor.CaretOffset);
+                Assert.Equal(6, window.Editor.SelectionLength);
+            }
+
+            dialog.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Empty(window.OwnedWindows);
+            Assert.True(window.Editor.IsKeyboardFocusWithin);
+            Assert.Equal(caret, window.Editor.CaretOffset);
+            dialog = OpenPrompt();
+            dialog.Close();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(6, window.Editor.SelectionLength);
+            Assert.Equal(caret, window.Editor.CaretOffset);
+            foreach ((string line, int offset, int expectedLine) in new[] { ("2", 1003, 2), ("3", 1010, 3), ("4", 1016, 4), ("999", 1023, 5), ("1", 0, 1) })
+            {
+                _ = window.Editor.TextArea.Focus();
+                window.KeyPressQwerty(PhysicalKey.G, modifier);
+                window.KeyReleaseQwerty(PhysicalKey.G, modifier);
+                Dispatcher.UIThread.RunJobs();
+                dialog = Assert.Single(window.OwnedWindows);
+                dialog.FindControl<TextBox>("LineInput")!.Text = line;
+                dialog.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Empty(window.OwnedWindows);
+                Assert.Equal(offset, window.Editor.CaretOffset);
+                Assert.Equal(0, window.Editor.SelectionLength);
+                AssertCaretStatus(window, expectedLine, 1);
+                Assert.True(window.Editor.IsKeyboardFocusWithin);
+            }
+
+            Assert.Equal("!" + original, window.Editor.Text);
+            Assert.Equal("!" + original, window.ViewModel.Session.Document.Text);
+            Assert.Equal(identity, window.ViewModel.DocumentId);
+            Assert.True(window.ViewModel.IsDirty);
+            window.Editor.Document.UndoStack.Undo();
+            Assert.Equal(original, window.Editor.Text);
+            window.Editor.Document.UndoStack.Redo();
+            Assert.Equal("!" + original, window.Editor.Text);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>The shortcut requires editor focus and reveals a distant line without changing clean state.</summary>
+    [Fact]
+    public async Task GoToLineRespectsFocusAndScrolls()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            KeyModifiers modifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+            KeyEventArgs Send(KeyModifiers modifiers)
+            {
+                KeyEventArgs args = new() { RoutedEvent = InputElement.KeyDownEvent, Key = Key.G, KeyModifiers = modifiers };
+                window.Editor.TextArea.RaiseEvent(args);
+                Dispatcher.UIThread.RunJobs();
+                return args;
+            }
+
+            Assert.False(Send(OperatingSystem.IsMacOS() ? KeyModifiers.Control : KeyModifiers.Meta).Handled);
+            Assert.False(Send(modifier | KeyModifiers.Shift).Handled);
+            window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+            _ = window.QueryInput.Focus();
+            Assert.False(Send(modifier).Handled);
+            _ = window.ReplacementInput.Focus();
+            Assert.False(Send(modifier).Handled);
+            Assert.Empty(window.OwnedWindows);
+            _ = window.Editor.TextArea.Focus();
+            Assert.True(Send(modifier).Handled);
+            Window dialog = Assert.Single(window.OwnedWindows);
+            Assert.Equal("1", dialog.FindControl<TextBox>("LineInput")!.Text);
+            dialog.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Empty(window.OwnedWindows);
+            Assert.Equal(0, window.Editor.CaretOffset);
+            Assert.False(window.ViewModel.IsDirty);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Editor.Text = string.Concat(Enumerable.Repeat("line\n", 100));
+            window.Editor.Document.UndoStack.ClearAll();
+            window.Editor.CaretOffset = 0;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(Send(modifier).Handled);
+            dialog = Assert.Single(window.OwnedWindows);
+            dialog.FindControl<TextBox>("LineInput")!.Text = "100";
+            dialog.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+            AssertCaretStatus(window, 100, 1);
+            Assert.Equal(495, window.Editor.CaretOffset);
+            Assert.True(window.Editor.VerticalOffset > 0);
+            Assert.True(window.Editor.TextArea.TextView.GetVisualLine(100) is not null);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     private static void AssertCaretStatus(EditorWindow window, int line, int column)
     {
         Dispatcher.UIThread.RunJobs();

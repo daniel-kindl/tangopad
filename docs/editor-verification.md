@@ -249,3 +249,46 @@ Attempt Save after another edit. Restore access after the check.
 
 A failed save can leave complete output if cancellation races with file replacement.
 See ADR 0006 for that persistence limit.
+
+## Go To Line verification
+
+Date: 2026-10-18. [Issue #43](https://github.com/daniel-kindl/tangopad/issues/43).
+
+`dotnet msbuild eng/verify.proj` passed on Linux. Debug and Release builds reported
+zero warnings and errors. All six TRX reports passed validation.
+Tests passed 170 cases and skipped one Windows-only filesystem case.
+
+The two initial headless cases failed because the shortcut did not open a dialog.
+All three Go To Line cases now pass. They cover mixed newlines, wrapping, empty
+and trailing lines, clamping, validation, focus, cancellation, selection, scrolling,
+status updates, document identity, dirty state, and undo/redo.
+
+`python3 eng/check-native-editor.py` passed all 24 groups on Fedora Linux 44,
+x64, .NET 10.0.13, with Xvfb, a private D-Bus session, and the GTK portal.
+Local evidence is in `artifacts/native-editor-9798bode`.
+The inspected screenshot shows the invalid input message and retained editor selection.
+Windows and macOS native interaction remain untested on this host.
+
+### Desktop acceptance
+
+Use Ctrl+G on Windows/Linux or Command+G on macOS with editor focus.
+The dialog selects the current logical line number.
+
+1. Open a UTF-8 file with CRLF, LF, and CR line endings.
+2. Select text. Open Go To Line. Enter `0`, a negative number, or nonnumeric text.
+3. Confirm the input. Check the error message and unchanged caret and selection.
+4. Cancel with Escape. Check editor focus and unchanged selection.
+5. Repeat with Cancel and the window close button.
+6. Enter a valid line. Check column 1, editor focus, and the visible target line.
+7. Enter a number beyond the last line. Check column 1 of the last logical line.
+8. Repeat with Word Wrap enabled and a long first line.
+9. Repeat on an empty document and a document with a trailing newline.
+10. Save without edits. Compare the output bytes with the original file.
+11. Make an edit before navigation. Check that Undo and Redo still change that edit.
+12. Check Find/Replace, Word Wrap, and font shortcuts after navigation.
+
+The headless tests cover validation, focus, selection, logical positions, scrolling,
+identity, dirty state, and undo history. The Linux script checks navigation through
+saved insertion offsets, mixed line endings, clamping, invalid input, cancellation,
+and exact bytes with wrapping enabled. Native Windows and macOS interaction requires
+this procedure. Hosted CI runs the headless tests and native startup on all three platforms.
