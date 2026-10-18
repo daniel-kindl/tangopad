@@ -5,7 +5,8 @@ The editor keeps its existing layout, commands, text rules, and dialog decisions
 
 ## Ownership
 
-EditorViewModel owns observable text, title, dirty state, busy state, edit availability, caret line and column, Word Wrap, font size, and commands.
+EditorViewModel owns observable text, title, dirty state, busy state, edit availability, and commands.
+It also owns caret line and column, character and word counts, Word Wrap, and font size.
 It uses CommunityToolkit.Mvvm's ObservableObject and generated properties and relay commands.
 It serializes document operations and retains the caller's synchronization context.
 The desktop caller runs commands and edits on the UI thread.
@@ -17,6 +18,9 @@ EditorBufferAdapter transfers exact text and resets caret and undo for a new doc
 It checks text equality before assigning the buffer, so typing and undo do not replace their own buffer.
 The adapter copies AvaloniaEdit caret positions into one-based numeric ViewModel properties when the caret position changes.
 The bottom status row uses compiled bindings and `Text.Status.CaretFormat` to display `Ln 1, Col 1` for an empty document.
+The status row also binds `CharacterCount` and `WordCount` through `Text.Status.CharacterCountFormat` and `Text.Status.WordCountFormat`.
+The ViewModel counts Unicode scalars and non-whitespace runs together when `Text` changes.
+Both labels reuse the `editor-status` style and the existing spacing token.
 The toolbar checkbox binds to the ViewModel's `WordWrap` property with a compiled two-way binding.
 The editor binds directly to that property. AvaloniaEdit disables horizontal scrolling during wrapping and restores it when wrapping stops.
 Word Wrap starts off and survives New and Open within the window. It does not change the document or undo history.

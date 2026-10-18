@@ -62,6 +62,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public partial int CharacterCount { get; private set; }
 
     [ObservableProperty]
+    public partial int WordCount { get; private set; }
+
+    [ObservableProperty]
     public partial int CaretLine { get; internal set; } = 1;
 
     [ObservableProperty]
@@ -78,12 +81,24 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     {
         Session.Document.ReplaceText(value);
         int count = 0;
-        foreach (Rune _ in value.EnumerateRunes())
+        int words = 0;
+        bool inWord = false;
+        foreach (Rune rune in value.EnumerateRunes())
         {
             count++;
+            if (Rune.IsWhiteSpace(rune))
+            {
+                inWord = false;
+            }
+            else if (!inWord)
+            {
+                words++;
+                inWord = true;
+            }
         }
 
         CharacterCount = count;
+        WordCount = words;
     }
 
     private bool CanStartOperation => !IsBusy;
