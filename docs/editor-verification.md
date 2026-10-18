@@ -9,6 +9,29 @@ Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),
 [semantic themes issue #24](https://github.com/daniel-kindl/tangopad/issues/24),
 and [resource convention issue #27](https://github.com/daniel-kindl/tangopad/issues/27).
 
+## Font size verification
+
+Date: 2026-10-18. [Issue #41](https://github.com/daniel-kindl/tangopad/issues/41).
+
+`dotnet msbuild eng/verify.proj` passed on Linux with zero Debug and Release build diagnostics.
+All six TRX reports passed validation. Tests passed 167 cases and skipped one Windows-only filesystem case.
+Native startup passed.
+
+The seven shortcut cases first failed because the keys were unhandled.
+The ViewModel test first failed to compile because font-size state and commands were absent.
+All 10 focused cases now pass.
+They cover the default, step, bounds, reset, notifications, platform modifier, Shift, numpad keys, and focus restrictions.
+Headless tests cover compiled bindings, visible line-height growth, both themes, caret, selection, scrolling,
+Word Wrap, document identity, dirty state, undo and redo, exact save bytes, New, Open, and a new window's default.
+
+`python3 eng/check-native-editor.py` passed all 21 native acceptance groups on Fedora Linux 44,
+x64, .NET 10.0.13, with Xvfb, a private D-Bus session, and the GTK portal.
+Local evidence is in `artifacts/native-editor-8y5987w_`.
+Inspected screenshots show increased and decreased font sizes, the reset baseline, and retained size after New and Open.
+Exact-byte and dirty-title checks passed with the existing native editor workflows.
+Windows and macOS native interaction remain untested on this host.
+Hosted matrix checks must pass on the pull request before a normal merge.
+
 ## Word Wrap verification
 
 Date: 2026-10-18. [Issue #39](https://github.com/daniel-kindl/tangopad/issues/39).

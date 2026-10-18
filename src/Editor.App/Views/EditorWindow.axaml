@@ -73,6 +73,7 @@
     <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"
                      WordWrap="{Binding WordWrap}"
+                     FontSize="{Binding FontSize}"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto" />
   </DockPanel>

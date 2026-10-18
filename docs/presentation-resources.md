@@ -5,7 +5,7 @@ The editor keeps its existing layout, commands, text rules, and dialog decisions
 
 ## Ownership
 
-EditorViewModel owns observable text, title, dirty state, busy state, edit availability, caret line and column, Word Wrap, and commands.
+EditorViewModel owns observable text, title, dirty state, busy state, edit availability, caret line and column, Word Wrap, font size, and commands.
 It uses CommunityToolkit.Mvvm's ObservableObject and generated properties and relay commands.
 It serializes document operations and retains the caller's synchronization context.
 The desktop caller runs commands and edits on the UI thread.
@@ -20,6 +20,14 @@ The bottom status row uses compiled bindings and `Text.Status.CaretFormat` to di
 The toolbar checkbox binds to the ViewModel's `WordWrap` property with a compiled two-way binding.
 The editor binds directly to that property. AvaloniaEdit disables horizontal scrolling during wrapping and restores it when wrapping stops.
 Word Wrap starts off and survives New and Open within the window. It does not change the document or undo history.
+The editor's compiled `FontSize` binding reads the ViewModel's single observable font-size property.
+The ViewModel defines the default, bounds, and step once.
+Ctrl++ and Ctrl+- change the size by 1 pixel within 8–48 pixels. Ctrl+0 resets it to 15 pixels.
+macOS uses Command instead of Ctrl.
+The plus shortcut accepts Shift. Numpad Add, Subtract, and 0 also work.
+The shortcuts require editor focus. Find and Replace inputs retain their keyboard behavior.
+Font size survives New and Open within the window and resets when the application restarts.
+Font changes preserve text, identity, dirty state, selection, caret, and undo history.
 Position updates do not write to the editor. The adapter removes its event handlers when the window closes.
 A close request uses the same ViewModel operation guard as other replacement requests.
 
@@ -45,7 +53,7 @@ Changing the application theme updates existing controls through DynamicResource
 Styles/EditorStyles.axaml consolidates dialog layout, typography, and control presentation.
 Window dimensions stay 960 by 680, with minimum dimensions of 400 by 250.
 Dialogs stay 460 pixels wide. Toolbar spacing stays 8 pixels.
-The editor stays at 15 pixels with a monospace font.
+The editor starts at 15 pixels with a monospace font.
 
 ## Resource selection and exceptions
 

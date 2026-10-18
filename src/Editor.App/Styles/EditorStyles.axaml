@@ -34,7 +34,6 @@
   </Style>
   <Style Selector="edit|TextEditor">
     <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
-    <Setter Property="FontSize" Value="{StaticResource FontSize.Editor}" />
     <Setter Property="LineNumbersForeground" Value="{DynamicResource Brush.Text.Muted}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
   </Style>

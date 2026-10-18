@@ -14,7 +14,6 @@
   <Thickness x:Key="Inset.Toolbar">8</Thickness>
   <Thickness x:Key="Inset.Dialog">20</Thickness>
   <FontFamily x:Key="Font.Editor">monospace</FontFamily>
-  <x:Double x:Key="FontSize.Editor">15</x:Double>
   <StaticResource x:Key="Font.Body" ResourceKey="ContentControlThemeFontFamily" />
   <StaticResource x:Key="FontSize.Body" ResourceKey="ControlContentThemeFontSize" />
   <StaticResource x:Key="Radius.Control" ResourceKey="ControlCornerRadius" />
