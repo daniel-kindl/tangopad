@@ -16,16 +16,134 @@ using Editor.App.Views.Dialogs;
 using Editor.Infrastructure;
 using Xunit;
 
+[assembly: AvaloniaTestApplication(typeof(Editor.App.Tests.Views.EditorBindingTests))]
+
 namespace Editor.App.Tests.Views;
 
 /// <summary>Checks compiled views and the AvaloniaEdit control on a headless UI dispatcher.</summary>
 public sealed class EditorBindingTests
 {
+    /// <summary>The status indicator starts at the first line and column without changing an empty document.</summary>
+    [Fact]
+    public async Task CaretStatusStartsAtOne()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            TextBlock status = Assert.IsType<TextBlock>(window.FindControl<TextBlock>("CaretStatus"));
+            Assert.Equal("Ln 1, Col 1", status.Text);
+            Assert.Equal(string.Empty, window.Editor.Text);
+            Assert.Equal(0, window.Editor.CaretOffset);
+            Assert.False(window.ViewModel.IsDirty);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Caret offsets use one-based document positions across CRLF, LF, and CR line endings.</summary>
+    /// <param name="offset">The caret offset in the mixed-newline document.</param>
+    /// <param name="line">The expected line.</param>
+    /// <param name="column">The expected column.</param>
+    [Theory]
+    [InlineData(0, 1, 1)]
+    [InlineData(3, 1, 4)]
+    [InlineData(7, 2, 1)]
+    [InlineData(9, 2, 3)]
+    [InlineData(10, 3, 1)]
+    [InlineData(12, 4, 1)]
+    [InlineData(15, 4, 4)]
+    public async Task CaretStatusTracksMixedNewlinePositions(int offset, int line, int column)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            window.Editor.Text = "first\r\nxy\nz\rend";
+            window.Editor.Document.UndoStack.ClearAll();
+            window.Editor.CaretOffset = offset;
+            AssertCaretStatus(window, line, column);
+            Assert.Equal(offset, window.Editor.CaretOffset);
+            Assert.Equal("first\r\nxy\nz\rend", window.ViewModel.Session.Document.Text);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Mouse selection reports the active caret endpoint without changing the selected text.</summary>
+    [Fact]
+    public async Task CaretStatusTracksMouseSelection()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            window.Editor.Text = "first\nsecond";
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaEdit.Rendering.TextView textView = window.Editor.TextArea.TextView;
+            Point start = textView.TranslatePoint(textView.GetVisualPosition(new TextViewPosition(2, 2),
+                AvaloniaEdit.Rendering.VisualYPosition.LineMiddle), window)!.Value;
+            Point end = textView.TranslatePoint(textView.GetVisualPosition(new TextViewPosition(2, 5),
+                AvaloniaEdit.Rendering.VisualYPosition.LineMiddle), window)!.Value;
+            window.MouseDown(start, MouseButton.Left);
+            AssertCaretStatus(window, 2, 2);
+            window.MouseMove(end);
+            window.MouseUp(end, MouseButton.Left);
+            AssertCaretStatus(window, 2, 5);
+            Assert.Equal("eco", window.Editor.SelectedText);
+            Assert.Equal("first\nsecond", window.ViewModel.Session.Document.Text);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Typing, keyboard selection, search navigation, and undo update the indicator without changing selection.</summary>
+    [Fact]
+    public async Task CaretStatusTracksEditingAndNavigation()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            window.KeyTextInput("one\ntwo");
+            AssertCaretStatus(window, 2, 4);
+            window.KeyPressQwerty(PhysicalKey.ArrowLeft, RawInputModifiers.Shift);
+            AssertCaretStatus(window, 2, 3);
+            Assert.Equal("o", window.Editor.SelectedText);
+            window.Editor.Document.UndoStack.Undo();
+            AssertCaretStatus(window, 1, 1);
+            Assert.Equal(string.Empty, window.Editor.Text);
+            window.Editor.Document.UndoStack.Redo();
+            AssertCaretStatus(window, 2, 4);
+            window.ViewModel.Search.ShowFindCommand.Execute(null);
+            window.ViewModel.Search.Query = "one";
+            window.ViewModel.Search.NextCommand.Execute(null);
+            AssertCaretStatus(window, 1, 4);
+            Assert.Equal("one", window.Editor.SelectedText);
+            Assert.Equal("one\ntwo", window.ViewModel.Session.Document.Text);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+            window.Editor.CaretOffset = window.Editor.Document.TextLength;
+            Assert.Equal(1, window.ViewModel.CaretLine);
+            Assert.Equal(4, window.ViewModel.CaretColumn);
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>Compiled bindings disable replacement during Open and expose cancellation without replacing the buffer.</summary>
     [Fact]
     public async Task BusyBindingsPreserveTheEditorBuffer()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(async () =>
         {
             DelayedStore store = new();
@@ -66,7 +184,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task ThemeResourcesUpdateExistingControls()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(() =>
         {
             Avalonia.Application application = Avalonia.Application.Current!;
@@ -83,6 +201,7 @@ public sealed class EditorBindingTests
             ErrorDialog error = new("cannot write");
             Task<UnsavedDecision> dialog = error.ShowDialog<UnsavedDecision>(window);
             Color lightBackground = Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color;
+            Color lightStatus = Assert.IsType<ISolidColorBrush>(window.CaretStatus.Foreground, exactMatch: false).Color;
             Color lightError = Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color;
             Assert.Equal(Colors.Black, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
             _ = Assert.IsType<IBrush>(window.Editor.TextArea.SelectionBrush, exactMatch: false);
@@ -102,6 +221,7 @@ public sealed class EditorBindingTests
             Assert.Equal(window.Foreground, window.NoMatchesText.Foreground);
             Assert.Equal(Colors.White, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
             Assert.NotEqual(lightBackground, Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color);
+            Assert.NotEqual(lightStatus, Assert.IsType<ISolidColorBrush>(window.CaretStatus.Foreground, exactMatch: false).Color);
             Assert.NotEqual(lightError, Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color);
             Assert.Equal("Untitled - Tangopad", window.Title);
             Assert.Equal(460, error.Width);
@@ -119,7 +239,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task EditorCommandsPreserveExactText()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(async () =>
         {
             string directory = Path.Combine(Path.GetTempPath(), $"tangopad-ui-{Guid.NewGuid():N}");
@@ -133,13 +253,20 @@ public sealed class EditorBindingTests
                 EditorWindow window = new(new FileTextDocumentStore(), dialogs);
                 window.Show();
                 _ = window.Editor.TextArea.Focus();
+                AssertCaretStatus(window, 1, 1);
                 window.KeyTextInput("typed");
+                AssertCaretStatus(window, 1, 6);
                 Assert.Equal("typed", window.ViewModel.Session.Document.Text);
                 Assert.Equal("Untitled * - Tangopad", window.Title);
                 Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
                 Assert.Equal("loaded\r\nnext\nλ", window.Editor.Text);
+                AssertCaretStatus(window, 1, 1);
                 Assert.False(window.Editor.Document.UndoStack.CanUndo);
                 Assert.Equal($"{input} - Tangopad", window.Title);
+                window.Editor.CaretOffset = window.Editor.Document.TextLength;
+                AssertCaretStatus(window, 3, 2);
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                AssertCaretStatus(window, 1, 1);
                 window.Editor.Document.Insert(window.Editor.Document.TextLength, "\rfinal");
                 window.KeyPressQwerty(PhysicalKey.S, (OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control) | RawInputModifiers.Shift);
                 for (int attempt = 0; window.ViewModel.IsBusy && attempt < 100; attempt++)
@@ -153,8 +280,11 @@ public sealed class EditorBindingTests
                 window.Editor.Document.UndoStack.Undo();
                 Assert.True(window.ViewModel.Session.Document.IsDirty);
                 Assert.Equal("loaded\r\nnext\nλ", window.ViewModel.Session.Document.Text);
+                window.Editor.CaretOffset = window.Editor.Document.TextLength;
+                AssertCaretStatus(window, 3, 2);
                 Assert.True(await window.ViewModel.NewAsync().ConfigureAwait(true));
                 Assert.Equal(string.Empty, window.Editor.Text);
+                AssertCaretStatus(window, 1, 1);
                 Assert.False(window.Editor.Document.UndoStack.CanUndo);
                 Assert.Equal("Untitled - Tangopad", window.Title);
                 dialogs.Decision = UnsavedDecision.Cancel;
@@ -179,7 +309,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task EditorWindowLoadsNamedControlsAndThemeResources()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(() =>
         {
             EditorWindow window = new(new FileTextDocumentStore());
@@ -191,7 +321,7 @@ public sealed class EditorBindingTests
             Assert.Equal("Untitled - Tangopad", window.Title);
 
             DockPanel layout = Assert.IsType<DockPanel>(window.Content);
-            Assert.Equal(3, layout.Children.Count);
+            Assert.Equal(4, layout.Children.Count);
             StackPanel toolbar = Assert.IsType<StackPanel>(layout.Children[0]);
             Assert.Equal(Dock.Top, DockPanel.GetDock(toolbar));
             Assert.Equal(Orientation.Horizontal, toolbar.Orientation);
@@ -202,7 +332,10 @@ public sealed class EditorBindingTests
             Button cancel = Assert.IsType<Button>(toolbar.Children[1]);
             Assert.Equal("Cancel operation", cancel.Content);
             Assert.False(cancel.IsVisible);
-            TextEditor editor = Assert.IsType<TextEditor>(layout.Children[2]);
+            Border status = Assert.IsType<Border>(layout.Children[2]);
+            Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
+            Assert.Same(window.CaretStatus, status.Child);
+            TextEditor editor = Assert.IsType<TextEditor>(layout.Children[3]);
             Assert.Equal(FontFamily.Parse("monospace"), editor.FontFamily);
             Assert.Equal(15, editor.FontSize);
             Assert.True(editor.ShowLineNumbers);
@@ -245,7 +378,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task PromptDialogsLoadCompiledMarkup()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(async () =>
         {
             UnsavedChangesDialog unsaved = new();
@@ -304,6 +437,8 @@ public sealed class EditorBindingTests
             Task<UnsavedDecision> dismissing = error.ShowDialog<UnsavedDecision>(owner);
             ok.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Equal(UnsavedDecision.Cancel, await dismissing.ConfigureAwait(true));
+            owner.Close();
+            Dispatcher.UIThread.RunJobs();
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
@@ -312,7 +447,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task SearchPanelNavigatesReplacesAndUndoes()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(() =>
         {
             EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
@@ -374,7 +509,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task ReplacementPreservesPersistenceAndCloseProtection()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(async () =>
         {
             string directory = Path.Combine(Path.GetTempPath(), $"tangopad-search-{Guid.NewGuid():N}");
@@ -429,7 +564,7 @@ public sealed class EditorBindingTests
     [Fact]
     public async Task SearchRevealsMatchesBeyondTheHorizontalViewport()
     {
-        await using HeadlessUnitTestSession ui = HeadlessUnitTestSession.StartNew(typeof(EditorBindingTests));
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(() =>
         {
             EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
@@ -457,6 +592,14 @@ public sealed class EditorBindingTests
     {
         return AppBuilder.Configure(() => new App(new FileTextDocumentStore()))
             .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+    }
+
+    private static void AssertCaretStatus(EditorWindow window, int line, int column)
+    {
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(line, window.ViewModel.CaretLine);
+        Assert.Equal(column, window.ViewModel.CaretColumn);
+        Assert.Equal($"Ln {line}, Col {column}", window.CaretStatus.Text);
     }
 
     private sealed class Dialogs : IEditorDialogs

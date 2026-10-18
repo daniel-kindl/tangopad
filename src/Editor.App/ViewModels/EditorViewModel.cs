@@ -27,6 +27,12 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     [NotifyPropertyChangedFor(nameof(Title), nameof(IsDirty))]
     public partial string Text { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial int CaretLine { get; internal set; } = 1;
+
+    [ObservableProperty]
+    public partial int CaretColumn { get; internal set; } = 1;
+
     internal DocumentSession Session { get; private set; } = DocumentSession.CreateUntitled(store);
     public Guid DocumentId => Session.Document.Id;
     public bool IsDirty => Session.Document.IsDirty;

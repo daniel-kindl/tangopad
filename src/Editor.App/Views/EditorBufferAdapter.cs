@@ -14,6 +14,7 @@ internal sealed class EditorBufferAdapter : ISearchBuffer
         this.editor = editor;
         this.viewModel = viewModel;
         editor.TextChanged += OnTextChanged;
+        editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
         editor.TextArea.SelectionChanged += OnSelectionChanged;
         viewModel.PropertyChanged += OnStateChanged;
         RefreshDocument();
@@ -46,6 +47,17 @@ internal sealed class EditorBufferAdapter : ISearchBuffer
         }
     }
 
+    private void OnCaretPositionChanged(object? sender, EventArgs args)
+    {
+        RefreshCaretPosition();
+    }
+
+    private void RefreshCaretPosition()
+    {
+        viewModel.CaretLine = editor.TextArea.Caret.Line;
+        viewModel.CaretColumn = editor.TextArea.Caret.Column;
+    }
+
     private void OnSelectionChanged(object? sender, EventArgs args)
     {
         Changed?.Invoke(this, EventArgs.Empty);
@@ -74,11 +86,13 @@ internal sealed class EditorBufferAdapter : ISearchBuffer
         editor.Text = viewModel.Text;
         editor.Document.UndoStack.ClearAll();
         editor.CaretOffset = 0;
+        RefreshCaretPosition();
     }
 
     internal void Detach()
     {
         editor.TextChanged -= OnTextChanged;
+        editor.TextArea.Caret.PositionChanged -= OnCaretPositionChanged;
         editor.TextArea.SelectionChanged -= OnSelectionChanged;
         viewModel.PropertyChanged -= OnStateChanged;
     }
