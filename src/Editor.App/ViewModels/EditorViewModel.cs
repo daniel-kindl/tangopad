@@ -133,19 +133,29 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         return RunAsync(async token =>
         {
             string? path = await dialogs.ChooseOpenAsync().ConfigureAwait(true);
-            if (path is null || !await ConfirmReplacementAsync(token).ConfigureAwait(true))
-            {
-                return false;
-            }
-
-            CanEdit = false;
-            DocumentSession loaded = await DocumentSession.LoadAsync(store, path, token).ConfigureAwait(true);
-            Session = loaded;
-            Text = Session.Document.Text;
-            OnPropertyChanged(nameof(DocumentId));
-            OnPropertyChanged(nameof(Format));
-            return true;
+            return path is not null && await OpenPathCoreAsync(path, token).ConfigureAwait(true);
         }, allowEditing: false);
+    }
+
+    internal Task<bool> OpenPathAsync(string path)
+    {
+        return RunAsync(token => OpenPathCoreAsync(path, token), allowEditing: false);
+    }
+
+    private async Task<bool> OpenPathCoreAsync(string path, CancellationToken token)
+    {
+        if (!await ConfirmReplacementAsync(token).ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        CanEdit = false;
+        DocumentSession loaded = await DocumentSession.LoadAsync(store, path, token).ConfigureAwait(true);
+        Session = loaded;
+        Text = Session.Document.Text;
+        OnPropertyChanged(nameof(DocumentId));
+        OnPropertyChanged(nameof(Format));
+        return true;
     }
 
     [RelayCommand(CanExecute = nameof(CanStartOperation))]

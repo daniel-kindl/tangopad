@@ -2,6 +2,9 @@ using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
+using AvaloniaEdit.Document;
+using AvaloniaEdit.Utils;
 using CommunityToolkit.Mvvm.Input;
 using Editor.App.Resources;
 using Editor.App.Services;
@@ -14,6 +17,8 @@ namespace Editor.App.Views;
 
 internal sealed partial class EditorWindow : Window
 {
+    private static readonly DataFormat<EditorWindow> EditorDragFormat = DataFormat.CreateInProcessFormat<EditorWindow>("Tangopad.EditorSelection");
+
     private bool closingApproved;
     private bool goToLineOpen;
 
@@ -46,6 +51,13 @@ internal sealed partial class EditorWindow : Window
         AddHandler(KeyDownEvent, OnSearchKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnGoToLineKeyDown, RoutingStrategies.Tunnel);
+        // Validate external drops before AvaloniaEdit's text-drop handlers run.
+        Editor.Options.EnableTextDragDrop = false;
+        RegisterDropHandlers(Editor.TextArea);
+        Editor.Options.EnableTextDragDrop = true;
+        Editor.TextArea.AddHandler(DataObjectEx.DataObjectCopyingEvent, OnCopying);
+        DragDrop.SetAllowDrop(this, true);
+        RegisterDropHandlers(this);
         Closing += OnClosing;
         Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); };
         Opened += (_, _) => Editor.TextArea.Focus();
@@ -53,6 +65,97 @@ internal sealed partial class EditorWindow : Window
 
     internal EditorViewModel ViewModel { get; }
     internal MarkdownPreviewAdapter Preview { get; }
+
+    private void RegisterDropHandlers(Interactive target)
+    {
+        target.AddHandler(DragDrop.DragEnterEvent, OnDragOver);
+        target.AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        target.AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
+        target.AddHandler(DragDrop.DropEvent, OnDrop);
+    }
+
+    private void OnCopying(object? sender, DataObjectCopyingEventArgs args)
+    {
+        if (args.IsDragDrop && args.DataObject is DataTransfer data)
+        {
+            data.Add(DataTransferItem.Create(EditorDragFormat, this));
+        }
+    }
+
+    private bool IsEditorDrag(DragEventArgs args)
+    {
+        return ReferenceEquals(args.DataTransfer.TryGetValue(EditorDragFormat), this);
+    }
+
+    private string? DroppedPath(DragEventArgs args)
+    {
+        if (ViewModel.IsBusy || closingApproved || (args.DragEffects & DragDropEffects.Copy) == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            if (args.DataTransfer.Items.Count != 1 || args.DataTransfer.Items[0].TryGetFile() is not IStorageFile file)
+            {
+                return null;
+            }
+
+            Uri uri = file.Path;
+            if (!uri.IsAbsoluteUri || !uri.IsFile || uri.IsUnc || !uri.IsLoopback)
+            {
+                return null;
+            }
+
+            string? path = file.TryGetLocalPath();
+            return path is not null && Path.IsPathFullyQualified(path) && !Directory.Exists(path) ? path : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs args)
+    {
+        if (IsEditorDrag(args))
+        {
+            return;
+        }
+
+        bool accepted = DroppedPath(args) is not null;
+        args.DragEffects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
+        DropHint.IsVisible = accepted;
+        args.Handled = true;
+    }
+
+    private void OnDragLeave(object? sender, DragEventArgs args)
+    {
+        if (IsEditorDrag(args))
+        {
+            return;
+        }
+
+        DropHint.IsVisible = false;
+        args.Handled = true;
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs args)
+    {
+        if (IsEditorDrag(args))
+        {
+            return;
+        }
+
+        string? path = DroppedPath(args);
+        args.Handled = true;
+        args.DragEffects = path is null ? DragDropEffects.None : DragDropEffects.Copy;
+        DropHint.IsVisible = false;
+        if (path is not null && await ViewModel.OpenPathAsync(path).ConfigureAwait(true))
+        {
+            _ = Editor.TextArea.Focus();
+        }
+    }
 
     private void OpenSearch(bool replace)
     {
