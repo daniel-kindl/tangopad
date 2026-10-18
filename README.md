@@ -41,6 +41,7 @@ Cancel leaves the document open. Errors appear in a dialog.
 | Save As | Ctrl+Shift+S | Command+Shift+S |
 | Find | Ctrl+F | Command+F |
 | Replace | Ctrl+H | Command+H |
+| Go To Line (editor focus) | Ctrl+G | Command+G |
 
 Word Wrap in the toolbar fits long lines to the editor width. It starts off and
 stays selected across New and Open until you change it or close the window.
@@ -53,6 +54,10 @@ Paste multiline text into either search field to preserve its exact line endings
 Replace current changes only a selected match. Replace all replaces non-overlapping
 matches from left to right and reports the replacement count. One Undo restores the operation.
 [Search behavior](docs/find-replace.md) describes matching and command availability.
+
+Go To Line accepts whole numbers from 1 to 2147483647. Numbers beyond the last
+line go to the beginning of the last logical line. Wrapping does not change line numbers.
+Enter confirms the line. Escape, Cancel, or closing the dialog preserves the caret and selection.
 
 You can continue editing during a save. Edits after the saved snapshot remain dirty.
 Cancel operation requests cancellation of pending file I/O.

@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Editor.App.Resources;
 using Editor.App.Services;
 using Editor.App.ViewModels;
+using Editor.App.Views.Dialogs;
 using Editor.Application;
 
 namespace Editor.App.Views;
@@ -13,6 +14,7 @@ namespace Editor.App.Views;
 internal sealed partial class EditorWindow : Window
 {
     private bool closingApproved;
+    private bool goToLineOpen;
 
     internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null)
     {
@@ -40,6 +42,7 @@ internal sealed partial class EditorWindow : Window
         AddShortcut(ReplaceButton, "H", replace);
         AddHandler(KeyDownEvent, OnSearchKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, OnGoToLineKeyDown, RoutingStrategies.Tunnel);
         Closing += OnClosing;
         Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); };
         Opened += (_, _) => Editor.TextArea.Focus();
@@ -106,6 +109,34 @@ internal sealed partial class EditorWindow : Window
         {
             command.Execute(null);
             args.Handled = true;
+        }
+    }
+
+    private async void OnGoToLineKeyDown(object? sender, KeyEventArgs args)
+    {
+        KeyModifiers modifier = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+        if (args.Key != Key.G || args.KeyModifiers != modifier || !Editor.IsKeyboardFocusWithin || goToLineOpen)
+        {
+            return;
+        }
+
+        args.Handled = true;
+        goToLineOpen = true;
+        try
+        {
+            int? line = await new GoToLineDialog(Editor.TextArea.Caret.Line).ShowDialog<int?>(this).ConfigureAwait(true);
+            if (line is { } requestedLine)
+            {
+                int offset = Editor.Document.GetLineByNumber(Math.Min(requestedLine, Editor.Document.LineCount)).Offset;
+                Editor.Select(offset, 0);
+                Editor.TextArea.Caret.BringCaretToView();
+            }
+
+            _ = Editor.TextArea.Focus();
+        }
+        finally
+        {
+            goToLineOpen = false;
         }
     }
 
