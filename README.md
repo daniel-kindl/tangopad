@@ -63,6 +63,12 @@ Go To Line accepts whole numbers from 1 to 2147483647. Numbers beyond the last
 line go to the beginning of the last logical line. Wrapping does not change line numbers.
 Enter confirms the line. Escape, Cancel, or closing the dialog preserves the caret and selection.
 
+The bottom status bar shows the caret line and column and the document character count.
+Characters are Unicode scalar values. A supplementary character such as `😀` counts as one.
+A base letter and a combining mark count separately. CRLF counts as two characters.
+LF and CR each count as one. This is not a count of visible glyphs or grapheme clusters.
+The count updates after edits, undo, redo, Open, and New.
+
 You can continue editing during a save. Edits after the saved snapshot remain dirty.
 Cancel operation requests cancellation of pending file I/O.
 Close an open file picker to complete a cancellation request.

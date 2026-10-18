@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Editor.App.Resources;
@@ -58,6 +59,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public partial string Text { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial int CharacterCount { get; private set; }
+
+    [ObservableProperty]
     public partial int CaretLine { get; internal set; } = 1;
 
     [ObservableProperty]
@@ -73,6 +77,13 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     partial void OnTextChanged(string value)
     {
         Session.Document.ReplaceText(value);
+        int count = 0;
+        foreach (Rune _ in value.EnumerateRunes())
+        {
+            count++;
+        }
+
+        CharacterCount = count;
     }
 
     private bool CanStartOperation => !IsBusy;
@@ -197,7 +208,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         {
             return false;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.DecoderFallbackException or System.Text.EncoderFallbackException or NotSupportedException or ArgumentException or AggregateException)
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or DecoderFallbackException or EncoderFallbackException or NotSupportedException or ArgumentException or AggregateException)
         {
             await dialogs.ShowErrorAsync(error.Message).ConfigureAwait(true);
             return false;

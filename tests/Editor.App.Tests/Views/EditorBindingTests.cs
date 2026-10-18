@@ -23,6 +23,119 @@ namespace Editor.App.Tests.Views;
 /// <summary>Checks compiled views and the AvaloniaEdit control on a headless UI dispatcher.</summary>
 public sealed class EditorBindingTests
 {
+    /// <summary>The character status starts at zero beside the caret status.</summary>
+    [Fact]
+    public async Task CharacterStatusStartsAtZero()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            TextBlock status = Assert.IsType<TextBlock>(window.FindControl<TextBlock>("CharacterStatus"));
+            Assert.Equal("Characters: 0", status.Text);
+            AssertCaretStatus(window, 1, 1);
+            Assert.Equal(string.Empty, window.ViewModel.Text);
+            Assert.False(window.ViewModel.IsDirty);
+            Assert.False(window.Editor.Document.UndoStack.CanUndo);
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>The count follows editing and document commands without changing selection, history, or saved bytes.</summary>
+    /// <param name="dark">Whether the window uses the dark theme.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CharacterStatusPreservesEditingAndPersistence(bool dark)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                const string original = "A😀e\u0301\r\nB\nC\r";
+                await File.WriteAllTextAsync(path, original).ConfigureAwait(true);
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = path })
+                {
+                    RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light
+                };
+                window.Show();
+                void AssertCount(int expected)
+                {
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Equal(expected, window.ViewModel.CharacterCount);
+                    Assert.Equal($"Characters: {expected}", window.CharacterStatus.Text);
+                }
+
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                Guid identity = window.ViewModel.DocumentId;
+                AssertCount(10);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                window.Editor.CaretOffset = window.Editor.Document.TextLength;
+                _ = window.Editor.TextArea.Focus();
+                window.KeyTextInput("!");
+                AssertCount(11);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.True(window.ViewModel.IsDirty);
+                window.Editor.Select(1, 2);
+                int caret = window.Editor.CaretOffset;
+                window.ViewModel.WordWrap = true;
+                window.ViewModel.IncreaseFontSizeCommand.Execute(null);
+                AssertCount(11);
+                Assert.Equal("😀", window.Editor.SelectedText);
+                Assert.Equal(caret, window.Editor.CaretOffset);
+                AssertCaretStatus(window, 1, 4);
+                Assert.Equal(identity, window.ViewModel.DocumentId);
+                Assert.True(window.Editor.Document.UndoStack.CanUndo);
+                window.Editor.Document.UndoStack.Undo();
+                AssertCount(10);
+                Assert.Equal(original, window.ViewModel.Session.Document.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.True(window.Editor.Document.UndoStack.CanRedo);
+                window.Editor.Document.UndoStack.Redo();
+                AssertCount(11);
+                Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
+                AssertCount(11);
+                Assert.Equal(identity, window.ViewModel.DocumentId);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.True(window.Editor.Document.UndoStack.CanUndo);
+                Assert.Equal(System.Text.Encoding.UTF8.GetBytes(original + "!"), await File.ReadAllBytesAsync(path).ConfigureAwait(true));
+                window.ViewModel.Search.ShowReplaceCommand.Execute(null);
+                window.ViewModel.Search.Query = "😀";
+                window.ViewModel.Search.Replacement = "xy";
+                window.ViewModel.Search.ReplaceAllCommand.Execute(null);
+                AssertCount(12);
+                Assert.Equal("Axye\u0301\r\nB\nC\r!", window.Editor.Text);
+                window.Editor.Document.UndoStack.Undo();
+                AssertCount(11);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.True(await window.ViewModel.NewAsync().ConfigureAwait(true));
+                AssertCount(0);
+                Assert.NotEqual(identity, window.ViewModel.DocumentId);
+                Assert.Equal(string.Empty, window.Editor.Text);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+                AssertCount(11);
+                Assert.Equal(original + "!", window.Editor.Text);
+                Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                Assert.False(window.ViewModel.IsDirty);
+                window.Close();
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>The status indicator starts at the first line and column without changing an empty document.</summary>
     [Fact]
     public async Task CaretStatusStartsAtOne()
@@ -334,7 +447,9 @@ public sealed class EditorBindingTests
             Assert.False(cancel.IsVisible);
             Border status = Assert.IsType<Border>(layout.Children[2]);
             Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
-            Assert.Same(window.CaretStatus, status.Child);
+            StackPanel statusItems = Assert.IsType<StackPanel>(status.Child);
+            Assert.Equal(Orientation.Horizontal, statusItems.Orientation);
+            Assert.Equal([window.CaretStatus, window.CharacterStatus], statusItems.Children);
             Grid documentLayout = Assert.IsType<Grid>(layout.Children[3]);
             TextEditor editor = Assert.IsType<TextEditor>(documentLayout.Children[0]);
             Assert.Equal(0, Grid.GetColumn(editor));
