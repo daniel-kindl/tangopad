@@ -23,6 +23,8 @@
               IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
       <Button x:Name="FindButton" Content="{StaticResource Text.Search.Find}" />
       <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
+      <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
+                IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
     </StackPanel>
     <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
                 Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
@@ -70,6 +72,7 @@
     </Border>
     <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"
+                     WordWrap="{Binding WordWrap}"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto" />
   </DockPanel>
