@@ -90,3 +90,12 @@ Architecture tests reject duplicate shared keys, inconsistent theme roles, inlin
 selected visual literals, and StaticResource references on theme-sensitive properties.
 There are no per-view exceptions to the checked AXAML properties.
 Native startup and Linux native acceptance remain separate checks.
+
+## Markdown preview
+
+Show Preview adds a read-only native text pane beside Markdown source.
+Hide Preview restores the full-width editor. Plain-text and untitled sessions hide
+the control. Links remain inactive and images show descriptions only.
+The pane uses existing semantic theme brushes, preview tokens, and text resources.
+Its runtime text comes exclusively from the bounded Markdown adapter.
+[ADR 0008](adr/0008-safe-markdown-preview.md) defines the security and resource limits.

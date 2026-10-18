@@ -6,7 +6,11 @@ text and Markdown. The design prioritizes performance, reliability, and independ
 
 Tangopad currently edits one plain-text document. New, Open, Save, and Save As
 use the existing document session and strict UTF-8 file store.
-Markdown, highlighting, export, and multiple tabs remain unimplemented.
+Markdown source highlighting and an optional read-only preview are available.
+Open a `.md` or `.markdown` file, then select Show Preview. Select Hide Preview to
+restore the full-width editor. Links are inactive, and images show descriptions only.
+Large documents can exceed the [preview limits](docs/adr/0008-safe-markdown-preview.md).
+Export and multiple tabs remain unimplemented.
 
 Install the exact .NET SDK from [global.json](global.json). Run the shared verification command from the repository root:
 

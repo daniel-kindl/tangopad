@@ -46,4 +46,21 @@
   <Style Selector="TextBlock.error-message">
     <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
   </Style>
+  <Style Selector="StackPanel.preview-body">
+    <Setter Property="Margin" Value="{StaticResource Inset.Toolbar}" />
+  </Style>
+  <Style Selector="TextBlock.preview-block">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="Margin" Value="{StaticResource Inset.Preview.Block}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.preview-code">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Markdown.Code}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+  </Style>
+  <Style Selector="TextBlock.preview-heading">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Markdown.Heading}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
 </Styles>

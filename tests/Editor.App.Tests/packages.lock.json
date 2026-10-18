@@ -319,6 +319,7 @@
           "Avalonia.Themes.Fluent": "[12.1.4, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Editor.Application": "[0.1.0, )",
+          "Editor.Formats.Markdown": "[0.1.0, )",
           "Editor.Infrastructure": "[0.1.0, )"
         }
       },
@@ -330,6 +331,12 @@
       },
       "editor.core": {
         "type": "Project"
+      },
+      "editor.formats.markdown": {
+        "type": "Project",
+        "dependencies": {
+          "Markdig": "[1.4.1, )"
+        }
       },
       "editor.infrastructure": {
         "type": "Project",
@@ -374,6 +381,12 @@
         "requested": "[8.4.2, )",
         "resolved": "8.4.2",
         "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
+      },
+      "Markdig": {
+        "type": "CentralTransitive",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "laiWlBRnwVqQlY9eWR56+uteUVtR+LpGw0doMSpirFuxdplSi3V59UOGRTepJaE8hJvfKGcCoguIZ8jmUHcEnA=="
       }
     }
   }

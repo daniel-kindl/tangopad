@@ -25,6 +25,7 @@
       <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
       <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
                 IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+      <Button x:Name="PreviewToggle" Content="{StaticResource Text.Preview.Show}" IsVisible="False" />
     </StackPanel>
     <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
                 Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
@@ -70,11 +71,20 @@
         </TextBlock.Text>
       </TextBlock>
     </Border>
-    <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
+    <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
+      <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
                      ShowLineNumbers="True"
                      WordWrap="{Binding WordWrap}"
                      FontSize="{Binding FontSize}"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto" />
+      <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" IsVisible="False"
+                    Width="{StaticResource Size.Preview.Splitter}" ResizeDirection="Columns" />
+      <ScrollViewer x:Name="PreviewScroll" Grid.Column="2" IsVisible="False"
+                    HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                    AutomationProperties.Name="{StaticResource Text.Preview.Name}">
+        <StackPanel x:Name="PreviewBlocks" Classes="preview-body" />
+      </ScrollViewer>
+    </Grid>
   </DockPanel>
 </Window>

@@ -6,7 +6,9 @@
     <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../docs/licenses/Markdig.txt" Link="licenses/Markdig.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <EmbeddedResource Include="Views/Markdown.xshd" />
+    <ProjectReference Include="../Editor.Formats.Markdown/Editor.Formats.Markdown.csproj" />
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
