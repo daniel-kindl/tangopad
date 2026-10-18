@@ -257,6 +257,7 @@ def exercise_recent(ui, files):
     wait("cleared recent paths persisted", lambda: paths() == [])
     ui.key("Escape")
     ui.editor(fixture, dirty=True)
+    ui.click(window, 120, 150)
     ui.key("ctrl+z")
     ui.editor(fixture)
     ui.bytes(fixture, b"# Recent file\r\ntext")
