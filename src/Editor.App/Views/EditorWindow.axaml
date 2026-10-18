@@ -62,14 +62,18 @@
     </StackPanel>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
             Padding="{StaticResource Inset.Toolbar}">
-      <TextBlock x:Name="CaretStatus" Classes="editor-status">
-        <TextBlock.Text>
-          <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
-            <Binding Path="CaretLine" />
-            <Binding Path="CaretColumn" />
-          </MultiBinding>
-        </TextBlock.Text>
-      </TextBlock>
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing.Actions}">
+        <TextBlock x:Name="CaretStatus" Classes="editor-status">
+          <TextBlock.Text>
+            <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
+              <Binding Path="CaretLine" />
+              <Binding Path="CaretColumn" />
+            </MultiBinding>
+          </TextBlock.Text>
+        </TextBlock>
+        <TextBlock x:Name="CharacterStatus" Classes="editor-status"
+                   Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
+      </StackPanel>
     </Border>
     <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
       <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"

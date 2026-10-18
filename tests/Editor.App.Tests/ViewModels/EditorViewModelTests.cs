@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Editor.App.Resources;
 using Editor.App.Services;
 using Editor.App.ViewModels;
@@ -7,8 +8,54 @@ using Xunit;
 namespace Editor.App.Tests.ViewModels;
 
 /// <summary>Checks presentation behavior through the editor commands.</summary>
-public sealed class EditorViewModelTests
+/// <param name="output">The measurement output.</param>
+public sealed class EditorViewModelTests(ITestOutputHelper output)
 {
+    /// <summary>The count uses Unicode scalars and preserves the exact document text.</summary>
+    /// <param name="text">The document text.</param>
+    /// <param name="expected">The scalar count.</param>
+    [Theory]
+    [InlineData("", 0)]
+    [InlineData("hello", 5)]
+    [InlineData("😀", 1)]
+    [InlineData("e\u0301", 2)]
+    [InlineData("\r\n", 2)]
+    [InlineData("a\r\nb\nc\rd", 8)]
+    [InlineData("λ café 😀\r\n", 10)]
+    public void CharacterCountUsesUnicodeScalars(string text, int expected)
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Guid identity = viewModel.DocumentId;
+        Assert.Equal(0, viewModel.CharacterCount);
+        viewModel.Text = text;
+        Assert.Equal(expected, viewModel.CharacterCount);
+        Assert.Equal(text, viewModel.Text);
+        Assert.Equal(text, viewModel.Session.Document.Text);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal(expected != 0, viewModel.IsDirty);
+    }
+
+    /// <summary>Only changed counts notify consumers. Caret navigation preserves the cached count.</summary>
+    [Fact]
+    public void CharacterCountNotificationsFollowTextChanges()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.Text = "😀";
+        Assert.Equal(1, viewModel.CharacterCount);
+        Assert.Contains("CharacterCount", notifications);
+        notifications.Clear();
+        viewModel.Text = "x";
+        Assert.Equal(1, viewModel.CharacterCount);
+        Assert.DoesNotContain("CharacterCount", notifications);
+        notifications.Clear();
+        viewModel.CaretLine = 2;
+        viewModel.CaretColumn = 3;
+        Assert.Equal(1, viewModel.CharacterCount);
+        Assert.Equal(["CaretLine", "CaretColumn"], notifications);
+    }
+
     /// <summary>Generated commands notify consumers and reject overlapping document operations.</summary>
     [Fact]
     public async Task CommandsPublishBusyStateAndPreservePendingEdits()
@@ -279,6 +326,45 @@ public sealed class EditorViewModelTests
         Assert.Equal(15, viewModel.FontSize);
         Assert.Equal("loaded\r\n\n", viewModel.Text);
         Assert.False(viewModel.IsDirty);
+    }
+
+    /// <summary>Large updates keep the scalar count correct and caret navigation leaves the text unchanged.</summary>
+    /// <param name="repetitions">The number of eight-code-unit tokens.</param>
+    [Theory]
+    [InlineData(125_000)]
+    [InlineData(1_250_000)]
+    public void CharacterCountLargeInputs(int repetitions)
+    {
+        string text = string.Concat(Enumerable.Repeat("a😀e\u0301\r\nx", repetitions));
+        string edited = text + "!";
+        EditorViewModel viewModel = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        for (int index = 0; index < 20; index++)
+        {
+            viewModel.Text = index % 2 == 0 ? text : edited;
+        }
+
+        Stopwatch watch = new();
+        long allocated = GC.GetAllocatedBytesForCurrentThread();
+        watch.Start();
+        for (int index = 0; index < 100; index++)
+        {
+            viewModel.Text = index % 2 == 0 ? text : edited;
+        }
+
+        watch.Stop();
+        long editBytes = GC.GetAllocatedBytesForCurrentThread() - allocated;
+        double editMilliseconds = watch.Elapsed.TotalMilliseconds / 100;
+        Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
+        watch.Restart();
+        for (int index = 0; index < 100_000; index++)
+        {
+            viewModel.CaretColumn = (index % 100) + 1;
+        }
+
+        watch.Stop();
+        Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
+        Assert.Same(edited, viewModel.Text);
+        output.WriteLine($"{text.Length:N0} UTF-16 code units: {editMilliseconds:F3} ms/update, {editBytes / 100} bytes/update; 100,000 caret changes: {watch.Elapsed.TotalMilliseconds:F3} ms.");
     }
 
     private sealed class Store : ITextDocumentStore

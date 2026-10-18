@@ -321,3 +321,56 @@ platforms. For native desktop acceptance, repeat the editor procedure above with
 Show Preview enabled. Check that links remain inactive, images remain descriptions,
 and Save As to plain text hides the preview without interrupting source editing.
 [ADR 0008](adr/0008-safe-markdown-preview.md) records renderer limits and deferred behavior.
+
+## Character count verification
+
+Date: 2026-10-18. [Issue #57](https://github.com/daniel-kindl/tangopad/issues/57).
+
+`dotnet msbuild eng/verify.proj` passed on Linux. Locked restore and audit,
+formatting, analyzers, and Debug and Release builds passed with zero diagnostics.
+Tests passed 221 cases and skipped one Windows-only filesystem case.
+All seven TRX reports passed validation. Native startup passed.
+
+`Editor.App/ViewModels/EditorViewModel.cs` owns the cached scalar count in the
+`Editor.App.ViewModels` namespace. `Views/EditorWindow.axaml` binds the status
+through compiled bindings. `Resources/Text.axaml` owns the label format.
+The view reuses the existing status style and spacing token.
+No module dependency, namespace, or public API changes are required.
+
+The first headless case failed because the character status control was absent.
+All 13 focused cases pass. They cover empty and ASCII text, supplementary Unicode,
+combining marks, CRLF, mixed newlines, count notifications, both themes, typing,
+caret status, selection, Word Wrap, font size, Find/Replace, undo/redo, identity,
+dirty state, exact UTF-8 save bytes, New, and Open.
+
+The count enumerates Unicode scalars once per changed text value without a
+collection allocation. Caret and selection changes do not invoke the count.
+The Release profile alternates two preallocated strings for 100 text updates
+after 20 warmup updates. It measures the ViewModel setter, including document
+synchronization and count notifications. It excludes control rendering and string
+creation. The input repeats ASCII, a supplementary character, a combining mark,
+and CRLF. Timing is evidence from this host, not a CI performance threshold.
+
+| UTF-16 code units | Mean time per text update | Allocated bytes per text update |
+| --- | --- | --- |
+| 1,000,000 | 2.052 ms | 0 |
+| 10,000,000 | 21.781 ms | 0 |
+
+The corresponding 100,000 caret changes took 8.690 ms and 0.473 ms.
+JIT warmup and concurrent host activity can affect these measurements.
+Repeat the profile from the repository root:
+
+```sh
+dotnet test --project tests/Editor.App.Tests --configuration Release -- --filter-method '*CharacterCountLargeInputs' --show-live-output on
+```
+
+`python3 eng/check-native-editor.py` passed all 29 groups on Fedora Linux 44,
+x64, with Xvfb, a private D-Bus session, and the GTK portal.
+Local evidence is in `artifacts/native-editor-pndqzkwh`.
+The inspected Unicode fixture screenshot shows `Characters: 29` beside the caret
+status. The fixture includes a supplementary character and mixed line endings.
+Native editing, Find/Replace, font size, Word Wrap, Markdown preview, Go To Line,
+file operations, exact saved bytes, and close checks pass.
+
+Windows and macOS native interaction remains untested on this Linux host.
+Hosted Linux, Windows, and macOS checks must pass before a normal merge.
