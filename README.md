@@ -33,6 +33,9 @@ dotnet run --project src/Editor.App --configuration Release
 
 Type in the new document. Use Open to select a UTF-8 file.
 Use Save to write the document, or Save As to select another destination.
+Recent Files reopens up to ten recent destinations. Paths stay on this device.
+Select Clear Recent Files to clear the list. See [recent files](docs/recent-files.md)
+for storage locations, privacy, and failure behavior.
 An asterisk in the title marks unsaved changes. The title shows the full file path.
 New, Open, and window close ask whether to save unsaved changes.
 Cancel leaves the document open. Errors appear in a dialog.

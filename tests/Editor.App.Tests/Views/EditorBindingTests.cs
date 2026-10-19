@@ -482,11 +482,12 @@ public sealed class EditorBindingTests
             Assert.Same(actions, window.FindControl<StackPanel>("Actions"));
             Assert.Same(cancel, window.FindControl<Button>("CancelOperation"));
             string[] labels = [.. actions.Children.Cast<Button>().Select(button => Assert.IsType<string>(button.Content))];
-            Assert.Equal(["New", "Open", "Save", "Save As"], labels);
+            Assert.Equal(["New", "Open", "Recent Files", "Save", "Save As"], labels);
             Assert.Same(actions.Children[0], window.FindControl<Button>("NewButton"));
             Assert.Same(actions.Children[1], window.FindControl<Button>("OpenButton"));
-            Assert.Same(actions.Children[2], window.FindControl<Button>("SaveButton"));
-            Assert.Same(actions.Children[3], window.FindControl<Button>("SaveAsButton"));
+            Assert.Same(actions.Children[2], window.FindControl<Button>("RecentFilesButton"));
+            Assert.Same(actions.Children[3], window.FindControl<Button>("SaveButton"));
+            Assert.Same(actions.Children[4], window.FindControl<Button>("SaveAsButton"));
 
             KeyModifiers command = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
             KeyGesture[] gestures = [.. window.KeyBindings.Select(binding => Assert.IsType<KeyGesture>(binding.Gesture))];
@@ -499,7 +500,7 @@ public sealed class EditorBindingTests
             Assert.Equal(command, gestures[2].KeyModifiers);
             Assert.Equal(command | KeyModifiers.Shift, gestures[3].KeyModifiers);
             Assert.Equal(gestures[0].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[0])));
-            Assert.Equal(gestures[3].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[3])));
+            Assert.Equal(gestures[3].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[4])));
 
             Assert.Equal(3, Avalonia.Application.Current!.Styles.Count);
             _ = Assert.IsType<FluentTheme>(Avalonia.Application.Current.Styles[0]);

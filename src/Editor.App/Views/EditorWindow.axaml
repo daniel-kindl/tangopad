@@ -16,6 +16,28 @@
                   IsEnabled="{Binding !IsBusy}">
         <Button x:Name="NewButton" Content="{StaticResource Text.Command.New}" Command="{Binding NewCommand}" />
         <Button x:Name="OpenButton" Content="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}" />
+        <Button x:Name="RecentFilesButton" Content="{StaticResource Text.Recent.Title}">
+          <Button.Flyout>
+            <Flyout>
+              <StackPanel Spacing="{StaticResource Spacing.Actions}">
+                <TextBlock Text="{StaticResource Text.Recent.Privacy}" />
+                <TextBlock Text="{StaticResource Text.Recent.StorageFailed}" IsVisible="{Binding HistoryStorageFailed}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <ItemsControl x:Name="RecentFilesItems" ItemsSource="{Binding RecentFiles}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecentFileEntry">
+                      <Button Content="{Binding Label}" ToolTip.Tip="{Binding Path}" HorizontalAlignment="Stretch"
+                              Command="{Binding $parent[ItemsControl].((vm:EditorViewModel)DataContext).OpenRecentCommand}"
+                              CommandParameter="{Binding Path}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="ClearRecentFilesButton" Content="{StaticResource Text.Recent.Clear}"
+                        Command="{Binding ClearRecentFilesCommand}" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
         <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" />
         <Button x:Name="SaveAsButton" Content="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" />
       </StackPanel>

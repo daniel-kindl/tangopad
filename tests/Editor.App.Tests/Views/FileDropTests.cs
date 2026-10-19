@@ -42,6 +42,7 @@ public sealed class FileDropTests
 
                 Assert.Equal("# Hello\r\nworld", window.Editor.Text);
                 Assert.Equal(path, window.ViewModel.Session.Destination);
+                Assert.Equal([path], window.ViewModel.RecentPaths);
                 Assert.Equal(DocumentFormat.Markdown, window.ViewModel.Format);
                 Assert.NotNull(window.Editor.SyntaxHighlighting);
                 Assert.Equal(14, window.ViewModel.CharacterCount);
