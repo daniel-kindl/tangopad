@@ -439,3 +439,50 @@ shows `Characters: 29` and `Words: 6` beside the caret status.
 
 Windows and macOS native interaction remains untested on this Linux host.
 Hosted Linux, Windows, and macOS verification must pass before a normal merge.
+
+## Reload from Disk, issue #67
+
+`Editor.App/ViewModels/EditorViewModel.cs` owns the command in `Editor.App.ViewModels`.
+`Views/EditorWindow.axaml` binds the toolbar button through the shared label in
+`Resources/Text.axaml`. Window code owns the platform shortcut and tooltip.
+Tests stay in `Editor.App.Tests/ViewModels` and `Editor.App.Tests/Views`.
+No dependency, namespace, or public API changes are required.
+[ADR 0007](adr/0007-plain-text-editor.md) records the document identity decision.
+
+The untitled-availability test fails against `dev` commit `4768416` because `ReloadButton` is absent.
+The same test passes with the implementation. All 15 focused reload cases pass.
+They cover clean and externally modified text,
+Save, Discard, Cancel, pending-save edits, failed loads, cancellation, reentry,
+untitled availability, exact Unicode and newlines, format, Markdown highlighting
+and preview, counts, line-ending status, selection, caret, undo, redo, and persisted history.
+The existing Application and filesystem tests verify the reused load and strict UTF-8 contracts.
+The headless shortcut cases include unchanged disk text, which must still reset editing state.
+
+Repeat the focused tests from the repository root:
+
+```sh
+dotnet test --project tests/Editor.App.Tests -- --filter-method '*Reload*'
+```
+
+`eng/check-native-editor.py` includes external Unicode edits with mixed newlines,
+Cancel with retained text and undo, and Discard with reset undo.
+Each native check verifies saved bytes through the production editor.
+Windows and macOS native interaction remains untested on this Linux host.
+Hosted Linux, Windows, and macOS verification must pass before a normal merge.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and Debug and Release builds passed
+with zero diagnostics. Tests passed 300 cases and skipped one Windows-only filesystem
+case. All seven TRX reports passed validation. Native startup passed.
+
+The first native F5 attempt delivered Alt+F5 with xdotool 3.20211022.1.
+Temporary key-event diagnostics confirmed the extra modifier. The production shortcut
+remains F5. The script sends Xvfb keycode 71 to avoid the
+[xdotool function-key modifier defect](https://github.com/jordansissel/xdotool/releases/tag/v4.20251130.1).
+Native undo checks use single-character edits because simulated typing creates separate undo entries.
+
+`python3 eng/check-native-editor.py` passed all 44 native workflow groups on Fedora Linux 44, x64,
+with Xvfb, a private D-Bus session, and the GTK portal. Local evidence is in
+`artifacts/native-editor-xuc9abp3`. The inspected reload screenshot shows the external Unicode
+source and mixed line-ending status. The three reload groups verify exact saved bytes,
+Cancel with retained undo, and Discard with reset undo. Existing editor workflows also pass.

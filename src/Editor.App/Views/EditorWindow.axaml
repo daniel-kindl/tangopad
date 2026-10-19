@@ -41,6 +41,7 @@
         </Button>
         <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" />
         <Button x:Name="SaveAsButton" Content="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" />
+        <Button x:Name="ReloadButton" Content="{StaticResource Text.Command.Reload}" Command="{Binding ReloadCommand}" />
       </StackPanel>
       <Button x:Name="CancelOperation" Content="{StaticResource Text.Command.CancelOperation}"
               IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />

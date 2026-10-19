@@ -55,7 +55,7 @@ Undo therefore follows the same text-change path as typing.
 The UI does not keep another clean baseline or infer saved state.
 
 The window title displays the full destination or Untitled.
-An asterisk marks dirty text. The toolbar exposes New, Open, Save, and Save As.
+An asterisk marks dirty text. The toolbar exposes New, Open, Save, Save As, and Reload from Disk.
 Shortcuts use Control on Linux and Windows, and Command on macOS.
 
 The ViewModel serializes commands on the UI thread.
@@ -74,6 +74,27 @@ Open first selects a path, then confirms unsaved changes, then loads a new sessi
 A failed or cancelled load preserves the current session.
 A successful Save before a later failed load can still update its baseline.
 Save As changes the destination only after successful persistence.
+
+Reload from Disk uses the current `DocumentSession.Destination` without a picker.
+The command is disabled for untitled documents and while another operation is pending.
+It uses the same confirmation, load, cancellation, and error paths as Open.
+Save writes the current buffer before reload. Discard permits the load without saving.
+Cancel preserves the current editing state. New edits during confirmation Save prevent replacement.
+A failed or cancelled load preserves identity, text, destination, selection, caret, and undo history.
+A successful Save before a later failed load retains its normal baseline and history changes.
+
+Successful reload creates a new session and document identity through `DocumentSession.LoadAsync`.
+The destination stays the same. The new identity represents intentional document replacement,
+even when the loaded text equals the buffer. The editor clears undo and redo, removes selection,
+and resets the caret to line 1, column 1. Format, highlighting, preview, counts, and ending status
+follow the loaded session. Visible Markdown preview remains visible and renders the new source.
+Recent Files moves the destination to the front without duplicating it.
+Core, Application, and Infrastructure retain their existing contracts.
+
+Reload uses F5 on Windows and Linux, following [Kate's Reload shortcut](https://docs.kde.org/stable_kf6/en/kate/kate/the-menu-entries.html).
+macOS uses Command+R, following [Apple's reload convention](https://support.apple.com/en-us/102564).
+Neither gesture conflicts with the current window shortcuts or AvaloniaEdit editing gestures.
+The toolbar tooltip displays the platform gesture. Reload does not watch for external changes.
 
 Cancel operation requests cancellation of pending I/O.
 Native picker APIs do not accept cancellation tokens.

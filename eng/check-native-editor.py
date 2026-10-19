@@ -266,6 +266,63 @@ def exercise_recent(ui, files):
     ui.editor()
 
 
+def exercise_reload(ui, files):
+    # Xvfb maps F5 to keycode 71. Older xdotool versions add Alt for the F5 keysym.
+    fixture = files / "reload.md"
+    original = b"# Original\r\n"
+    external = "# External 😀\r\nλ\nlast\r".encode()
+    fixture.write_bytes(original)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(fixture, saving=False)
+    ui.editor(fixture)
+    fixture.write_bytes(external)
+    ui.key("71")
+    time.sleep(0.5)
+    ui.key("ctrl+End")
+    ui.type("!")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"!")
+    ui.record("reload-external-unicode-and-mixed-newlines")
+
+    ui.type("?")
+    ui.editor(fixture, dirty=True)
+    ui.key("71")
+    ui.decision("Cancel")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"!?")
+    ui.key("ctrl+z")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"!")
+    ui.record("reload-cancel-preserves-text-and-undo")
+
+    ui.type("x")
+    ui.editor(fixture, dirty=True)
+    fixture.write_bytes(original)
+    ui.key("71")
+    ui.decision("Discard")
+    ui.editor(fixture)
+    ui.key("ctrl+End")
+    ui.type("v")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, original + b"v")
+    ui.key("ctrl+z")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, original)
+    ui.record("reload-discard-resets-undo")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def exercise(ui, files, app):
     first, second, output = (files / name for name in ("first.txt", "second.MD", "round trip.markdown"))
     fixture = files / "Unicode input.MARKDOWN"
@@ -373,7 +430,7 @@ def exercise(ui, files, app):
                 # IN_ACCESS and IN_OPEN detect reads of the referenced local asset.
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the preview asset.")
-                ui.click(window, 654, 25)
+                ui.click(window, 794, 25)
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Preview accessed a network or local-file resource.")
@@ -396,9 +453,9 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.bytes(markdown, markdown_text)
-        ui.click(window, 654, 25)
+        ui.click(window, 794, 25)
         ui.record("markdown-preview-hidden-with-undo-and-find")
-        ui.click(window, 654, 25)
+        ui.click(window, 794, 25)
         time.sleep(0.5)
         plain = files / "highlighting.txt"
         ui.picker("ctrl+shift+s", "Save text file")
@@ -502,14 +559,14 @@ def exercise(ui, files, app):
         for _ in range(5):
             ui.key("ctrl+plus")
         # Word Wrap follows Replace in the existing toolbar.
-        ui.click(window, 560, 25)
+        ui.click(window, 700, 25)
         ui.editor(wrapped)
         ui.record("word-wrap-enabled-long-unicode-line")
         ui.click(window, 120, 150)
         ui.key("ctrl+End")
         ui.type("!")
         ui.editor(wrapped, dirty=True)
-        ui.click(window, 560, 25)
+        ui.click(window, 700, 25)
         ui.record("word-wrap-disabled-after-edit")
         ui.click(window, 120, 150)
         ui.key("ctrl+z")
@@ -521,7 +578,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.bytes(wrapped, long_text + b"!")
         ui.editor(wrapped)
-        ui.click(window, 560, 25)
+        ui.click(window, 700, 25)
         ui.key("ctrl+n")
         ui.editor()
         ui.picker("ctrl+o", "Open text file")
@@ -564,7 +621,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.bytes(wrapped, long_text + b"!")
         ui.record("go-to-line-cancel-preserves-selection-and-bytes")
-        ui.click(window, 560, 25)
+        ui.click(window, 700, 25)
         ui.click(window, 120, 150)
         ui.key("ctrl+0")
         ui.key("ctrl+n")
@@ -654,6 +711,7 @@ def main():
             files.mkdir()
             exercise_drops(ui, files, launch)
             exercise_recent(ui, files)
+            exercise_reload(ui, files)
             exercise(ui, files, app)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")

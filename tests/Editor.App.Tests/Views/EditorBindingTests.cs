@@ -575,7 +575,7 @@ public sealed class EditorBindingTests
             Assert.Same(actions, window.FindControl<StackPanel>("Actions"));
             Assert.Same(cancel, window.FindControl<Button>("CancelOperation"));
             string[] labels = [.. actions.Children.Cast<Button>().Select(button => Assert.IsType<string>(button.Content))];
-            Assert.Equal(["New", "Open", "Recent Files", "Save", "Save As"], labels);
+            Assert.Equal(["New", "Open", "Recent Files", "Save", "Save As", "Reload from Disk"], labels);
             Assert.Same(actions.Children[0], window.FindControl<Button>("NewButton"));
             Assert.Same(actions.Children[1], window.FindControl<Button>("OpenButton"));
             Assert.Same(actions.Children[2], window.FindControl<Button>("RecentFilesButton"));
@@ -1212,6 +1212,29 @@ public sealed class EditorBindingTests
             Assert.False(window.Editor.Document.UndoStack.CanUndo);
             window.Close();
             Dispatcher.UIThread.RunJobs();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Reload has a discoverable command that is unavailable for an untitled document.</summary>
+    [Fact]
+    public async Task ReloadIsUnavailableForUntitledDocument()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            Button reload = Assert.IsType<Button>(window.FindControl<Button>("ReloadButton"));
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Reload from Disk", reload.Content);
+            Assert.False(reload.IsEffectivelyEnabled);
+            KeyGesture gesture = Assert.IsType<KeyGesture>(Assert.Single(window.KeyBindings,
+                binding => ReferenceEquals(binding.Command, reload.Command)).Gesture);
+            Assert.Equal(OperatingSystem.IsMacOS() ? Key.R : Key.F5, gesture.Key);
+            Assert.Equal(OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.None, gesture.KeyModifiers);
+            Assert.Equal(gesture.ToString(), ToolTip.GetTip(reload));
+            window.Close();
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
