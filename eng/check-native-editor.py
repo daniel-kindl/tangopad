@@ -243,17 +243,17 @@ def exercise_recent(ui, files):
     ui.key("ctrl+n")
     window = ui.editor()
     ui.click(window, 185, 25)
-    # The first row follows the privacy notice. Keep focus in the popup.
-    ui.xdo("mousemove", "--window", window, 180, 107, "click", 1)
+    # Flyout focus starts on the first recent entry.
+    ui.key("Return")
     window = ui.editor(fixture)
     ui.record("recent-file-reopen")
     ui.key("ctrl+End")
     ui.type("!")
     window = ui.editor(fixture, dirty=True)
-    count = len(paths())
     ui.click(window, 185, 25)
-    # Each ItemsControl row occupies 32 pixels. The clear button follows the list.
-    ui.xdo("mousemove", "--window", window, 100, 107 + (32 * count), "click", 1)
+    # Move from the first entry to Clear through the popup's focus cycle.
+    ui.key("shift+Tab")
+    ui.key("Return")
     wait("cleared recent paths persisted", lambda: paths() == [])
     ui.key("Escape")
     ui.editor(fixture, dirty=True)
