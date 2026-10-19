@@ -32,6 +32,15 @@
   <x:String x:Key="Text.Search.ReplacementCount" xml:space="preserve">Replaced: </x:String>
   <x:String x:Key="Text.Status.WordCountFormat">Words: {0}</x:String>
   <x:String x:Key="Text.Status.CharacterCountFormat">Characters: {0}</x:String>
+  <x:String x:Key="Text.Status.Encoding">UTF-8</x:String>
+  <x:String x:Key="Text.Status.EncodingName">Text encoding: UTF-8</x:String>
+  <x:String x:Key="Text.Status.LineEndingNameFormat">Line endings: {0}</x:String>
+  <x:String x:Key="Text.Status.LineEndingFormat">Endings: {0}</x:String>
+  <x:String x:Key="Text.Status.LineEnding.None">None</x:String>
+  <x:String x:Key="Text.Status.LineEnding.Lf">LF</x:String>
+  <x:String x:Key="Text.Status.LineEnding.CrLf">CRLF</x:String>
+  <x:String x:Key="Text.Status.LineEnding.Cr">CR</x:String>
+  <x:String x:Key="Text.Status.LineEnding.Mixed">Mixed</x:String>
   <x:String x:Key="Text.Status.CaretFormat">Ln {0}, Col {1}</x:String>
   <x:String x:Key="Text.Editor.WordWrap">Word Wrap</x:String>
   <x:String x:Key="Text.GoToLine.Title">Go To Line</x:String>

@@ -6,7 +6,7 @@ The editor keeps its existing layout, commands, text rules, and dialog decisions
 ## Ownership
 
 EditorViewModel owns observable text, title, dirty state, busy state, edit availability, and commands.
-It also owns caret line and column, character and word counts, Word Wrap, and font size.
+It also owns caret line and column, character and word counts, line-ending style, Word Wrap, and font size.
 It uses CommunityToolkit.Mvvm's ObservableObject and generated properties and relay commands.
 It serializes document operations and retains the caller's synchronization context.
 The desktop caller runs commands and edits on the UI thread.
@@ -21,6 +21,44 @@ The bottom status row uses compiled bindings and `Text.Status.CaretFormat` to di
 The status row also binds `CharacterCount` and `WordCount` through `Text.Status.CharacterCountFormat` and `Text.Status.WordCountFormat`.
 The ViewModel counts Unicode scalars and non-whitespace runs together when `Text` changes.
 Both labels reuse the `editor-status` style and the existing spacing token.
+The status row also displays `UTF-8` and the cached `LineEndings` value.
+`LineEndingStyle` and its observable property belong to `Editor.App.ViewModels`.
+`PresentationResources.LineEndingLabel` maps that value to shared text resources.
+The ViewModel performs no resource lookup. Both visible and screen-reader labels use compiled bindings.
+The labels use the existing status style and spacing token.
+The status items wrap at narrow window widths so all labels remain visible.
+
+### Encoding and line endings
+
+The supported document store reads and writes strict UTF-8. Every supported document therefore displays `UTF-8`, including an untitled document.
+The status provides no encoding selection or conversion.
+
+Line-ending detection reads the current source buffer. It applies these rules:
+
+- `CRLF` is an adjacent carriage return and line feed, treated as one ending.
+- `LF` is a line feed without an immediately preceding carriage return.
+- `CR` is a carriage return without an immediately following line feed.
+- `Mixed` means that the buffer contains at least two of these three ending styles.
+- `None` means that the buffer contains none of these endings.
+
+An untitled empty document displays `UTF-8` and `Endings: None`.
+Text without a newline also displays `Endings: None`.
+Unicode separators such as U+0085, U+2028, and U+2029 do not count as these endings.
+For example, `\r\n\n` is mixed CRLF and LF. `\r\r\n` is mixed CR and CRLF.
+A trailing carriage return counts as CR. Repeated CRLF sequences display CRLF.
+Markdown uses its exact source text, including fenced code.
+
+The text-change handler detects endings in the same Unicode-scalar pass that counts characters and words.
+It recognizes CRLF across adjacent scalar values without skipping either character in the existing counts.
+The cached value changes only when the detected style changes.
+Caret movement, selection, scrolling, and theme changes do not scan the document.
+New and Open use the same text-change path. Equal text retains the correct cached value across document identities.
+Detection never writes text, normalizes endings, or changes undo history or saved bytes.
+The status uses descriptive automation names. Ending changes use polite screen-reader announcements.
+The labels do not intercept keyboard focus or editor shortcuts.
+
+### Editor presentation controls
+
 The toolbar checkbox binds to the ViewModel's `WordWrap` property with a compiled two-way binding.
 The editor binds directly to that property. AvaloniaEdit disables horizontal scrolling during wrapping and restores it when wrapping stops.
 Word Wrap starts off and survives New and Open within the window. It does not change the document or undo history.

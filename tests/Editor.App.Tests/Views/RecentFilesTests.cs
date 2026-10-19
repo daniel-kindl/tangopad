@@ -53,6 +53,8 @@ public sealed class RecentFilesTests
                 Assert.NotNull(opening);
                 await opening.ConfigureAwait(true);
                 Dispatcher.UIThread.RunJobs();
+                Assert.Equal(decision == UnsavedDecision.Cancel ? "Endings: None" : "Endings: CRLF", window.LineEndingStatus.Text);
+                Assert.Equal("UTF-8", window.EncodingStatus.Text);
                 Assert.Equal(1, dialogs.Confirmations);
                 Assert.Equal(0, dialogs.Pickers);
                 Assert.True(window.ViewModel.WordWrap);

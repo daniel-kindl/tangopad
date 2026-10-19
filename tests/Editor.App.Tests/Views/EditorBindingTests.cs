@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
@@ -24,6 +25,88 @@ namespace Editor.App.Tests.Views;
 /// <summary>Checks compiled views and the AvaloniaEdit control on a headless UI dispatcher.</summary>
 public sealed class EditorBindingTests
 {
+    /// <summary>Status labels describe exact source endings without changing the document.</summary>
+    /// <param name="text">The exact source text.</param>
+    /// <param name="ending">The displayed ending style.</param>
+    [Theory]
+    [InlineData("", "None")]
+    [InlineData("😀 no newline", "None")]
+    [InlineData("a\nb\n", "LF")]
+    [InlineData("a\r\nb\r\n", "CRLF")]
+    [InlineData("a\rb\r", "CR")]
+    [InlineData("\r\n\n", "Mixed")]
+    [InlineData("\r\n\r", "Mixed")]
+    [InlineData("\n\r", "Mixed")]
+    [InlineData("😀\r\nλ\nlast\r", "Mixed")]
+    [InlineData("\r\r\n", "Mixed")]
+    [InlineData("\u0085\u2028\u2029", "None")]
+    public async Task DocumentStatusDescribesExactBuffer(string text, string ending)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+            window.Show();
+            TextBlock encoding = Assert.IsType<TextBlock>(window.FindControl<TextBlock>("EncodingStatus"));
+            TextBlock endings = Assert.IsType<TextBlock>(window.FindControl<TextBlock>("LineEndingStatus"));
+            Assert.Equal("UTF-8", encoding.Text);
+            Assert.Equal("Endings: None", endings.Text);
+            Guid identity = window.ViewModel.DocumentId;
+            window.Editor.Document.Insert(0, text);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal($"Endings: {ending}", endings.Text);
+            Assert.Equal($"Line endings: {ending}", AutomationProperties.GetName(endings));
+            Assert.Equal("Text encoding: UTF-8", AutomationProperties.GetName(encoding));
+            Assert.False(endings.Focusable);
+            Assert.False(encoding.Focusable);
+            Assert.Equal("UTF-8", encoding.Text);
+            Assert.Equal(text, window.Editor.Text);
+            Assert.Equal(text, window.ViewModel.Session.Document.Text);
+            Assert.Equal(identity, window.ViewModel.DocumentId);
+            Assert.Equal(text.Length != 0, window.ViewModel.IsDirty);
+            if (text.Length != 0)
+            {
+                window.Editor.Document.UndoStack.Undo();
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal("Endings: None", endings.Text);
+                Assert.False(window.ViewModel.IsDirty);
+                window.Editor.Document.UndoStack.Redo();
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal($"Endings: {ending}", endings.Text);
+                Assert.Equal(text, window.Editor.Text);
+            }
+
+            window.Editor.Document.UndoStack.ClearAll();
+            window.ViewModel.Text = string.Empty;
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Every status item stays visible at the minimum window width.</summary>
+    [Fact]
+    public async Task DocumentStatusFitsMinimumWindowWidth()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(() =>
+        {
+            EditorWindow window = new(new FileTextDocumentStore(), new Dialogs()) { Width = 400 };
+            window.Show();
+            window.ViewModel.Text = "a\r\nb\nc\r";
+            window.UpdateLayout();
+            foreach (TextBlock item in new[] { window.CaretStatus, window.CharacterStatus, window.WordStatus, window.EncodingStatus, window.LineEndingStatus })
+            {
+                Point edge = Assert.NotNull(item.TranslatePoint(new Point(item.Bounds.Width, item.Bounds.Height), window));
+                Assert.InRange(edge.X, 0, window.ClientSize.Width);
+                Assert.InRange(edge.Y, 0, window.ClientSize.Height);
+            }
+
+            window.ViewModel.Text = string.Empty;
+            window.Close();
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>The document counts start at zero beside the caret status.</summary>
     [Fact]
     public async Task CharacterStatusStartsAtZero()
@@ -57,11 +140,12 @@ public sealed class EditorBindingTests
         _ = await ui.Dispatch(async () =>
         {
             string path = Path.GetTempFileName();
+            string saved = Path.GetTempFileName();
             try
             {
                 const string original = "A😀e\u0301\r\nB\nC\r";
                 await File.WriteAllTextAsync(path, original).ConfigureAwait(true);
-                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = path })
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = saved })
                 {
                     RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light
                 };
@@ -73,6 +157,8 @@ public sealed class EditorBindingTests
                     Assert.Equal($"Characters: {expected}", window.CharacterStatus.Text);
                     Assert.Equal(words, window.ViewModel.WordCount);
                     Assert.Equal($"Words: {words}", window.WordStatus.Text);
+                    Assert.Equal(expected == 0 ? "Endings: None" : "Endings: Mixed", window.LineEndingStatus.Text);
+                    Assert.Equal("UTF-8", window.EncodingStatus.Text);
                 }
 
                 Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
@@ -98,6 +184,7 @@ public sealed class EditorBindingTests
                 Assert.DoesNotContain("Text", notifications);
                 Assert.DoesNotContain("CharacterCount", notifications);
                 Assert.DoesNotContain("WordCount", notifications);
+                Assert.DoesNotContain("LineEndings", notifications);
                 Assert.Equal("😀", window.Editor.SelectedText);
                 Assert.Equal(caret, window.Editor.CaretOffset);
                 AssertCaretStatus(window, 1, 4);
@@ -124,6 +211,11 @@ public sealed class EditorBindingTests
                 Assert.False(window.ViewModel.IsDirty);
                 Assert.True(window.Editor.Document.UndoStack.CanUndo);
                 Assert.Equal(System.Text.Encoding.UTF8.GetBytes(original + "!"), await File.ReadAllBytesAsync(path).ConfigureAwait(true));
+                Assert.True(await window.ViewModel.SaveAsAsync().ConfigureAwait(true));
+                AssertCount(11, 4);
+                Assert.Equal(identity, window.ViewModel.DocumentId);
+                Assert.False(window.ViewModel.IsDirty);
+                Assert.Equal(System.Text.Encoding.UTF8.GetBytes(original + "!"), await File.ReadAllBytesAsync(saved).ConfigureAwait(true));
                 window.ViewModel.Search.ShowReplaceCommand.Execute(null);
                 window.ViewModel.Search.Query = "😀";
                 window.ViewModel.Search.Replacement = "x y ";
@@ -149,6 +241,7 @@ public sealed class EditorBindingTests
             finally
             {
                 File.Delete(path);
+                File.Delete(saved);
             }
 
             return true;
@@ -466,9 +559,9 @@ public sealed class EditorBindingTests
             Assert.False(cancel.IsVisible);
             Border status = Assert.IsType<Border>(layout.Children[2]);
             Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
-            StackPanel statusItems = Assert.IsType<StackPanel>(status.Child);
+            WrapPanel statusItems = Assert.IsType<WrapPanel>(status.Child);
             Assert.Equal(Orientation.Horizontal, statusItems.Orientation);
-            Assert.Equal([window.CaretStatus, window.CharacterStatus, window.WordStatus], statusItems.Children);
+            Assert.Equal([window.CaretStatus, window.CharacterStatus, window.WordStatus, window.EncodingStatus, window.LineEndingStatus], statusItems.Children);
             Grid documentLayout = Assert.IsType<Grid>(layout.Children[3]);
             TextEditor editor = Assert.IsType<TextEditor>(documentLayout.Children[0]);
             Assert.Equal(0, Grid.GetColumn(editor));
@@ -597,7 +690,7 @@ public sealed class EditorBindingTests
             window.KeyPressQwerty(PhysicalKey.F, modifier);
             Assert.True(window.SearchPanel.IsVisible);
             Assert.True(window.QueryInput.IsFocused);
-            Assert.Equal("Find", Avalonia.Automation.AutomationProperties.GetName(window.QueryInput));
+            Assert.Equal("Find", AutomationProperties.GetName(window.QueryInput));
             window.KeyTextInput("ana");
             Assert.Equal("ana", window.ViewModel.Search.Query);
             Assert.Equal(2, window.ViewModel.Search.MatchCount);

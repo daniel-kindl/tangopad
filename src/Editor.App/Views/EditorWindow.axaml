@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:edit="using:AvaloniaEdit"
+        xmlns:resources="using:Editor.App.Resources"
         xmlns:vm="using:Editor.App.ViewModels"
         x:Class="Editor.App.Views.EditorWindow"
         x:DataType="vm:EditorViewModel"
@@ -84,7 +85,7 @@
     </StackPanel>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
             Padding="{StaticResource Inset.Toolbar}">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing.Actions}">
+      <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Actions}">
         <TextBlock x:Name="CaretStatus" Classes="editor-status">
           <TextBlock.Text>
             <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
@@ -97,7 +98,14 @@
                    Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
         <TextBlock x:Name="WordStatus" Classes="editor-status"
                    Text="{Binding WordCount, StringFormat={StaticResource Text.Status.WordCountFormat}}" />
-      </StackPanel>
+        <TextBlock x:Name="EncodingStatus" Classes="editor-status"
+                   Text="{StaticResource Text.Status.Encoding}"
+                   AutomationProperties.Name="{StaticResource Text.Status.EncodingName}" />
+        <TextBlock x:Name="LineEndingStatus" Classes="editor-status"
+                   Text="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingFormat}}"
+                   AutomationProperties.Name="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingNameFormat}}"
+                   AutomationProperties.LiveSetting="Polite" />
+      </WrapPanel>
     </Border>
     <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
       <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"

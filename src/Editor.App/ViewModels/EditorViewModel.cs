@@ -109,6 +109,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public partial int WordCount { get; private set; }
 
     [ObservableProperty]
+    public partial LineEndingStyle LineEndings { get; private set; }
+
+    [ObservableProperty]
     public partial int CaretLine { get; internal set; } = 1;
 
     [ObservableProperty]
@@ -127,9 +130,31 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         int count = 0;
         int words = 0;
         bool inWord = false;
+        bool previousCr = false;
+        bool hasLf = false;
+        bool hasCrLf = false;
+        bool hasCr = false;
         foreach (Rune rune in value.EnumerateRunes())
         {
             count++;
+            if (previousCr)
+            {
+                if (rune.Value == '\n')
+                {
+                    hasCrLf = true;
+                }
+                else
+                {
+                    hasCr = true;
+                }
+            }
+
+            if (rune.Value == '\n' && !previousCr)
+            {
+                hasLf = true;
+            }
+
+            previousCr = rune.Value == '\r';
             if (Rune.IsWhiteSpace(rune))
             {
                 inWord = false;
@@ -143,6 +168,14 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
 
         CharacterCount = count;
         WordCount = words;
+        LineEndings = (hasLf, hasCrLf, hasCr || previousCr) switch
+        {
+            (false, false, false) => LineEndingStyle.None,
+            (true, false, false) => LineEndingStyle.Lf,
+            (false, true, false) => LineEndingStyle.CrLf,
+            (false, false, true) => LineEndingStyle.Cr,
+            _ => LineEndingStyle.Mixed,
+        };
     }
 
     private bool CanStartOperation => !IsBusy;
