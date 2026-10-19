@@ -6,6 +6,7 @@
   <x:String x:Key="Text.Command.New">New</x:String>
   <x:String x:Key="Text.Command.Open">Open</x:String>
   <x:String x:Key="Text.Command.Save">Save</x:String>
+  <x:String x:Key="Text.Command.Reload">Reload from Disk</x:String>
   <x:String x:Key="Text.Command.SaveAs">Save As</x:String>
   <x:String x:Key="Text.Command.CancelOperation">Cancel operation</x:String>
   <x:String x:Key="Text.Command.Discard">Discard</x:String>

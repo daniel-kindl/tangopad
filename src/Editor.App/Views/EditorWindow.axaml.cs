@@ -48,6 +48,9 @@ internal sealed partial class EditorWindow : Window
         AddShortcut(OpenButton, "O", ViewModel.OpenCommand);
         AddShortcut(SaveButton, "S", ViewModel.SaveCommand);
         AddShortcut(SaveAsButton, "Shift+S", ViewModel.SaveAsCommand);
+        KeyGesture reload = KeyGesture.Parse(OperatingSystem.IsMacOS() ? "Meta+R" : "F5");
+        ToolTip.SetTip(ReloadButton, reload.ToString());
+        KeyBindings.Add(new KeyBinding { Gesture = reload, Command = ViewModel.ReloadCommand });
         RelayCommand find = new(() => OpenSearch(false));
         RelayCommand replace = new(() => OpenSearch(true));
         FindButton.Command = find;

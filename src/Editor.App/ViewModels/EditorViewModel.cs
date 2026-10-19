@@ -92,7 +92,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     partial void OnCanEditChanged(bool value) { Search.CanEdit = value; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand), nameof(OpenRecentCommand), nameof(ClearRecentFilesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(OpenCommand), nameof(SaveCommand), nameof(SaveAsCommand), nameof(CancelCommand), nameof(OpenRecentCommand), nameof(ClearRecentFilesCommand), nameof(ReloadCommand))]
     public partial bool IsBusy { get; private set; }
 
     [ObservableProperty]
@@ -234,6 +234,16 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         OnPropertyChanged(nameof(DocumentId));
         OnPropertyChanged(nameof(Format));
         return true;
+    }
+
+    private bool CanReload => !IsBusy && Session.Destination is not null;
+
+    [RelayCommand(CanExecute = nameof(CanReload))]
+    internal Task<bool> ReloadAsync()
+    {
+        return Session.Destination is { } path
+            ? RunAsync(token => OpenPathCoreAsync(path, token), allowEditing: false)
+            : Task.FromResult(false);
     }
 
     [RelayCommand(CanExecute = nameof(CanStartOperation))]
