@@ -37,7 +37,7 @@ public sealed class ReloadTests
         Assert.Equal(10, model.CharacterCount);
         Assert.Equal(3, model.WordCount);
         Assert.Equal(LineEndingStyle.Mixed, model.LineEndings);
-        Assert.Equal([path, "/other.txt"], model.RecentPaths);
+        Assert.Equal([Path.GetFullPath(path), Path.GetFullPath("/other.txt")], model.RecentPaths);
         Assert.True(model.ReloadCommand.CanExecute(null));
     }
 
@@ -94,7 +94,7 @@ public sealed class ReloadTests
         Assert.Equal("/current.txt", model.Session.Destination);
         Assert.Equal("Access denied.", dialogs.Error);
         Assert.Equal(save ? "keep" : null, store.SavedText);
-        Assert.Equal(["/current.txt"], model.RecentPaths);
+        Assert.Equal([Path.GetFullPath("/current.txt")], model.RecentPaths);
     }
 
     /// <summary>Cancellation and reentry cannot replace the active session, even if storage ignores cancellation.</summary>
