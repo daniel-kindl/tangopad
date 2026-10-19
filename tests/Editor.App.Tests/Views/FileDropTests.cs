@@ -47,6 +47,8 @@ public sealed class FileDropTests
                 Assert.NotNull(window.Editor.SyntaxHighlighting);
                 Assert.Equal(14, window.ViewModel.CharacterCount);
                 Assert.Equal(3, window.ViewModel.WordCount);
+                Assert.Equal("Endings: CRLF", window.LineEndingStatus.Text);
+                Assert.Equal("UTF-8", window.EncodingStatus.Text);
                 Assert.False(window.Editor.Document.UndoStack.CanUndo);
                 Assert.True(window.Editor.IsKeyboardFocusWithin);
                 window.Close();

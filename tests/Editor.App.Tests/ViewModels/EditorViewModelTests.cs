@@ -11,6 +11,47 @@ namespace Editor.App.Tests.ViewModels;
 /// <param name="output">The measurement output.</param>
 public sealed class EditorViewModelTests(ITestOutputHelper output)
 {
+    /// <summary>Only text changes update ending status. Equal text in a new session keeps its status.</summary>
+    [Fact]
+    public async Task LineEndingsFollowTextAndDocumentTransitions()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs { OpenPath = "/open.md", Decision = UnsavedDecision.Discard },
+            new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Assert.Equal(LineEndingStyle.None, viewModel.LineEndings);
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.Text = "a\r\n";
+        Assert.Equal(LineEndingStyle.CrLf, viewModel.LineEndings);
+        Assert.Contains("LineEndings", notifications);
+        notifications.Clear();
+        viewModel.Text = "b\r\n";
+        Assert.DoesNotContain("LineEndings", notifications);
+        notifications.Clear();
+        viewModel.CaretColumn = 2;
+        viewModel.WordWrap = true;
+        viewModel.IncreaseFontSizeCommand.Execute(null);
+        Assert.Equal(["CaretColumn", "WordWrap", "FontSize"], notifications);
+        Assert.Equal(LineEndingStyle.CrLf, viewModel.LineEndings);
+        viewModel.Text = "loaded\r\n\n";
+        Assert.Equal(LineEndingStyle.Mixed, viewModel.LineEndings);
+        Guid identity = viewModel.DocumentId;
+        Assert.True(await viewModel.OpenAsync().ConfigureAwait(true));
+        Assert.NotEqual(identity, viewModel.DocumentId);
+        Assert.Equal(LineEndingStyle.Mixed, viewModel.LineEndings);
+        Assert.False(viewModel.IsDirty);
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.Equal(LineEndingStyle.None, viewModel.LineEndings);
+        viewModel.Text = "\r";
+        Assert.Equal(LineEndingStyle.Cr, viewModel.LineEndings);
+        viewModel.Text = "\n";
+        Assert.Equal(LineEndingStyle.Lf, viewModel.LineEndings);
+        viewModel.Text = "plain";
+        Assert.Equal(LineEndingStyle.None, viewModel.LineEndings);
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.Equal(LineEndingStyle.None, viewModel.LineEndings);
+        Assert.False(viewModel.IsDirty);
+    }
+
     /// <summary>The count uses Unicode scalars and preserves the exact document text.</summary>
     /// <param name="text">The document text.</param>
     /// <param name="expected">The scalar count.</param>
@@ -433,6 +474,7 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         double editMilliseconds = watch.Elapsed.TotalMilliseconds / 100;
         Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
         Assert.Equal(repetitions + 1, viewModel.WordCount);
+        Assert.Equal(LineEndingStyle.CrLf, viewModel.LineEndings);
         watch.Restart();
         for (int index = 0; index < 100_000; index++)
         {
@@ -442,6 +484,7 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         watch.Stop();
         Assert.Equal((7 * repetitions) + 1, viewModel.CharacterCount);
         Assert.Equal(repetitions + 1, viewModel.WordCount);
+        Assert.Equal(LineEndingStyle.CrLf, viewModel.LineEndings);
         Assert.Same(edited, viewModel.Text);
         output.WriteLine($"{text.Length:N0} UTF-16 code units: {editMilliseconds:F3} ms/update, {editBytes / 100} bytes/update; 100,000 caret changes: {watch.Elapsed.TotalMilliseconds:F3} ms.");
     }
