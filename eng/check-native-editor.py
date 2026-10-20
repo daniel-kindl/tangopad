@@ -277,11 +277,13 @@ def exercise_line_numbers(ui, files):
 
     def gutter():
         # The second line has no caret or selection during these checks.
-        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((0, 76, 20, 98)).tobytes()
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((0, 76, 20, 88)).tobytes()
 
     numbered = gutter()
-    # Line numbers follows Word Wrap when the Markdown preview button is hidden.
-    ui.click(window, 756, 25)
+    # Tab from Word Wrap selects Line numbers in both host font layouts.
+    ui.click(window, 700, 25)
+    ui.key("Tab")
+    ui.key("space")
     wait("hidden line-number gutter", lambda: gutter() != numbered)
     hidden = gutter()
     ui.record("line-numbers-hidden")
@@ -304,7 +306,9 @@ def exercise_line_numbers(ui, files):
     ui.key("ctrl+z")
     ui.key("ctrl+s")
     ui.bytes(fixture, original)
-    ui.click(window, 756, 25)
+    ui.click(window, 700, 25)
+    ui.key("Tab")
+    ui.key("space")
     wait("restored gutter after undo", lambda: gutter() == numbered)
     ui.click(window, 120, 150)
 

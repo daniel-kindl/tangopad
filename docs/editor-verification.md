@@ -505,7 +505,7 @@ Go To Line tests cover wrapping with numbers both visible and hidden.
 The file-drop test opens Markdown with numbers hidden and checks the retained choice.
 ViewModel tests check presentation-only notifications and the default in a new window.
 
-`eng/check-native-editor.py` includes mouse and keyboard toggles, logical line
+`eng/check-native-editor.py` includes keyboard toggles, logical line
 navigation with numbers visible and hidden, undo, and exact saved bytes.
 Inspect its line-number screenshots to check the gutter and keyboard focus.
 For interactive desktop acceptance, repeat those checks in both themes at the
@@ -521,9 +521,13 @@ because the toolbar now wraps controls.
 
 `python3 eng/check-native-editor.py` passed all 47 workflow groups on Fedora Linux 44,
 x64, with Xvfb, the GTK portal, and a private D-Bus session. Local evidence is in
-`artifacts/native-editor-tfzzu9mh`. The inspected screenshots show gutter removal,
+`artifacts/native-editor-ak92vt16`. The inspected screenshots show gutter removal,
 keyboard restoration, and insertion at logical line 3 with numbers hidden.
 The script compares the rendered gutter before navigation to avoid stale screenshots.
 Earlier script attempts required explicit dialog waits and editor focus.
 Windows and macOS native interaction remains untested on this Linux host.
 Hosted Linux, Windows, and macOS verification must pass before a normal merge.
+
+The first hosted native attempt clicked Word Wrap because Ubuntu uses wider default text.
+The script now selects Line numbers with Tab from the existing Word Wrap control.
+Its gutter sample excludes the third line for both host font heights.
