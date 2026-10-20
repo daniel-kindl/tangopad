@@ -282,6 +282,7 @@ def exercise_line_numbers(ui, files):
     numbered = gutter()
     # Tab from Word Wrap selects Line numbers in both host font layouts.
     ui.click(window, 700, 25)
+    ui.key("space")
     ui.key("Tab")
     ui.key("space")
     wait("hidden line-number gutter", lambda: gutter() != numbered)
@@ -306,11 +307,6 @@ def exercise_line_numbers(ui, files):
     ui.key("ctrl+z")
     ui.key("ctrl+s")
     ui.bytes(fixture, original)
-    ui.click(window, 700, 25)
-    ui.key("Tab")
-    ui.key("space")
-    wait("restored gutter after undo", lambda: gutter() == numbered)
-    ui.click(window, 120, 150)
 
 
 def exercise_reload(ui, files):

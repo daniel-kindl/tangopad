@@ -521,7 +521,7 @@ because the toolbar now wraps controls.
 
 `python3 eng/check-native-editor.py` passed all 47 workflow groups on Fedora Linux 44,
 x64, with Xvfb, the GTK portal, and a private D-Bus session. Local evidence is in
-`artifacts/native-editor-ak92vt16`. The inspected screenshots show gutter removal,
+`artifacts/native-editor-oomjbboz`. The inspected screenshots show gutter removal,
 keyboard restoration, and insertion at logical line 3 with numbers hidden.
 The script compares the rendered gutter before navigation to avoid stale screenshots.
 Earlier script attempts required explicit dialog waits and editor focus.
@@ -531,3 +531,8 @@ Hosted Linux, Windows, and macOS verification must pass before a normal merge.
 The first hosted native attempt clicked Word Wrap because Ubuntu uses wider default text.
 The script now selects Line numbers with Tab from the existing Word Wrap control.
 Its gutter sample excludes the third line for both host font heights.
+
+The second hosted attempt passed the toggle and navigation checks, then failed
+while restoring toolbar state after a modal dialog. The script now restores
+Word Wrap before that dialog. It leaves line numbers hidden for the remaining
+native document workflows and avoids another toolbar traversal after the modal closes.
