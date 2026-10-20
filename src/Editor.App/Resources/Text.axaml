@@ -60,4 +60,8 @@
   <x:String x:Key="Text.Recent.Clear">Clear Recent Files</x:String>
   <x:String x:Key="Text.Recent.Privacy">Recent paths stay on this device. Clear them at any time.</x:String>
   <x:String x:Key="Text.Recent.StorageFailed">History could not be saved. Previously stored paths may return after restart.</x:String>
+  <x:String x:Key="Text.Dialog.Conflict.Title">File changed on disk</x:String>
+  <x:String x:Key="Text.Dialog.Conflict.Prompt">The save stopped because this file changed, was removed, or already exists at a new destination.</x:String>
+  <x:String x:Key="Text.Dialog.Conflict.Consequences">Reload from Disk loads the current file, or the selected file for an untitled document, after checking for unsaved changes. Overwrite anyway replaces the destination with your editor text, or recreates a missing file. Cancel keeps your edits and leaves the file unchanged.</x:String>
+  <x:String x:Key="Text.Command.Overwrite">Overwrite anyway</x:String>
 </ResourceDictionary>

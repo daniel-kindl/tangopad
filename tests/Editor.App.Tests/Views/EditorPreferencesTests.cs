@@ -77,6 +77,7 @@ public sealed class EditorPreferencesTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         public Task<string?> ChooseOpenAsync() { return Task.FromResult<string?>(null); }
         public Task<string?> ChooseSaveAsync(string? destination) { return Task.FromResult<string?>(null); }
         public Task<UnsavedDecision> ConfirmUnsavedAsync() { return Task.FromResult(UnsavedDecision.Discard); }

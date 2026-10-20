@@ -575,20 +575,22 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         internal Exception? LoadError { get; set; }
         internal TaskCompletionSource<string>? PendingLoad { get; init; }
 
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
         {
-            return PendingLoad?.Task ?? (LoadError is { } error ? Task.FromException<string>(error) : Task.FromResult("loaded\r\n\n"));
+            return new(await (PendingLoad?.Task ?? (LoadError is { } error ? Task.FromException<string>(error) : Task.FromResult("loaded\r\n\n"))).ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             Snapshot = text;
-            return PendingSave.Task;
+            await PendingSave.Task.ConfigureAwait(true);
+            return destination;
         }
     }
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal UnsavedDecision Decision { get; set; } = UnsavedDecision.Cancel;
         internal string? OpenPath { get; set; }
         internal string? SavePath { get; set; }

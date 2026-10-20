@@ -117,6 +117,13 @@ class Desktop:
         self.click(window, {"Save": 270, "Discard": 336, "Cancel": 410}[choice], 80)
         self.gone("Unsaved changes")
 
+    def conflict(self, choice):
+        window = self.window("File changed on disk")
+        geometry = dict(line.split("=", 1) for line in self.xdo("getwindowgeometry", "--shell", window).splitlines())
+        width, height = int(geometry["WIDTH"]), int(geometry["HEIGHT"])
+        self.click(window, width - {"Cancel": 50, "Overwrite": 155, "Reload": 300}[choice], height - 38)
+        self.gone("File changed on disk")
+
     def record(self, name):
         ImageGrab.grab(xdisplay=self.env["DISPLAY"]).save(self.evidence / f"{len(self.steps):02}-{name}.png")
         self.steps.append(name)
@@ -366,6 +373,65 @@ def exercise_reload(ui, files):
     ui.editor()
 
 
+def exercise_conflicts(ui, files):
+    fixture = files / "conflict.txt"
+    original = b"original"
+    external = b"external"
+    fixture.write_bytes(original)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(fixture, saving=False)
+    ui.editor(fixture)
+    ui.key("ctrl+End")
+    ui.type("!")
+    ui.editor(fixture, dirty=True)
+    timestamp = fixture.stat()
+    fixture.write_bytes(external)
+    os.utime(fixture, ns=(timestamp.st_atime_ns, timestamp.st_mtime_ns))
+    ui.key("ctrl+s")
+    ui.window("File changed on disk")
+    ui.record("conflict-dialog")
+    ui.conflict("Cancel")
+    ui.editor(fixture, dirty=True)
+    ui.bytes(fixture, external)
+    ui.key("ctrl+z")
+    ui.editor(fixture)
+    ui.key("ctrl+y")
+    ui.editor(fixture, dirty=True)
+    ui.record("conflict-cancel-keeps-text-and-undo")
+    ui.key("ctrl+s")
+    ui.conflict("Overwrite")
+    ui.editor(fixture)
+    ui.bytes(fixture, original + b"!")
+    ui.record("conflict-deliberate-overwrite")
+    ui.type("?")
+    ui.editor(fixture, dirty=True)
+    fixture.write_bytes(external)
+    ui.key("ctrl+s")
+    ui.conflict("Reload")
+    ui.decision("Discard")
+    ui.editor(fixture)
+    ui.key("ctrl+End")
+    ui.type("+")
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"+")
+    ui.record("conflict-reload-uses-unsaved-confirmation")
+    fixture.unlink()
+    ui.type("x")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.conflict("Cancel")
+    if fixture.exists():
+        raise RuntimeError("Cancel recreated a missing file.")
+    ui.key("ctrl+s")
+    ui.conflict("Overwrite")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"+x")
+    ui.record("conflict-missing-file-needs-overwrite")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def exercise(ui, files, app):
     first, second, output = (files / name for name in ("first.txt", "second.MD", "round trip.markdown"))
     fixture = files / "Unicode input.MARKDOWN"
@@ -424,6 +490,7 @@ def exercise(ui, files, app):
         ui.choose(overwrite, saving=True)
         ui.overwrite()
         ui.key("alt+r")
+        ui.conflict("Overwrite")
         ui.bytes(overwrite, b"typed\nedited!")
         ui.editor(overwrite)
         ui.record("overwrite-cancel-and-replace")
@@ -809,6 +876,7 @@ def main():
             exercise_recent(ui, files)
             exercise_line_numbers(ui, files)
             exercise_reload(ui, files)
+            exercise_conflicts(ui, files)
             exercise(ui, files, app)
             exercise_preferences(ui, files, launch, executable)
             # A separate dirty document checks the Discard close branch.

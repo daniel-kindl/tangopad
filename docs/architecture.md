@@ -199,3 +199,5 @@ See [ADR 0006](adr/0006-local-text-persistence.md) for UTF-8, replacement, metad
 See [ADR 0007](adr/0007-plain-text-editor.md) for UI synchronization and desktop command behavior.
 
 [Document formats](document-formats.md) defines extension mapping and session format transitions.
+
+See [ADR 0009](adr/0009-optimistic-file-concurrency.md) for disk revisions and explicit conflict choices.

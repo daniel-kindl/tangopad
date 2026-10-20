@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using Editor.Application;
 
@@ -6,14 +8,14 @@ namespace Editor.Infrastructure;
 /// <summary>Stores plain text in local UTF-8 files.</summary>
 /// <remarks>
 /// Loads consume one initial UTF-8 BOM. Saves add no BOM and replace the destination directory entry.
-/// Replacement does not preserve file metadata or coordinate writers. See ADR 0006 for platform limits.
+/// Replacement does not preserve file metadata. See ADR 0009 for optimistic concurrency limits.
 /// </remarks>
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     /// <inheritdoc />
-    public async Task<string> LoadAsync(string destination, CancellationToken cancellationToken)
+    public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         cancellationToken.ThrowIfCancellationRequested();
@@ -25,19 +27,33 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             Share = FileShare.Read | FileShare.Delete,
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
         });
-        using StreamReader reader = new(stream, StrictUtf8, detectEncodingFromByteOrderMarks: false);
+        long length = stream.Length;
+        DateTime modified = File.GetLastWriteTimeUtc(stream.SafeFileHandle);
+        using SHA256 hash = SHA256.Create();
+        using CryptoStream hashing = new(stream, hash, CryptoStreamMode.Read);
+        using StreamReader reader = new(hashing, StrictUtf8, detectEncodingFromByteOrderMarks: false);
         string text = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        return text.StartsWith('\uFEFF') ? text[1..] : text;
+        return stream.Length != length || File.GetLastWriteTimeUtc(stream.SafeFileHandle) != modified
+            ? throw new IOException("The file changed during loading. Reload the file.")
+            : new(text.StartsWith('\uFEFF') ? text[1..] : text, Revision(path, length, modified, hash.Hash!));
     }
 
     /// <inheritdoc />
-    public async Task SaveAsync(string destination, string text, CancellationToken cancellationToken)
+    public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         ArgumentNullException.ThrowIfNull(text);
         cancellationToken.ThrowIfCancellationRequested();
         string path = Path.GetFullPath(destination);
+        string? before = await ReadRevisionAsync(path, overwrite ? null : expectedRevision ?? string.Empty, cancellationToken).ConfigureAwait(false);
+        if (!overwrite && (expectedRevision is not null && expectedRevision.StartsWith(path + "\n", StringComparison.Ordinal)
+            ? !string.Equals(before, expectedRevision, StringComparison.Ordinal)
+            : before is not null))
+        {
+            return null;
+        }
+
         string temporary = Path.Combine(Path.GetDirectoryName(path)!, $".tangopad-{Guid.NewGuid():N}.tmp");
         bool created = false;
         try
@@ -62,8 +78,29 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
                 await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
+            string persisted = await ReadRevisionAsync(temporary, null, cancellationToken).ConfigureAwait(false)
+                ?? throw new IOException("The temporary file disappeared before saving.");
+            persisted = path + persisted[temporary.Length..];
+            string? current = await ReadRevisionAsync(path, before ?? string.Empty, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            File.Move(temporary, path, overwrite: true);
+            if (!string.Equals(current, before, StringComparison.Ordinal))
+            {
+                File.Delete(temporary);
+                return null;
+            }
+
+            // A new destination uses a non-overwriting move, including the final race window.
+            try
+            {
+                File.Move(temporary, path, overwrite: before is not null);
+            }
+            catch (IOException) when (before is null && File.Exists(path))
+            {
+                File.Delete(temporary);
+                return null;
+            }
+
+            return persisted;
         }
         catch (Exception failure)
         {
@@ -80,6 +117,56 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             }
 
             throw;
+        }
+    }
+
+    private static string Revision(string path, long length, DateTime modified, byte[] hash)
+    {
+        return string.Create(CultureInfo.InvariantCulture, $"{path}\n{length}\n{modified.Ticks}\n{Convert.ToHexString(hash)}");
+    }
+
+    private static async Task<string?> ReadRevisionAsync(string path, string? comparison, CancellationToken token)
+    {
+        try
+        {
+            using FileStream stream = new(path, new FileStreamOptions
+            {
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.Read | FileShare.Delete,
+                Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
+            });
+            long length = stream.Length;
+            DateTime modified = File.GetLastWriteTimeUtc(stream.SafeFileHandle);
+            string prefix = string.Create(CultureInfo.InvariantCulture, $"{path}\n{length}\n{modified.Ticks}\n");
+            if (comparison is not null && !comparison.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                // A different path, length, or timestamp already proves a conflict.
+                return prefix;
+            }
+
+            using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            byte[] buffer = new byte[64 * 1024];
+            long remaining = length;
+            while (remaining > 0)
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), token).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    throw new IOException("The file changed during the save check. Try again.");
+                }
+
+                hash.AppendData(buffer, 0, read);
+                remaining -= read;
+            }
+
+            return stream.Length != length || File.GetLastWriteTimeUtc(stream.SafeFileHandle) != modified
+                ? throw new IOException("The file changed during the save check. Try again.")
+                : Revision(path, length, modified, hash.GetHashAndReset());
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
         }
     }
 }

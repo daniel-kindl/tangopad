@@ -350,6 +350,7 @@ public sealed class FileDropTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal int Confirmations { get; private set; }
         internal UnsavedDecision Decision { get; set; } = UnsavedDecision.Cancel;
         internal bool AllowError { get; init; }

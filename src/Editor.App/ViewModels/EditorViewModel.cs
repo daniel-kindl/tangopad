@@ -336,7 +336,35 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         }
 
         token.ThrowIfCancellationRequested();
-        await Session.SaveAsAsync(path, token).ConfigureAwait(true);
+        while (!await Session.SaveAsAsync(path, false, token).ConfigureAwait(true))
+        {
+            string snapshot = Text;
+            ConflictDecision decision = await dialogs.ConfirmConflictAsync(path).ConfigureAwait(true);
+            token.ThrowIfCancellationRequested();
+            // A decision about an earlier buffer must not save or discard newer edits.
+            if (!string.Equals(snapshot, Text, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (decision == ConflictDecision.Reload)
+            {
+                // Reload the current document, even when Save As selected another destination.
+                _ = await OpenPathCoreAsync(Session.Destination ?? path, token).ConfigureAwait(true);
+
+                return false;
+            }
+
+            if (decision != ConflictDecision.Overwrite)
+            {
+                return false;
+            }
+
+            if (await Session.SaveAsAsync(path, true, token).ConfigureAwait(true))
+            {
+                break;
+            }
+        }
         RecordRecent(path);
         OnPropertyChanged(nameof(Format));
         return true;

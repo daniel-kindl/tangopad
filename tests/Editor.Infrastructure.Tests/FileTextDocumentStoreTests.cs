@@ -21,10 +21,10 @@ public sealed class FileTextDocumentStoreTests : IDisposable
     {
         string path = Path.Combine(directory, "document.txt");
 
-        await store.SaveAsync(path, text, TestContext.Current.CancellationToken);
+        _ = await store.SaveAsync(path, text, null, true, TestContext.Current.CancellationToken);
 
         Assert.Equal(Encoding.UTF8.GetBytes(text), await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
-        Assert.Equal(text, await store.LoadAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal(text, (await store.LoadAsync(path, TestContext.Current.CancellationToken)).Text);
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
     }
 
@@ -46,7 +46,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         DocumentSession session = await DocumentSession.LoadAsync(store, original, TestContext.Current.CancellationToken);
         Guid identity = session.Document.Id;
 
-        await session.SaveAsAsync(destination, TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken);
 
         Assert.Equal(bytes, await File.ReadAllBytesAsync(original, TestContext.Current.CancellationToken));
         Assert.Equal(bytes, await File.ReadAllBytesAsync(destination, TestContext.Current.CancellationToken));
@@ -66,9 +66,9 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         string path = Path.Combine(directory, "bom.txt");
         await File.WriteAllBytesAsync(path, [0xEF, 0xBB, 0xBF, 0xEF, 0xBB, 0xBF, 0x61], TestContext.Current.CancellationToken);
 
-        Assert.Equal("\uFEFFa", await store.LoadAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal("\uFEFFa", (await store.LoadAsync(path, TestContext.Current.CancellationToken)).Text);
 
-        await store.SaveAsync(path, "a", TestContext.Current.CancellationToken);
+        _ = await store.SaveAsync(path, "a", null, true, TestContext.Current.CancellationToken);
         Assert.Equal("a"u8.ToArray(), await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
     }
 
@@ -98,9 +98,9 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         string path = Path.Combine(directory, "existing.txt");
         await File.WriteAllTextAsync(path, "long original contents", TestContext.Current.CancellationToken);
 
-        await store.SaveAsync(path, "new", TestContext.Current.CancellationToken);
+        _ = await store.SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken);
         Assert.Equal("new"u8.ToArray(), await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
-        await store.SaveAsync(path, "", TestContext.Current.CancellationToken);
+        _ = await store.SaveAsync(path, "", null, true, TestContext.Current.CancellationToken);
         Assert.Empty(await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
     }
@@ -123,7 +123,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         DocumentSession session = await DocumentSession.LoadAsync(store, original, TestContext.Current.CancellationToken);
         session.Document.ReplaceText(new string('a', 16384) + "\uD800");
 
-        _ = await Assert.ThrowsAsync<EncoderFallbackException>(() => session.SaveAsAsync(destination, TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAsync<EncoderFallbackException>(() => session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken));
 
         Assert.Equal(original, session.Destination);
         Assert.True(session.Document.IsDirty);
@@ -138,8 +138,8 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         session.Document.ReplaceText("baseline");
         Assert.False(session.Document.IsDirty);
         session.Document.ReplaceText("retry");
-        await session.SaveAsAsync(destination, TestContext.Current.CancellationToken);
-        Assert.Equal("retry", await store.LoadAsync(destination, TestContext.Current.CancellationToken));
+        _ = await session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken);
+        Assert.Equal("retry", (await store.LoadAsync(destination, TestContext.Current.CancellationToken)).Text);
         Assert.Equal(destination, session.Destination);
         Assert.False(session.Document.IsDirty);
         Assert.Equal(2, Directory.GetFileSystemEntries(directory).Length);
@@ -155,7 +155,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         DocumentSession session = DocumentSession.CreateUntitled(store);
         session.Document.ReplaceText("draft");
 
-        Exception? error = await Record.ExceptionAsync(() => session.SaveAsAsync(destination, TestContext.Current.CancellationToken));
+        Exception? error = await Record.ExceptionAsync(() => session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken));
 
         Assert.True(error is IOException or UnauthorizedAccessException, $"Unexpected error: {error}");
         Assert.Null(session.Destination);
@@ -163,8 +163,8 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         Assert.Equal("keep", await File.ReadAllTextAsync(sentinel, TestContext.Current.CancellationToken));
         Assert.Equal([destination], Directory.GetFileSystemEntries(directory));
         Directory.Delete(destination, recursive: true);
-        await session.SaveAsAsync(destination, TestContext.Current.CancellationToken);
-        Assert.Equal("draft", await store.LoadAsync(destination, TestContext.Current.CancellationToken));
+        _ = await session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken);
+        Assert.Equal("draft", (await store.LoadAsync(destination, TestContext.Current.CancellationToken)).Text);
         Assert.False(session.Document.IsDirty);
     }
 
@@ -177,7 +177,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         FileNotFoundException error = await Assert.ThrowsAsync<FileNotFoundException>(() => store.LoadAsync(file, TestContext.Current.CancellationToken));
         Assert.Equal(file, error.FileName);
         _ = await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.LoadAsync(nested, TestContext.Current.CancellationToken));
-        _ = await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.SaveAsync(nested, "draft", TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAsync<DirectoryNotFoundException>(() => store.SaveAsync(nested, "draft", null, true, TestContext.Current.CancellationToken));
         Assert.Empty(Directory.GetFileSystemEntries(directory));
     }
 
@@ -208,7 +208,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
                 // The host enforces the permission needed by this test.
             }
 
-            _ = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.SaveAsync(path, "new", TestContext.Current.CancellationToken));
+            _ = await Assert.ThrowsAsync<UnauthorizedAccessException>(() => store.SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken));
             Assert.Equal("original", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             Assert.Equal([path], Directory.GetFileSystemEntries(directory));
         }
@@ -217,8 +217,8 @@ public sealed class FileTextDocumentStoreTests : IDisposable
             File.SetUnixFileMode(directory, mode);
         }
 
-        await store.SaveAsync(path, "retry", TestContext.Current.CancellationToken);
-        Assert.Equal("retry", await store.LoadAsync(path, TestContext.Current.CancellationToken));
+        _ = await store.SaveAsync(path, "retry", null, true, TestContext.Current.CancellationToken);
+        Assert.Equal("retry", (await store.LoadAsync(path, TestContext.Current.CancellationToken)).Text);
     }
 
     /// <summary>Checks replacement failure when Windows denies delete sharing on the old file.</summary>
@@ -235,14 +235,14 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         await File.WriteAllTextAsync(path, "previous", TestContext.Current.CancellationToken);
         using (FileStream locked = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            Exception? error = await Record.ExceptionAsync(() => store.SaveAsync(path, "new", TestContext.Current.CancellationToken));
+            Exception? error = await Record.ExceptionAsync(() => store.SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken));
             Assert.True(error is IOException or UnauthorizedAccessException, $"Unexpected error: {error}");
             Assert.Equal("previous", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             Assert.Equal([path], Directory.GetFileSystemEntries(directory));
         }
 
-        await store.SaveAsync(path, "retry", TestContext.Current.CancellationToken);
-        Assert.Equal("retry", await store.LoadAsync(path, TestContext.Current.CancellationToken));
+        _ = await store.SaveAsync(path, "retry", null, true, TestContext.Current.CancellationToken);
+        Assert.Equal("retry", (await store.LoadAsync(path, TestContext.Current.CancellationToken)).Text);
     }
 
     /// <summary>Checks invalid destination validation at the adapter boundary.</summary>
@@ -254,7 +254,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
     public async Task InvalidDestinationsFailBeforeFileAccess(string? destination)
     {
         _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => store.LoadAsync(destination!, TestContext.Current.CancellationToken));
-        _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => store.SaveAsync(destination!, "text", TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => store.SaveAsync(destination!, "text", null, true, TestContext.Current.CancellationToken));
         Assert.Empty(Directory.GetFileSystemEntries(directory));
     }
 
@@ -265,9 +265,9 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         string path = Path.Combine(directory, "original.txt");
         await File.WriteAllTextAsync(path, "original", TestContext.Current.CancellationToken);
 
-        _ = await Assert.ThrowsAsync<ArgumentNullException>(() => store.SaveAsync(path, null!, TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAsync<ArgumentNullException>(() => store.SaveAsync(path, null!, null, true, TestContext.Current.CancellationToken));
 
-        Assert.Equal("original", await store.LoadAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal("original", (await store.LoadAsync(path, TestContext.Current.CancellationToken)).Text);
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
     }
 
@@ -281,7 +281,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         await cancellation.CancelAsync();
 
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.LoadAsync(path, cancellation.Token));
-        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.SaveAsync(path, "new", cancellation.Token));
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.SaveAsync(path, "new", null, true, cancellation.Token));
 
         Assert.Equal("original", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
@@ -299,7 +299,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         session.Document.ReplaceText(new string('x', 32 * 1024 * 1024));
         using CancellationTokenSource cancellation = new();
 
-        Task save = session.SaveAsAsync(destination, cancellation.Token);
+        Task save = session.SaveAsAsync(destination, true, cancellation.Token);
         Assert.False(save.IsCompleted);
         await cancellation.CancelAsync();
         OperationCanceledException error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => save);
@@ -311,9 +311,9 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         Assert.Equal("baseline", await File.ReadAllTextAsync(original, TestContext.Current.CancellationToken));
         Assert.Equal(2, Directory.GetFileSystemEntries(directory).Length);
         session.Document.ReplaceText("retry");
-        await session.SaveAsAsync(destination, TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync(destination, true, TestContext.Current.CancellationToken);
         Assert.False(session.Document.IsDirty);
-        Assert.Equal("retry", await store.LoadAsync(destination, TestContext.Current.CancellationToken));
+        Assert.Equal("retry", (await store.LoadAsync(destination, TestContext.Current.CancellationToken)).Text);
     }
 
     /// <summary>Checks cancellation of a pending read without modifying its input.</summary>
@@ -324,7 +324,7 @@ public sealed class FileTextDocumentStoreTests : IDisposable
         await File.WriteAllTextAsync(path, new string('x', 32 * 1024 * 1024), TestContext.Current.CancellationToken);
         using CancellationTokenSource cancellation = new();
 
-        Task<string> load = store.LoadAsync(path, cancellation.Token);
+        Task<StoredDocument> load = store.LoadAsync(path, cancellation.Token);
         Assert.False(load.IsCompleted);
         await cancellation.CancelAsync();
         OperationCanceledException error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);

@@ -73,19 +73,21 @@ public sealed class RecentHistoryTests
 
     private sealed class DeniedStore : ITextDocumentStore
     {
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
         {
-            return Task.FromException<string>(new UnauthorizedAccessException("Access denied."));
+            return new(await Task.FromException<string>(new UnauthorizedAccessException("Access denied.")).ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
         {
-            return Task.FromException(new UnauthorizedAccessException("Access denied."));
+            await Task.FromException(new UnauthorizedAccessException("Access denied.")).ConfigureAwait(true);
+            return destination;
         }
     }
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal string? SavePath { get; init; } = "denied.txt";
         internal string? Error { get; private set; }
         public Task<string?> ChooseOpenAsync() { return Task.FromResult<string?>(null); }

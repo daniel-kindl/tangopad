@@ -166,14 +166,14 @@ public sealed class ReloadTests
         internal TaskCompletionSource<string>? PendingLoad { get; set; }
         internal TaskCompletionSource? PendingSave { get; set; }
 
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
         {
             Loads++;
             LoadedPath = destination;
-            return PendingLoad?.Task ?? (LoadError is { } error ? Task.FromException<string>(error) : Task.FromResult(Text));
+            return new(await (PendingLoad?.Task ?? (LoadError is { } error ? Task.FromException<string>(error) : Task.FromResult(Text))).ConfigureAwait(true), destination);
         }
 
-        public async Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             SavedText = text;
             if (PendingSave is { } pending)
@@ -182,11 +182,13 @@ public sealed class ReloadTests
             }
 
             Text = text;
+            return destination;
         }
     }
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal UnsavedDecision Decision { get; init; }
         internal int Confirmations { get; private set; }
         internal string? Error { get; private set; }

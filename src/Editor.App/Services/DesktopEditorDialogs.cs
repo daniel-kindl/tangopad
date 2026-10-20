@@ -43,6 +43,11 @@ internal sealed class DesktopEditorDialogs(Window owner) : IEditorDialogs
         return new UnsavedChangesDialog().ShowDialog<UnsavedDecision>(owner);
     }
 
+    public Task<ConflictDecision> ConfirmConflictAsync(string destination)
+    {
+        return new FileConflictDialog(destination).ShowDialog<ConflictDecision>(owner);
+    }
+
     public async Task ShowErrorAsync(string message)
     {
         _ = await new ErrorDialog(message).ShowDialog<UnsavedDecision>(owner).ConfigureAwait(true);

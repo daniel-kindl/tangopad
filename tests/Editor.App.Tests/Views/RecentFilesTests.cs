@@ -220,6 +220,7 @@ public sealed class RecentFilesTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal UnsavedDecision Decision { get; set; }
         internal string? OpenPath { get; init; }
         internal string? SavePath { get; init; }

@@ -4,6 +4,8 @@ Status: Accepted
 
 Date: 2026-10-17
 
+Concurrency and persistence contracts are updated by [ADR 0009](0009-optimistic-file-concurrency.md).
+
 ## Context
 
 [Issue #17](https://github.com/daniel-kindl/tangopad/issues/17) adds a local

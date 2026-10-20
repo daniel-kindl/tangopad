@@ -12,6 +12,7 @@ public sealed class DocumentSession
 {
     private readonly ITextDocumentStore store;
     private bool saving;
+    private string? revision;
 
     private DocumentSession(ITextDocumentStore store, TextDocument document, string? destination)
     {
@@ -49,32 +50,33 @@ public sealed class DocumentSession
         ArgumentNullException.ThrowIfNull(store);
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         cancellationToken.ThrowIfCancellationRequested();
-        string text = await store.LoadAsync(destination, cancellationToken).ConfigureAwait(true);
+        StoredDocument loaded = await store.LoadAsync(destination, cancellationToken).ConfigureAwait(true);
         cancellationToken.ThrowIfCancellationRequested();
-        return new(store, TextDocument.FromText(text), destination);
+        return new(store, TextDocument.FromText(loaded.Text), destination) { revision = loaded.Revision };
     }
 
     /// <summary>Saves a captured snapshot to the current destination, even when the document is clean.</summary>
     /// <param name="cancellationToken">The token that cancels the save.</param>
-    /// <returns>A task that completes after persistence and acknowledgement.</returns>
+    /// <returns>True after persistence and acknowledgement, or false for a conflict without a write.</returns>
     /// <exception cref="InvalidOperationException">The document has no destination, or a save is already pending.</exception>
-    public Task SaveAsync(CancellationToken cancellationToken = default)
+    public Task<bool> SaveAsync(CancellationToken cancellationToken = default)
     {
         return SaveAsAsync(Destination ?? throw new InvalidOperationException(
-            "The document has no destination. Use SaveAsAsync first."), cancellationToken);
+            "The document has no destination. Use SaveAsAsync first."), false, cancellationToken);
     }
 
     /// <summary>Saves a snapshot and changes the destination only after success.</summary>
     /// <param name="destination">The nonblank destination for the snapshot.</param>
     /// <param name="cancellationToken">The token that cancels the save.</param>
-    /// <returns>A task that completes after persistence, acknowledgement, and the destination update.</returns>
+    /// <param name="overwrite">Whether the user explicitly permits replacing the current disk state.</param>
+    /// <returns>True after persistence and acknowledgement, or false for a conflict without a write.</returns>
     /// <exception cref="InvalidOperationException">A save is already pending.</exception>
     /// <remarks>
     /// Failure or observed cancellation preserves the baseline and destination.
     /// If the adapter ignores cancellation, cancellation observed after persistence still prevents acknowledgement.
     /// The adapter might have written data in that case. A retry remains possible.
     /// </remarks>
-    public async Task SaveAsAsync(string destination, CancellationToken cancellationToken = default)
+    public async Task<bool> SaveAsAsync(string destination, bool overwrite = false, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         cancellationToken.ThrowIfCancellationRequested();
@@ -87,10 +89,17 @@ public sealed class DocumentSession
         try
         {
             string snapshot = Document.Text;
-            await store.SaveAsync(destination, snapshot, cancellationToken).ConfigureAwait(true);
+            string? persisted = await store.SaveAsync(destination, snapshot, revision, overwrite, cancellationToken).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
+            if (persisted is null)
+            {
+                return false;
+            }
+
+            revision = persisted;
             Document.AcceptChanges(snapshot);
             Destination = destination;
+            return true;
         }
         finally
         {
