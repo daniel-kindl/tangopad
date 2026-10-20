@@ -11,7 +11,7 @@
         MinHeight="{StaticResource Size.Window.MinHeight}"
         Title="{Binding Title}">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource Brush.Surface}">
+    <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource Brush.Surface}">
       <StackPanel x:Name="Actions" Orientation="Horizontal"
                   Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}"
                   IsEnabled="{Binding !IsBusy}">
@@ -50,7 +50,9 @@
       <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
                 IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
       <Button x:Name="PreviewToggle" Content="{StaticResource Text.Preview.Show}" IsVisible="False" />
-    </StackPanel>
+      <CheckBox x:Name="LineNumbersToggle" Content="{StaticResource Text.Editor.LineNumbers}"
+                IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+    </WrapPanel>
     <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
                 Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
       <Grid ColumnDefinitions="Auto,*">
@@ -110,7 +112,7 @@
     </Border>
     <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
       <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
-                     ShowLineNumbers="True"
+                     ShowLineNumbers="{Binding ShowLineNumbers}"
                      WordWrap="{Binding WordWrap}"
                      FontSize="{Binding FontSize}"
                      HorizontalScrollBarVisibility="Auto"

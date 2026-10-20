@@ -29,6 +29,7 @@ public sealed class FileDropTests
             {
                 await File.WriteAllTextAsync(path, "# Hello\r\nworld").ConfigureAwait(true);
                 EditorWindow window = new(new FileTextDocumentStore(), new Dialogs());
+                window.ViewModel.ShowLineNumbers = false;
                 window.Show();
                 Dispatcher.UIThread.RunJobs();
                 IStorageFile file = Assert.IsType<IStorageFile>(await window.StorageProvider.TryGetFileFromPathAsync(path).ConfigureAwait(true), exactMatch: false);
@@ -40,6 +41,7 @@ public sealed class FileDropTests
                 _ = Send(window, DragDrop.DropEvent, data);
                 await WaitForOperationAsync(window).ConfigureAwait(true);
 
+                Assert.False(window.Editor.ShowLineNumbers);
                 Assert.Equal("# Hello\r\nworld", window.Editor.Text);
                 Assert.Equal(path, window.ViewModel.Session.Destination);
                 Assert.Equal([path], window.ViewModel.RecentPaths);

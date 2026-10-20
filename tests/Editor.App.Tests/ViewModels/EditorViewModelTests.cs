@@ -402,6 +402,41 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.False(viewModel.IsDirty);
     }
 
+    /// <summary>Line numbers are window state and do not change document state or counts.</summary>
+    [Fact]
+    public async Task LineNumbersPreserveDocumentAcrossNewAndOpen()
+    {
+        EditorViewModel viewModel = new(new Store(), new Dialogs
+        {
+            Decision = UnsavedDecision.Discard,
+            OpenPath = "/input.md"
+        }, new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Assert.True(viewModel.ShowLineNumbers);
+        viewModel.Text = "λ😀\r\nline\nlast\r";
+        Guid identity = viewModel.DocumentId;
+        List<string?> notifications = [];
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+        viewModel.ShowLineNumbers = false;
+        Assert.Equal(["ShowLineNumbers"], notifications);
+        Assert.Equal(identity, viewModel.DocumentId);
+        Assert.Equal("λ😀\r\nline\nlast\r", viewModel.Session.Document.Text);
+        Assert.True(viewModel.IsDirty);
+        notifications.Clear();
+        viewModel.ShowLineNumbers = true;
+        Assert.Equal(["ShowLineNumbers"], notifications);
+        viewModel.ShowLineNumbers = false;
+        Assert.True(await viewModel.NewAsync().ConfigureAwait(true));
+        Assert.False(viewModel.ShowLineNumbers);
+        Assert.Equal(string.Empty, viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+        Assert.True(await viewModel.OpenAsync().ConfigureAwait(true));
+        Assert.False(viewModel.ShowLineNumbers);
+        Assert.Equal("loaded\r\n\n", viewModel.Text);
+        Assert.False(viewModel.IsDirty);
+        EditorViewModel nextWindow = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"));
+        Assert.True(nextWindow.ShowLineNumbers);
+    }
+
     /// <summary>Font commands clamp size and notify only presentation changes.</summary>
     [Fact]
     public async Task FontSizeIsBoundedObservableWindowState()

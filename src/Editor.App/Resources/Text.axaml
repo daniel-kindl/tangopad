@@ -44,6 +44,7 @@
   <x:String x:Key="Text.Status.LineEnding.Mixed">Mixed</x:String>
   <x:String x:Key="Text.Status.CaretFormat">Ln {0}, Col {1}</x:String>
   <x:String x:Key="Text.Editor.WordWrap">Word Wrap</x:String>
+  <x:String x:Key="Text.Editor.LineNumbers">Line numbers</x:String>
   <x:String x:Key="Text.GoToLine.Title">Go To Line</x:String>
   <x:String x:Key="Text.GoToLine.LineNumber">Line number</x:String>
   <x:String x:Key="Text.GoToLine.Prompt">Enter a line number. Larger numbers go to the last line.</x:String>

@@ -547,7 +547,7 @@ public sealed class EditorBindingTests
 
             DockPanel layout = Assert.IsType<DockPanel>(window.Content);
             Assert.Equal(4, layout.Children.Count);
-            StackPanel toolbar = Assert.IsType<StackPanel>(layout.Children[0]);
+            WrapPanel toolbar = Assert.IsType<WrapPanel>(layout.Children[0]);
             Assert.Equal(Dock.Top, DockPanel.GetDock(toolbar));
             Assert.Equal(Orientation.Horizontal, toolbar.Orientation);
             StackPanel actions = Assert.IsType<StackPanel>(toolbar.Children[0]);
@@ -1071,10 +1071,13 @@ public sealed class EditorBindingTests
 
     /// <summary>Go To Line preserves selection on invalid input and cancel, then navigates to logical line starts.</summary>
     /// <param name="wrap">Whether the editor wraps visual lines.</param>
+    /// <param name="lineNumbers">Whether the editor shows line numbers.</param>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task GoToLineUsesLogicalLinesAndPreservesDocument(bool wrap)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task GoToLineUsesLogicalLinesAndPreservesDocument(bool wrap, bool lineNumbers)
     {
         HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
         _ = await ui.Dispatch(() =>
@@ -1083,6 +1086,7 @@ public sealed class EditorBindingTests
             window.Show();
             string original = new string('x', 1000) + "\r\nsecond\nthird\rfourth\n";
             window.Editor.Text = original;
+            window.ViewModel.ShowLineNumbers = lineNumbers;
             window.ViewModel.WordWrap = wrap;
             window.Editor.Document.Insert(0, "!");
             Guid identity = window.ViewModel.DocumentId;
