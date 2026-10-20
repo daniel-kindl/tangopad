@@ -11,15 +11,50 @@ using Editor.Infrastructure;
 namespace Editor.App.ViewModels;
 
 // All calls and continuations use the UI thread, as required by DocumentSession.
-internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels, RecentFileHistory? recentFiles = null) : ObservableObject
+internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorDialogs dialogs, EditorLabels labels, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null) : ObservableObject
 {
-    private const double DefaultFontSize = 15;
-    private const double MinimumFontSize = 8;
-    private const double MaximumFontSize = 48;
+    private const double DefaultFontSize = EditorPresentation.DefaultFontSize;
+    private const double MinimumFontSize = EditorPresentation.MinimumFontSize;
+    private const double MaximumFontSize = EditorPresentation.MaximumFontSize;
     private const double FontSizeStep = 1;
 
     private CancellationTokenSource? operation;
     private readonly RecentFileHistory history = recentFiles ?? new();
+
+    private readonly EditorPreferences preferences = editorPreferences ?? new();
+    private bool applyingPreferences;
+
+    internal async Task InitializePreferencesAsync()
+    {
+        await preferences.Ready.ConfigureAwait(true);
+        EditorPresentation loaded = preferences.Current;
+        applyingPreferences = true;
+        try
+        {
+            WordWrap = loaded.WordWrap;
+            ShowLineNumbers = loaded.ShowLineNumbers;
+            FontSize = loaded.FontSize;
+        }
+        finally
+        {
+            applyingPreferences = false;
+        }
+    }
+
+    partial void OnWordWrapChanged(bool value)
+    {
+        if (!applyingPreferences) { preferences.Update(wordWrap: value); }
+    }
+
+    partial void OnShowLineNumbersChanged(bool value)
+    {
+        if (!applyingPreferences) { preferences.Update(showLineNumbers: value); }
+    }
+
+    partial void OnFontSizeChanged(double value)
+    {
+        if (!applyingPreferences) { preferences.Update(fontSize: value); }
+    }
 
     public IReadOnlyList<string> RecentPaths => history.Paths;
     public IReadOnlyList<RecentFileEntry> RecentFiles => [.. history.Paths.Select(path => new RecentFileEntry(path))];
@@ -82,6 +117,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     private void ResetFontSize()
     {
         FontSize = DefaultFontSize;
+        preferences.Update(fontSize: DefaultFontSize);
     }
 
     [ObservableProperty]

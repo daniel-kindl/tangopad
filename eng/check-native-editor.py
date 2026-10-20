@@ -696,6 +696,56 @@ def exercise(ui, files, app):
         blocked.chmod(0o700)
 
 
+def exercise_preferences(ui, files, launch, executable):
+    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "editor-preferences.json"
+    settings.unlink(missing_ok=True)
+    fixture = files / "preferences.txt"
+    original = ("first\n" + "wrapped presentation " * 80 + "\nlast\n").encode()
+    fixture.write_bytes(original)
+
+    def open_fixture():
+        ui.editor()
+        ui.picker("ctrl+o", "Open text file")
+        ui.choose(fixture, saving=False)
+        return ui.editor(fixture)
+
+    def pixels():
+        shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
+        return (shot.crop((680, 10, 940, 40)).tobytes(), shot.crop((0, 100, 800, 250)).tobytes())
+
+    app = launch([str(executable)], "preferences-first")
+    window = open_fixture()
+    time.sleep(0.5)
+    defaults = pixels()
+    ui.click(window, 700, 25)
+    ui.key("Tab")
+    ui.key("space")
+    ui.click(window, 200, 80)
+    ui.key("ctrl+plus")
+    ui.key("ctrl+plus")
+    ui.key("ctrl+plus")
+    wait("persisted presentation changes", lambda: settings.exists() and json.loads(settings.read_text()) ==
+         {"version": 1, "wordWrap": True, "showLineNumbers": False, "fontSize": 18})
+    time.sleep(0.5)
+    changed = pixels()
+    if changed[0] == defaults[0] or changed[1] == defaults[1]:
+        raise RuntimeError("Preference input did not change the native controls.")
+    ui.record("preferences-before-relaunch")
+    ui.close(window)
+    wait("first preference process exit", lambda: app.poll() is not None)
+    if app.returncode != 0:
+        raise RuntimeError(f"Editor exited with code {app.returncode}.")
+    app = launch([str(executable)], "preferences-restored")
+    window = open_fixture()
+    wait("restored native preference controls", lambda: pixels() == changed)
+    ui.bytes(fixture, original)
+    ui.record("preferences-restored-after-process-relaunch")
+    ui.close(window)
+    wait("restored preference process exit", lambda: app.poll() is not None)
+    if app.returncode != 0:
+        raise RuntimeError(f"Editor exited with code {app.returncode}.")
+
+
 def main():
     if sys.platform != "linux" or os.geteuid() == 0 or ctypes.sizeof(ctypes.c_long) != 8:
         raise RuntimeError("NOT TESTED: Run as a non-root user on 64-bit Linux with X11 test dependencies.")
@@ -757,6 +807,7 @@ def main():
             exercise_line_numbers(ui, files)
             exercise_reload(ui, files)
             exercise(ui, files, app)
+            exercise_preferences(ui, files, launch, executable)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()

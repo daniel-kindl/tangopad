@@ -55,6 +55,8 @@ App code-behind performs framework lifecycle setup only. The document service re
 RecentFileHistory in Infrastructure stores recent paths separately from document semantics.
 The ViewModel exposes history commands and snapshots. See [recent files](recent-files.md)
 for storage format, placement, concurrency, and privacy decisions.
+EditorPreferences in Infrastructure stores editor presentation preferences separately.
+See [editor preferences](editor-preferences.md) for startup precedence, storage, and privacy.
 Application and Core reference no NuGet packages. Production code never references tests.
 Infrastructure references Application only and adds no packages.
 Editor.Formats.Markdown references Markdig only. App renders its inert records with native controls. App composes the adapter through Program.Main.

@@ -50,13 +50,15 @@ Cancel leaves the document open. Errors appear in a dialog.
 | Replace | Ctrl+H | Command+H |
 | Go To Line (editor focus) | Ctrl+G | Command+G |
 
-The Line numbers checkbox in the toolbar shows or hides the editor gutter. Numbers start enabled.
-The choice stays in the current window through document changes and resets when the app restarts.
+The Line numbers checkbox in the toolbar shows or hides the editor gutter. Numbers are enabled by default.
+The choice survives document changes and app restarts.
 Hiding numbers preserves logical line positions, text, and undo history.
 
-Word Wrap in the toolbar fits long lines to the editor width. It starts off and
-stays selected across New and Open until you change it or close the window.
+Word Wrap in the toolbar fits long lines to the editor width. It is off by default and
+preserves your choice across document changes and app restarts.
 Wrapping changes only the display. It preserves text, saved line endings, and undo history.
+Word Wrap, Line Numbers, and font size use local per-user storage.
+See [editor preferences](docs/editor-preferences.md) for locations, privacy, failures, and reset steps.
 
 Find searches literal text with optional case sensitivity. Enter finds the next match
 while focus is in a search field. Shift+Enter finds the previous match.
