@@ -50,6 +50,10 @@ Cancel leaves the document open. Errors appear in a dialog.
 | Replace | Ctrl+H | Command+H |
 | Go To Line (editor focus) | Ctrl+G | Command+G |
 
+The Line numbers checkbox in the toolbar shows or hides the editor gutter. Numbers start enabled.
+The choice stays in the current window through document changes and resets when the app restarts.
+Hiding numbers preserves logical line positions, text, and undo history.
+
 Word Wrap in the toolbar fits long lines to the editor width. It starts off and
 stays selected across New and Open until you change it or close the window.
 Wrapping changes only the display. It preserves text, saved line endings, and undo history.

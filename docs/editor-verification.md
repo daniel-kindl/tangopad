@@ -486,3 +486,44 @@ with Xvfb, a private D-Bus session, and the GTK portal. Local evidence is in
 `artifacts/native-editor-xuc9abp3`. The inspected reload screenshot shows the external Unicode
 source and mixed line-ending status. The three reload groups verify exact saved bytes,
 Cancel with retained undo, and Discard with reset undo. Existing editor workflows also pass.
+
+## Line numbers, issue #69
+
+`Editor.App/ViewModels/EditorViewModel.cs` owns `ShowLineNumbers` in
+`Editor.App.ViewModels`. The property starts enabled and stays in the current
+window. It has no preference storage. `Views/EditorWindow.axaml` binds the checkbox
+and AvaloniaEdit gutter through compiled bindings. `Resources/Text.axaml` owns
+the shared label. The toolbar wraps controls to keep the checkbox accessible at
+small widths. No dependency, namespace, or public API changes are required.
+
+The initial two headless cases failed because `LineNumbersToggle` was absent.
+They pass with the implementation. The focused tests cover keyboard toggling,
+both themes, minimum window width, gutter removal and restoration, selection,
+caret, dirty state, document identity, undo, redo, exact UTF-8 save bytes,
+New, Open, Reload, Save As, Find/Replace, Markdown preview, and source highlighting.
+Go To Line tests cover wrapping with numbers both visible and hidden.
+The file-drop test opens Markdown with numbers hidden and checks the retained choice.
+ViewModel tests check presentation-only notifications and the default in a new window.
+
+`eng/check-native-editor.py` includes mouse and keyboard toggles, logical line
+navigation with numbers visible and hidden, undo, and exact saved bytes.
+Inspect its line-number screenshots to check the gutter and keyboard focus.
+For interactive desktop acceptance, repeat those checks in both themes at the
+minimum window width. Check that the label, check mark, and focus indicator remain visible.
+Windows and macOS native interaction requires a separate desktop session.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and Debug and Release builds passed
+with zero diagnostics. Tests passed 306 cases and skipped one Windows-only filesystem
+case. All seven TRX reports passed validation. Native startup passed.
+The first full run required an update to the existing toolbar layout assertion
+because the toolbar now wraps controls.
+
+`python3 eng/check-native-editor.py` passed all 47 workflow groups on Fedora Linux 44,
+x64, with Xvfb, the GTK portal, and a private D-Bus session. Local evidence is in
+`artifacts/native-editor-tfzzu9mh`. The inspected screenshots show gutter removal,
+keyboard restoration, and insertion at logical line 3 with numbers hidden.
+The script compares the rendered gutter before navigation to avoid stale screenshots.
+Earlier script attempts required explicit dialog waits and editor focus.
+Windows and macOS native interaction remains untested on this Linux host.
+Hosted Linux, Windows, and macOS verification must pass before a normal merge.

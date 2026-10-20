@@ -266,6 +266,49 @@ def exercise_recent(ui, files):
     ui.editor()
 
 
+def exercise_line_numbers(ui, files):
+    fixture = files / "line-numbers.txt"
+    original = b"first\r\nsecond\nthird\rlast\n"
+    fixture.write_bytes(original)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(fixture, saving=False)
+    window = ui.editor(fixture)
+    time.sleep(0.3)
+
+    def gutter():
+        # The second line has no caret or selection during these checks.
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((0, 76, 20, 98)).tobytes()
+
+    numbered = gutter()
+    # Line numbers follows Word Wrap when the Markdown preview button is hidden.
+    ui.click(window, 756, 25)
+    wait("hidden line-number gutter", lambda: gutter() != numbered)
+    hidden = gutter()
+    ui.record("line-numbers-hidden")
+    ui.key("space")
+    wait("restored line-number gutter", lambda: gutter() == numbered)
+    ui.record("line-numbers-restored-with-keyboard")
+    ui.key("space")
+    wait("hidden line-number gutter before navigation", lambda: gutter() == hidden)
+    ui.click(window, 120, 150)
+    ui.picker("ctrl+g", "Go To Line")
+    ui.type("3")
+    ui.key("Return")
+    ui.gone("Go To Line")
+    ui.editor(fixture)
+    ui.type("!")
+    ui.key("ctrl+s")
+    ui.bytes(fixture, b"first\r\nsecond\n!third\rlast\n")
+    wait("hidden gutter after navigation", lambda: gutter() == hidden)
+    ui.record("line-numbers-hidden-logical-navigation-and-exact-save")
+    ui.key("ctrl+z")
+    ui.key("ctrl+s")
+    ui.bytes(fixture, original)
+    ui.click(window, 756, 25)
+    wait("restored gutter after undo", lambda: gutter() == numbered)
+    ui.click(window, 120, 150)
+
+
 def exercise_reload(ui, files):
     # Xvfb maps F5 to keycode 71. Older xdotool versions add Alt for the F5 keysym.
     fixture = files / "reload.md"
@@ -711,6 +754,7 @@ def main():
             files.mkdir()
             exercise_drops(ui, files, launch)
             exercise_recent(ui, files)
+            exercise_line_numbers(ui, files)
             exercise_reload(ui, files)
             exercise(ui, files, app)
             # A separate dirty document checks the Discard close branch.

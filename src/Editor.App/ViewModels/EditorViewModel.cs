@@ -87,6 +87,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     [ObservableProperty]
     public partial bool WordWrap { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowLineNumbers { get; set; } = true;
+
     public SearchViewModel Search { get; } = new();
 
     partial void OnCanEditChanged(bool value) { Search.CanEdit = value; }
