@@ -726,6 +726,8 @@ def exercise_preferences(ui, files, launch, executable):
     ui.key("ctrl+plus")
     wait("persisted presentation changes", lambda: settings.exists() and json.loads(settings.read_text()) ==
          {"version": 1, "wordWrap": True, "showLineNumbers": False, "fontSize": 18})
+    # Keep the caret outside the compared text region in both processes.
+    ui.key("ctrl+Home")
     time.sleep(0.5)
     changed = pixels()
     if changed[0] == defaults[0] or changed[1] == defaults[1]:
@@ -737,6 +739,7 @@ def exercise_preferences(ui, files, launch, executable):
         raise RuntimeError(f"Editor exited with code {app.returncode}.")
     app = launch([str(executable)], "preferences-restored")
     window = open_fixture()
+    ui.key("ctrl+Home")
     wait("restored native preference controls", lambda: pixels() == changed)
     ui.bytes(fixture, original)
     ui.record("preferences-restored-after-process-relaunch")
