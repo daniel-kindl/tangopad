@@ -57,15 +57,7 @@ public sealed class RecentFileHistory
     {
         try
         {
-            string directory = Environment.GetFolderPath(OperatingSystem.IsMacOS()
-                ? Environment.SpecialFolder.UserProfile : Environment.SpecialFolder.LocalApplicationData,
-                Environment.SpecialFolderOption.DoNotVerify);
-            if (OperatingSystem.IsMacOS() && !string.IsNullOrEmpty(directory))
-            {
-                directory = Path.Combine(directory, "Library", "Application Support");
-            }
-
-            return new(string.IsNullOrEmpty(directory) ? null : Path.Combine(directory, "Tangopad", "recent-files.json"));
+            return new(UserDataLocation.FilePath("recent-files.json"));
         }
         catch (Exception error) when (IsStorageError(error))
         {

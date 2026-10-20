@@ -23,10 +23,10 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null)
     {
         InitializeComponent();
-        ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles);
+        ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles, editorPreferences);
         DataContext = ViewModel;
         RecentFilesItems.AddHandler(Button.ClickEvent, (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -72,7 +72,7 @@ internal sealed partial class EditorWindow : Window
         Opened += async (_, _) =>
         {
             _ = Editor.TextArea.Focus();
-            await ViewModel.InitializeHistoryAsync().ConfigureAwait(true);
+            await Task.WhenAll(ViewModel.InitializeHistoryAsync(), ViewModel.InitializePreferencesAsync()).ConfigureAwait(true);
         };
     }
 

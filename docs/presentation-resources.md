@@ -61,14 +61,15 @@ The labels do not intercept keyboard focus or editor shortcuts.
 
 The toolbar checkbox binds to the ViewModel's `WordWrap` property with a compiled two-way binding.
 The editor binds directly to that property. AvaloniaEdit disables horizontal scrolling during wrapping and restores it when wrapping stops.
-Word Wrap starts off and survives New and Open within the window. It does not change the document or undo history.
+Word Wrap is off by default and survives document changes and app restarts. It does not change the document or undo history.
 The editor's compiled `FontSize` binding reads the ViewModel's single observable font-size property.
-The ViewModel defines the default, bounds, and step once.
+`EditorPresentation` defines the default and bounds. The ViewModel defines the step.
 Ctrl++ and Ctrl+- change the size by 1 pixel within 8–48 pixels. Ctrl+0 resets it to 15 pixels.
 macOS uses Command instead of Ctrl.
 The plus shortcut accepts Shift. Numpad Add, Subtract, and 0 also work.
 The shortcuts require editor focus. Find and Replace inputs retain their keyboard behavior.
-Font size survives New and Open within the window and resets when the application restarts.
+Font size survives document changes and app restarts.
+[Editor preferences](editor-preferences.md) describes storage, defaults, and startup precedence.
 Font changes preserve text, identity, dirty state, selection, caret, and undo history.
 Position updates do not write to the editor. The adapter removes its event handlers when the window closes.
 A close request uses the same ViewModel operation guard as other replacement requests.
