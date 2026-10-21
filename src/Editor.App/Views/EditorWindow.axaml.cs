@@ -23,7 +23,7 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null, IDocumentFileMonitor? fileMonitor = null)
     {
         InitializeComponent();
         ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles, editorPreferences);
@@ -33,6 +33,7 @@ internal sealed partial class EditorWindow : Window
             RecentFilesButton.Flyout?.Hide();
             _ = Editor.TextArea.Focus();
         }));
+        ExternalChanges = new ExternalFileChangeAdapter(ViewModel, fileMonitor ?? new LocalDocumentFileMonitor());
         Preview = new MarkdownPreviewAdapter(this, previewParser);
         EditorBufferAdapter buffer = new(Editor, ViewModel);
         MarkdownHighlightingAdapter highlighting = new(Editor, ViewModel);
@@ -68,7 +69,7 @@ internal sealed partial class EditorWindow : Window
         DragDrop.SetAllowDrop(this, true);
         RegisterDropHandlers(this);
         Closing += OnClosing;
-        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); };
+        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); ExternalChanges.Dispose(); };
         Opened += async (_, _) =>
         {
             _ = Editor.TextArea.Focus();
@@ -78,6 +79,7 @@ internal sealed partial class EditorWindow : Window
 
     internal EditorViewModel ViewModel { get; }
     internal MarkdownPreviewAdapter Preview { get; }
+    internal ExternalFileChangeAdapter ExternalChanges { get; }
 
     private void RegisterDropHandlers(Interactive target)
     {

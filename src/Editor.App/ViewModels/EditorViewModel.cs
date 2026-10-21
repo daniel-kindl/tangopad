@@ -217,6 +217,18 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         };
     }
 
+    [ObservableProperty]
+    public partial bool HasExternalChange { get; internal set; }
+
+    internal Action? ExternalChangeDismissed { get; set; }
+
+    [RelayCommand]
+    private void DismissExternalChange()
+    {
+        ExternalChangeDismissed?.Invoke();
+        HasExternalChange = false;
+    }
+
     private bool CanStartOperation => !IsBusy;
 
     [RelayCommand(CanExecute = nameof(IsBusy))]
