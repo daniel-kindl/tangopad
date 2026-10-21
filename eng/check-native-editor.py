@@ -373,6 +373,46 @@ def exercise_reload(ui, files):
     ui.editor()
 
 
+def exercise_external_notification(ui, files):
+    fixture = files / "notification.txt"
+    fixture.write_bytes(b"original")
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(fixture, saving=False)
+    window = ui.editor(fixture)
+    geometry = dict(line.split("=", 1) for line in ui.xdo("getwindowgeometry", "--shell", window).splitlines())
+    x, y = int(geometry["X"]), int(geometry["Y"])
+
+    def banner_pixels():
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((x, y + 45, x + 500, y + 90))
+
+    time.sleep(0.3)
+    before = banner_pixels()
+    external = "external 😀\r\nλ\n".encode()
+    fixture.write_bytes(external)
+
+    def message_visible():
+        after = banner_pixels()
+        changed = sum(a != b for a, b in zip(before.tobytes(), after.tobytes()))
+        return changed > 1000
+
+    wait("external file notification", message_visible)
+    ui.editor(fixture)
+    ui.record("external-change-nonblocking-banner")
+    # The notification follows the first toolbar row at the default window size.
+    ui.click(window, 260, 65)
+    time.sleep(0.3)
+    ui.click(window, 120, 150)
+    ui.key("ctrl+End")
+    ui.type("!")
+    ui.editor(fixture, dirty=True)
+    ui.key("ctrl+s")
+    ui.editor(fixture)
+    ui.bytes(fixture, external + b"!")
+    ui.record("external-change-banner-reload")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def exercise_conflicts(ui, files):
     fixture = files / "conflict.txt"
     original = b"original"
@@ -876,6 +916,7 @@ def main():
             exercise_recent(ui, files)
             exercise_line_numbers(ui, files)
             exercise_reload(ui, files)
+            exercise_external_notification(ui, files)
             exercise_conflicts(ui, files)
             exercise(ui, files, app)
             exercise_preferences(ui, files, launch, executable)

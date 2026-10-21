@@ -113,3 +113,17 @@ Long-lived exclusive locks restrict other programs and behave differently across
 Platform-specific file IDs can detect identical-content replacements, but add native
 interop and still cannot make a separate check and rename atomic.
 A merge engine exceeds the scope of this explicit save and reload workflow.
+
+## Follow-up: optional notifications, issue #75
+
+`IDocumentFileMonitor` now supplies event hints and revision reads from Application.
+`DocumentSession.Revision` exposes the accepted revision without changing its ownership.
+Infrastructure implements the monitor with `FileSystemWatcher` and the existing
+raw-byte revision reader. App's view adapter owns debounce, cancellation, stale
+result rejection, and dispatcher delivery. The existing dependency graph and
+Application namespace allowlist remain unchanged.
+
+Monitoring does not acknowledge disk revisions or replace text. Dismiss affects
+presentation only. Save-time checks remain authoritative because events can be
+missed. See [external file notifications](../external-file-notifications.md) for
+lifecycle, placement, limits, and manual acceptance checks.

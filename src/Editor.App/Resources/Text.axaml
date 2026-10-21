@@ -64,4 +64,6 @@
   <x:String x:Key="Text.Dialog.Conflict.Prompt">The save stopped because this file changed, was removed, or already exists at a new destination.</x:String>
   <x:String x:Key="Text.Dialog.Conflict.Consequences">Reload from Disk loads the current file, or the selected file for an untitled document, after checking for unsaved changes. Overwrite anyway replaces the destination with your editor text, or recreates a missing file. Cancel keeps your edits and leaves the file unchanged.</x:String>
   <x:String x:Key="Text.Command.Overwrite">Overwrite anyway</x:String>
+  <x:String x:Key="Text.ExternalChange.Message">This file changed on disk.</x:String>
+  <x:String x:Key="Text.ExternalChange.Dismiss">Dismiss</x:String>
 </ResourceDictionary>

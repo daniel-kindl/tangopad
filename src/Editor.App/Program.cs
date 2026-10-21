@@ -10,7 +10,7 @@ internal static class Program
     {
         RecentFileHistory history = RecentFileHistory.ForCurrentUser();
         EditorPreferences preferences = EditorPreferences.ForCurrentUser();
-        _ = AppBuilder.Configure(() => new App(new FileTextDocumentStore(), history, preferences))
+        _ = AppBuilder.Configure(() => new App(new FileTextDocumentStore(), history, preferences, new LocalDocumentFileMonitor()))
             .UsePlatformDetect()
             .StartWithClassicDesktopLifetime(args);
         _ = Task.WhenAll(history.FlushAsync(), preferences.FlushAsync()).Wait(TimeSpan.FromMilliseconds(250));

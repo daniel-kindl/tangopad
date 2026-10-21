@@ -12,7 +12,6 @@ public sealed class DocumentSession
 {
     private readonly ITextDocumentStore store;
     private bool saving;
-    private string? revision;
 
     private DocumentSession(ITextDocumentStore store, TextDocument document, string? destination)
     {
@@ -27,6 +26,9 @@ public sealed class DocumentSession
     /// <summary>Gets the last successfully loaded or saved destination, or null for an untitled document.</summary>
     /// <remarks>The destination is opaque. The session does not normalize paths or test file existence.</remarks>
     public string? Destination { get; private set; }
+
+    /// <summary>Gets the last successfully loaded or saved opaque disk revision.</summary>
+    public string? Revision { get; private set; }
 
     /// <summary>Gets the format identified from the last successful destination, or plain text when untitled.</summary>
     public DocumentFormat Format => DocumentFormats.Identify(Destination);
@@ -52,7 +54,7 @@ public sealed class DocumentSession
         cancellationToken.ThrowIfCancellationRequested();
         StoredDocument loaded = await store.LoadAsync(destination, cancellationToken).ConfigureAwait(true);
         cancellationToken.ThrowIfCancellationRequested();
-        return new(store, TextDocument.FromText(loaded.Text), destination) { revision = loaded.Revision };
+        return new(store, TextDocument.FromText(loaded.Text), destination) { Revision = loaded.Revision };
     }
 
     /// <summary>Saves a captured snapshot to the current destination, even when the document is clean.</summary>
@@ -89,14 +91,14 @@ public sealed class DocumentSession
         try
         {
             string snapshot = Document.Text;
-            string? persisted = await store.SaveAsync(destination, snapshot, revision, overwrite, cancellationToken).ConfigureAwait(true);
+            string? persisted = await store.SaveAsync(destination, snapshot, Revision, overwrite, cancellationToken).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
             if (persisted is null)
             {
                 return false;
             }
 
-            revision = persisted;
+            Revision = persisted;
             Document.AcceptChanges(snapshot);
             Destination = destination;
             return true;

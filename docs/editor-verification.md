@@ -596,3 +596,34 @@ Windows and macOS native interaction remains untested on this Linux host.
 Hosted Linux, Windows, and macOS verification must pass before a normal merge.
 The final check and replacement remain separate filesystem operations. The tests
 do not prove perfect exclusion of concurrent writers. ADR 0009 states those limits.
+
+## External file notifications, issue #75
+
+Date: 2026-10-21. [External file notifications](external-file-notifications.md)
+defines ownership, lifecycle, filesystem limits, and the desktop checklist.
+
+The acceptance test failed against dev commit `79eac49` because an external edit
+produced no banner. Injected-monitor tests now cover event bursts, false positives,
+modification, deletion, rename, replacement, dismissal, and later revisions.
+They cover late verification across New, Open, Reload, Save As, and window close.
+Other tests check failed Open, own saves, monitoring errors, and Save, Discard,
+and Cancel through the banner's bound Reload command.
+The retained buffer checks include identity, exact text, selection, redo, and
+clean state. Dismiss still requires an explicit conflict decision before saving.
+Real-file tests compare monitor revisions with loaded and saved raw bytes,
+including a BOM, invalid UTF-8, and changes with restored metadata.
+
+The Linux X11 native script passed all 56 workflow groups on Fedora Linux 44,
+x64, with Xvfb, a private D-Bus session, and the GTK portal.
+Evidence is in `artifacts/native-editor-y98nqr9_`.
+The inspected notification screenshot shows both actions and the original editor
+text after the external edit. The banner's Reload action loads external Unicode
+and mixed line endings. A subsequent edit and save produces the expected bytes.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and both builds passed with zero
+diagnostics. Tests passed 368 cases and skipped one Windows-only filesystem case.
+All seven TRX reports passed validation. Native startup passed.
+
+Native Windows, macOS, Wayland, screen-reader, and network-mount checks remain
+untested on this host. Use the platform checklist before claiming those results.

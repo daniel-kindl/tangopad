@@ -32,10 +32,10 @@ flowchart LR
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
 | Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
-| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format |
+| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format and an optional file monitor contract |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, clean baseline, and document format identification |
 | Editor.Formats.Markdown | Markdown parsing and inert preview records | Bounded Markdig adapter without UI or resource loading |
-| Editor.Infrastructure | Local persistence | Strict UTF-8 document storage and bounded recent-path storage through same-directory replacement |
+| Editor.Infrastructure | Local persistence and monitoring | Strict UTF-8 document storage, bounded recent-path storage, and optional file events with revision checks |
 | Editor.Formats.Markdown.Tests | Parser behavior | Baseline syntax, hostile text, and resource limits without Avalonia |
 | Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
 | Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
@@ -201,3 +201,6 @@ See [ADR 0007](adr/0007-plain-text-editor.md) for UI synchronization and desktop
 [Document formats](document-formats.md) defines extension mapping and session format transitions.
 
 See [ADR 0009](adr/0009-optimistic-file-concurrency.md) for disk revisions and explicit conflict choices.
+
+[External file notifications](external-file-notifications.md) defines the optional monitor port,
+local watcher, presentation lifecycle, and save-time authority.

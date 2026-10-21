@@ -546,7 +546,7 @@ public sealed class EditorBindingTests
             Assert.Equal("Untitled - Tangopad", window.Title);
 
             DockPanel layout = Assert.IsType<DockPanel>(window.Content);
-            Assert.Equal(4, layout.Children.Count);
+            Assert.Equal(5, layout.Children.Count);
             WrapPanel toolbar = Assert.IsType<WrapPanel>(layout.Children[0]);
             Assert.Equal(Dock.Top, DockPanel.GetDock(toolbar));
             Assert.Equal(Orientation.Horizontal, toolbar.Orientation);
@@ -557,12 +557,17 @@ public sealed class EditorBindingTests
             Button cancel = Assert.IsType<Button>(toolbar.Children[1]);
             Assert.Equal("Cancel operation", cancel.Content);
             Assert.False(cancel.IsVisible);
-            Border status = Assert.IsType<Border>(layout.Children[2]);
+            WrapPanel notification = Assert.IsType<WrapPanel>(layout.Children[1]);
+            Assert.False(notification.IsVisible);
+            Assert.Equal(Dock.Top, DockPanel.GetDock(notification));
+            Assert.Same(window.ViewModel.ReloadCommand, window.FindControl<Button>("ReloadExternalChangeButton")!.Command);
+            Assert.Same(window.ViewModel.DismissExternalChangeCommand, window.FindControl<Button>("DismissExternalChangeButton")!.Command);
+            Border status = Assert.IsType<Border>(layout.Children[3]);
             Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
             WrapPanel statusItems = Assert.IsType<WrapPanel>(status.Child);
             Assert.Equal(Orientation.Horizontal, statusItems.Orientation);
             Assert.Equal([window.CaretStatus, window.CharacterStatus, window.WordStatus, window.EncodingStatus, window.LineEndingStatus], statusItems.Children);
-            Grid documentLayout = Assert.IsType<Grid>(layout.Children[3]);
+            Grid documentLayout = Assert.IsType<Grid>(layout.Children[4]);
             TextEditor editor = Assert.IsType<TextEditor>(documentLayout.Children[0]);
             Assert.Equal(0, Grid.GetColumn(editor));
             Assert.False(window.PreviewScroll.IsVisible);

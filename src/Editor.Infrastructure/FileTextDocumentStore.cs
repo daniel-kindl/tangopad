@@ -125,7 +125,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
         return string.Create(CultureInfo.InvariantCulture, $"{path}\n{length}\n{modified.Ticks}\n{Convert.ToHexString(hash)}");
     }
 
-    private static async Task<string?> ReadRevisionAsync(string path, string? comparison, CancellationToken token)
+    internal static async Task<string?> ReadRevisionAsync(string path, string? comparison, CancellationToken token)
     {
         try
         {
@@ -163,6 +163,10 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             return stream.Length != length || File.GetLastWriteTimeUtc(stream.SafeFileHandle) != modified
                 ? throw new IOException("The file changed during the save check. Try again.")
                 : Revision(path, length, modified, hash.GetHashAndReset());
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
         }
         catch (FileNotFoundException)
         {
