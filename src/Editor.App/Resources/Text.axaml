@@ -28,6 +28,14 @@
   <x:String x:Key="Text.Search.Close">Close search</x:String>
   <x:String x:Key="Text.Search.MatchCase">Match case</x:String>
   <x:String x:Key="Text.Search.MatchWholeWord">Match whole word</x:String>
+  <x:String x:Key="Text.Search.UseRegex">Use regular expressions</x:String>
+  <x:String x:Key="Text.Search.RegexReplacement">Captures: $1 or ${name}. Use $$ for a dollar sign.</x:String>
+  <x:String x:Key="Text.Search.Searching">Searching…</x:String>
+  <x:String x:Key="Text.Search.InvalidPattern">Invalid regular expression. Check the pattern.</x:String>
+  <x:String x:Key="Text.Search.TimedOut">Search took too long. Simplify the pattern.</x:String>
+  <x:String x:Key="Text.Search.EmptyMatch">The pattern matches empty text. Use a pattern that consumes text.</x:String>
+  <x:String x:Key="Text.Search.LimitReached">Regex search limit reached. Use a smaller document, pattern, or replacement.</x:String>
+  <x:String x:Key="Text.Search.InvalidReplacement">Invalid replacement. Use $1, ${name}, $&amp;, or $$ with existing capture groups.</x:String>
   <x:String x:Key="Text.Search.NoMatches">No matches</x:String>
   <x:String x:Key="Text.Search.Empty">Enter text to find</x:String>
   <x:String x:Key="Text.Search.MatchCount" xml:space="preserve">Matches: </x:String>

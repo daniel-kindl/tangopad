@@ -71,15 +71,18 @@
                  AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
                  AutomationProperties.Name="{StaticResource Text.Search.Find}" />
       </Grid>
-      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding Search.IsReplaceVisible}">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Search.IsReplaceVisible}">
         <Label Content="{StaticResource Text.Search.Replace}" Target="{Binding #ReplacementInput}" />
         <TextBox x:Name="ReplacementInput" Grid.Column="1" Text="{Binding Search.Replacement, Mode=TwoWay}"
                  AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
                  AutomationProperties.Name="{StaticResource Text.Search.Replace}" />
+        <TextBlock x:Name="RegexReplacementHint" Grid.Row="1" Grid.Column="1"
+                   Text="{StaticResource Text.Search.RegexReplacement}" IsVisible="{Binding Search.UseRegex}" />
       </Grid>
       <WrapPanel>
         <CheckBox x:Name="MatchCaseInput" Content="{StaticResource Text.Search.MatchCase}" IsChecked="{Binding Search.MatchCase, Mode=TwoWay}" />
         <CheckBox x:Name="MatchWholeWordInput" Content="{StaticResource Text.Search.MatchWholeWord}" IsChecked="{Binding Search.MatchWholeWord, Mode=TwoWay}" />
+        <CheckBox x:Name="UseRegexInput" Content="{StaticResource Text.Search.UseRegex}" IsChecked="{Binding Search.UseRegex, Mode=TwoWay}" />
         <Button x:Name="PreviousMatchButton" Content="{StaticResource Text.Search.Previous}" Command="{Binding Search.PreviousCommand}" />
         <Button x:Name="NextMatchButton" Content="{StaticResource Text.Search.Next}" Command="{Binding Search.NextCommand}" />
         <Button x:Name="ReplaceCurrentButton" Content="{StaticResource Text.Search.ReplaceCurrent}" Command="{Binding Search.ReplaceCurrentCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />
@@ -88,6 +91,12 @@
       </WrapPanel>
       <WrapPanel AutomationProperties.LiveSetting="Polite">
         <TextBlock Text="{StaticResource Text.Search.Empty}" IsVisible="{Binding !Search.HasQuery}" />
+        <TextBlock x:Name="SearchingText" Text="{StaticResource Text.Search.Searching}" IsVisible="{Binding Search.IsSearching}" />
+        <TextBlock x:Name="InvalidPatternText" Text="{StaticResource Text.Search.InvalidPattern}" IsVisible="{Binding Search.InvalidPattern}" />
+        <TextBlock x:Name="SearchTimedOutText" Text="{StaticResource Text.Search.TimedOut}" IsVisible="{Binding Search.SearchTimedOut}" />
+        <TextBlock x:Name="EmptyRegexMatchText" Text="{StaticResource Text.Search.EmptyMatch}" IsVisible="{Binding Search.EmptyRegexMatch}" />
+        <TextBlock x:Name="SearchLimitText" Text="{StaticResource Text.Search.LimitReached}" IsVisible="{Binding Search.SearchLimitReached}" />
+        <TextBlock x:Name="InvalidReplacementText" Text="{StaticResource Text.Search.InvalidReplacement}" IsVisible="{Binding Search.InvalidReplacement}" />
         <TextBlock x:Name="NoMatchesText" Text="{StaticResource Text.Search.NoMatches}" IsVisible="{Binding Search.NoMatches}" />
         <TextBlock IsVisible="{Binding Search.HasQuery}" Margin="{StaticResource Inset.Search.Status}">
           <Run Text="{StaticResource Text.Search.MatchCount}" /><Run Text="{Binding Search.MatchCount}" />

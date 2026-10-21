@@ -662,8 +662,8 @@ def exercise(ui, files, app):
         ui.key("shift+Return")
         ui.key("Tab")
         ui.type("$1")
-        # Query, replacement, case, whole word, previous, next, current, all, close.
-        for _ in range(6):
+        # Query, replacement, case, whole word, regex, previous, next, current, all, close.
+        for _ in range(7):
             ui.key("Tab")
         ui.key("space")
         ui.record("find-replace-panel")
@@ -876,8 +876,8 @@ def exercise_whole_word(ui, files):
     ui.key("space")  # Match whole word.
     time.sleep(0.2)
     ui.record("whole-word-options")
-    # Replace current is disabled because no match is selected.
-    for _ in range(3):
+    # Regex is before navigation. Replace current is disabled until a match is selected.
+    for _ in range(4):
         ui.key("Tab")
     ui.key("space")  # Replace all.
     ui.key("Escape")
@@ -897,6 +897,57 @@ def exercise_whole_word(ui, files):
     ui.key("ctrl+s")
     ui.bytes(path, original.encode("utf-8"))
     ui.record("whole-word-unicode-replace-and-grouped-undo")
+
+
+def exercise_regex(ui, files):
+    path = files / "regex.md"
+    original = "# cat12 cat_cat3\r\nCAT4 😀cat5😀\n"
+    path.write_bytes(original.encode("utf-8"))
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(path, saving=False)
+    ui.editor(path)
+    ui.key("ctrl+h")
+    ui.type(r"cat(\d+)")
+    ui.key("Tab")
+    ui.type("dog$1!")
+    ui.key("Tab")  # Match case stays off.
+    ui.key("Tab")
+    ui.key("space")  # Match whole word excludes cat_cat3.
+    ui.key("Tab")
+    ui.key("space")  # Use regular expressions.
+    time.sleep(0.5)
+    ui.record("regex-captures-ready")
+    # Previous, next, and Replace all. Replace current has no selected match.
+    for _ in range(3):
+        ui.key("Tab")
+    ui.key("space")
+    time.sleep(0.5)
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    expected = "# dog12! cat_cat3\r\ndog4! 😀dog5!😀\n".encode("utf-8")
+    ui.bytes(path, expected)
+    ui.editor(path)
+    ui.key("ctrl+z")
+    ui.key("ctrl+s")
+    ui.bytes(path, original.encode("utf-8"))
+    ui.key("ctrl+y")
+    ui.key("ctrl+s")
+    ui.bytes(path, expected)
+    ui.record("regex-capture-replacement-grouped-undo-redo-exact-bytes")
+    ui.key("ctrl+f")
+    ui.type("(")
+    time.sleep(0.5)
+    ui.record("regex-invalid-pattern-feedback")
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    ui.bytes(path, expected)
+    ui.key("ctrl+h")
+    ui.type("(?=dog)")
+    time.sleep(0.5)
+    ui.record("regex-empty-match-feedback")
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    ui.bytes(path, expected)
 
 
 def main():
@@ -969,6 +1020,13 @@ def main():
             wait("exit after whole-word checks", lambda: whole_word_app.poll() is not None)
             if whole_word_app.returncode != 0:
                 raise RuntimeError(f"Editor exited with code {whole_word_app.returncode}.")
+            regex_app = launch([str(executable)], "editor-regex")
+            ui.editor()
+            exercise_regex(ui, files)
+            ui.close(ui.editor(files / "regex.md"))
+            wait("exit after regex checks", lambda: regex_app.poll() is not None)
+            if regex_app.returncode != 0:
+                raise RuntimeError(f"Editor exited with code {regex_app.returncode}.")
             exercise_preferences(ui, files, launch, executable)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")

@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Editor.App.ViewModels;
 
-internal sealed partial class SearchViewModel : ObservableObject
+internal sealed partial class SearchViewModel : ObservableObject, IDisposable
 {
     private ISearchBuffer? buffer;
     private List<SearchMatch> matches = [];
@@ -13,6 +13,13 @@ internal sealed partial class SearchViewModel : ObservableObject
     private string? scannedQuery;
     private bool scannedMatchCase;
     private bool scannedMatchWholeWord;
+    private bool scannedUseRegex;
+    private bool scannedIsReplaceVisible;
+    private string? scannedReplacement;
+    private List<SearchReplacement> regexReplacements = [];
+    private CancellationTokenSource? scanCancellation;
+
+    internal Task Work { get; private set; } = Task.CompletedTask;
 
     internal SearchViewModel(ISearchBuffer? buffer = null)
     {
@@ -32,6 +39,15 @@ internal sealed partial class SearchViewModel : ObservableObject
     public partial bool MatchWholeWord { get; set; }
 
     [ObservableProperty]
+    public partial bool UseRegex { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; private set; }
+
+    [ObservableProperty]
+    public partial SearchIssue Issue { get; private set; }
+
+    [ObservableProperty]
     public partial bool IsOpen { get; private set; }
 
     [ObservableProperty]
@@ -47,12 +63,19 @@ internal sealed partial class SearchViewModel : ObservableObject
     public partial int ReplacementCount { get; private set; }
 
     public bool HasQuery => Query.Length != 0;
-    public bool NoMatches => HasQuery && MatchCount == 0;
+    public bool NoMatches => HasQuery && MatchCount == 0 && !IsSearching && !HasSearchError;
+    public bool HasSearchError => Issue != SearchIssue.None;
+    public bool InvalidPattern => Issue == SearchIssue.InvalidPattern;
+    public bool SearchTimedOut => Issue == SearchIssue.TimedOut;
+    public bool EmptyRegexMatch => Issue == SearchIssue.EmptyMatch;
+    public bool SearchLimitReached => Issue == SearchIssue.LimitReached;
+    public bool InvalidReplacement => Issue == SearchIssue.InvalidReplacement;
 
     internal void Attach(ISearchBuffer? value)
     {
         buffer?.Changed -= OnBufferChanged;
 
+        scannedText = null;
         buffer = value;
         buffer?.Changed += OnBufferChanged;
 
@@ -60,6 +83,26 @@ internal sealed partial class SearchViewModel : ObservableObject
     }
 
     partial void OnQueryChanged(string value) { Refresh(); }
+    partial void OnReplacementChanged(string value)
+    {
+        ReplacementCount = 0;
+        if (UseRegex && IsReplaceVisible)
+        {
+            Refresh();
+        }
+    }
+    partial void OnUseRegexChanged(bool value) { Refresh(); }
+    partial void OnIsSearchingChanged(bool value) { NotifyStatus(); }
+    partial void OnIssueChanged(SearchIssue value)
+    {
+        OnPropertyChanged(nameof(HasSearchError));
+        OnPropertyChanged(nameof(InvalidPattern));
+        OnPropertyChanged(nameof(SearchTimedOut));
+        OnPropertyChanged(nameof(EmptyRegexMatch));
+        OnPropertyChanged(nameof(SearchLimitReached));
+        OnPropertyChanged(nameof(InvalidReplacement));
+        NotifyStatus();
+    }
     partial void OnMatchCaseChanged(bool value) { Refresh(); }
     partial void OnMatchWholeWordChanged(bool value) { Refresh(); }
     partial void OnCanEditChanged(bool value) { NotifyCommands(); }
@@ -71,15 +114,29 @@ internal sealed partial class SearchViewModel : ObservableObject
     private void Refresh()
     {
         string text = buffer?.Text ?? string.Empty;
-        if (text != scannedText || Query != scannedQuery || MatchCase != scannedMatchCase || MatchWholeWord != scannedMatchWholeWord)
+        if (text != scannedText || Query != scannedQuery || MatchCase != scannedMatchCase || MatchWholeWord != scannedMatchWholeWord ||
+            UseRegex != scannedUseRegex || (UseRegex && (IsReplaceVisible != scannedIsReplaceVisible ||
+            (IsReplaceVisible && Replacement != scannedReplacement))))
         {
+            CancelScan();
+            Issue = SearchIssue.None;
             ReplacementCount = 0;
             scannedText = text;
             scannedQuery = Query;
             scannedMatchCase = MatchCase;
             scannedMatchWholeWord = MatchWholeWord;
+            scannedUseRegex = UseRegex;
+            scannedIsReplaceVisible = IsReplaceVisible;
+            scannedReplacement = Replacement;
             matches = [];
-            if (buffer is not null && Query.Length != 0)
+            regexReplacements = [];
+            if (UseRegex && buffer is not null && Query.Length != 0)
+            {
+                scanCancellation = new CancellationTokenSource();
+                IsSearching = true;
+                Work = ScanRegexAsync(Work, text, Query, IsReplaceVisible ? Replacement : null, MatchCase, MatchWholeWord, scanCancellation.Token);
+            }
+            if (!UseRegex && buffer is not null && Query.Length != 0)
             {
                 StringComparison comparison = MatchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
                 int offset = 0;
@@ -101,13 +158,52 @@ internal sealed partial class SearchViewModel : ObservableObject
             }
         }
 
+        NotifyStatus();
+    }
+
+    private void NotifyStatus()
+    {
         MatchCount = matches.Count;
         OnPropertyChanged(nameof(HasQuery));
         OnPropertyChanged(nameof(NoMatches));
         NotifyCommands();
     }
 
-    private static bool IsWholeWordMatch(string text, int start, int length)
+    public void Dispose()
+    {
+        Attach(null);
+    }
+
+    private void CancelScan()
+    {
+        scanCancellation?.Cancel();
+        scanCancellation?.Dispose();
+        scanCancellation = null;
+        IsSearching = false;
+    }
+
+    private async Task ScanRegexAsync(Task previous, string text, string query, string? replacement, bool matchCase, bool wholeWord, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await previous.ConfigureAwait(true);
+            RegexSearchResult result = await Task.Run(() => RegexSearch.Scan(text, query, replacement, matchCase, wholeWord, cancellationToken), cancellationToken).ConfigureAwait(true);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                matches = result.Matches;
+                regexReplacements = result.Replacements;
+                Issue = result.Issue;
+                IsSearching = false;
+                NotifyStatus();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // A newer request owns the observable state.
+        }
+    }
+
+    internal static bool IsWholeWordMatch(string text, int start, int length)
     {
         int end = start + length;
         if (SplitsScalar(text, start) || SplitsScalar(text, end))
@@ -132,8 +228,8 @@ internal sealed partial class SearchViewModel : ObservableObject
             UnicodeCategory.EnclosingMark or UnicodeCategory.ConnectorPunctuation;
     }
 
-    private bool CanNavigate => IsOpen && buffer is not null && matches.Count != 0;
-    private bool CanReplaceAll => CanNavigate && IsReplaceVisible && CanEdit;
+    private bool CanNavigate => IsOpen && !IsSearching && buffer is not null && matches.Count != 0;
+    private bool CanReplaceAll => CanNavigate && IsReplaceVisible && CanEdit && !HasSearchError;
     private bool CanReplaceCurrent => CanReplaceAll && CurrentMatch is not null;
     private SearchMatch? CurrentMatch => buffer is null ? null : matches
         .Where(match => match.Start == buffer.SelectionStart && match.Length == buffer.SelectionLength)
@@ -148,13 +244,21 @@ internal sealed partial class SearchViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ShowFind() { IsReplaceVisible = false; IsOpen = true; }
+    private void ShowFind() { IsReplaceVisible = false; IsOpen = true; Refresh(); }
 
     [RelayCommand]
-    private void ShowReplace() { IsReplaceVisible = true; IsOpen = true; }
+    private void ShowReplace() { IsReplaceVisible = true; IsOpen = true; Refresh(); }
 
     [RelayCommand]
-    private void Close() { IsOpen = false; }
+    private void Close()
+    {
+        IsOpen = false;
+        if (IsSearching)
+        {
+            CancelScan();
+            scannedText = null;
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanNavigate))]
     private void Next()
@@ -190,7 +294,10 @@ internal sealed partial class SearchViewModel : ObservableObject
             return;
         }
 
-        buffer.Replace([match], Replacement);
+        SearchReplacement replacement = UseRegex
+            ? regexReplacements.First(replacement => replacement.Match == match)
+            : new SearchReplacement(match, Replacement);
+        buffer.Replace([replacement]);
         ReplacementCount = 1;
     }
 
@@ -202,18 +309,19 @@ internal sealed partial class SearchViewModel : ObservableObject
             return;
         }
 
-        List<SearchMatch> replacements = [];
+        List<SearchReplacement> replacements = [];
         int end = 0;
-        foreach (SearchMatch match in matches)
+        for (int index = 0; index < matches.Count; index++)
         {
+            SearchMatch match = matches[index];
             if (match.Start >= end)
             {
-                replacements.Add(match);
+                replacements.Add(UseRegex ? regexReplacements[index] : new SearchReplacement(match, Replacement));
                 end = match.Start + match.Length;
             }
         }
 
-        buffer.Replace(replacements, Replacement);
+        buffer.Replace(replacements);
         ReplacementCount = replacements.Count;
     }
 }
