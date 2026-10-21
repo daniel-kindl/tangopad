@@ -30,6 +30,9 @@ internal sealed class ExternalFileChangeAdapter : IDisposable
 
     internal Task Work { get; private set; } = Task.CompletedTask;
 
+    /// <summary>Gets how many verification results the dispatcher has applied.</summary>
+    internal int DeliveredResults { get; private set; }
+
     private void Dismiss()
     {
         dismissed = observed;
@@ -104,6 +107,7 @@ internal sealed class ExternalFileChangeAdapter : IDisposable
                         }
                         observed = revision;
                         viewModel.HasExternalChange = revision != baseline && !(hasDismissed && revision == dismissed);
+                        DeliveredResults++;
                     });
                 }
                 catch (Exception error) when (IsMonitoringFailure(error))

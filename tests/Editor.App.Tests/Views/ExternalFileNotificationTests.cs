@@ -61,7 +61,7 @@ public sealed class ExternalFileNotificationTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
-    /// <summary>Injected bursts, false events, missing files, and replacements use verified revisions.</summary>
+    /// <summary>Injected bursts and revisions cover dismissal, coalescing, and later changes.</summary>
     /// <param name="change">The external filesystem operation.</param>
     [Theory]
     [InlineData("edit")]
@@ -78,14 +78,20 @@ public sealed class ExternalFileNotificationTests
             try
             {
                 await File.WriteAllTextAsync(path, "# original").ConfigureAwait(true);
-                Monitor monitor = new();
+                TaskCompletionSource<string?> initial = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                Monitor monitor = new() { Pending = initial };
                 EditorWindow window = new(new FileTextDocumentStore(), new Dialogs(), fileMonitor: monitor);
                 window.Show();
                 Assert.True(await window.ViewModel.OpenPathAsync(path).ConfigureAwait(true));
                 await WaitAsync(() => monitor.Reads > 0).ConfigureAwait(true);
+                Assert.NotNull(window.ViewModel.Session.Revision);
+                monitor.UseRevision(window.ViewModel.Session.Revision);
+                initial.SetResult(window.ViewModel.Session.Revision);
+                monitor.Pending = null;
+                await WaitForDeliveryAsync(window, 0).ConfigureAwait(true);
                 Assert.False(window.ViewModel.HasExternalChange);
                 Action signal = monitor.Signal!;
-                await VerifyEventsAsync(monitor).ConfigureAwait(true);
+                await VerifyEventsAsync(monitor, window).ConfigureAwait(true);
                 Assert.False(window.ViewModel.HasExternalChange);
                 if (change == "edit")
                 {
@@ -99,14 +105,30 @@ public sealed class ExternalFileNotificationTests
                         await File.WriteAllTextAsync(path, "replacement").ConfigureAwait(true);
                     }
                 }
+
+                string? revision = change switch
+                {
+                    "delete" or "rename" => null,
+                    "replace" => "replacement",
+                    _ => "external",
+                };
+                int reads = monitor.Reads;
+                TaskCompletionSource<string?> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                monitor.Pending = gate;
                 for (int i = 0; i < 1000; i++) { signal(); }
+                await WaitAsync(() => monitor.Reads > reads).ConfigureAwait(true);
+                Assert.Equal(reads + 1, monitor.Reads);
+                monitor.UseRevision(revision);
+                monitor.Pending = null;
+                gate.SetResult(revision);
                 await WaitAsync(() => window.ViewModel.HasExternalChange).ConfigureAwait(true);
-                Assert.InRange(monitor.Reads, 3, 5);
+                Assert.Equal(reads + 1, monitor.Reads);
                 Assert.Equal("# original", window.Editor.Text);
                 window.ViewModel.DismissExternalChangeCommand.Execute(null);
-                await VerifyEventsAsync(monitor).ConfigureAwait(true);
+                await VerifyEventsAsync(monitor, window).ConfigureAwait(true);
                 Assert.False(window.ViewModel.HasExternalChange);
                 await File.WriteAllTextAsync(path, "another revision").ConfigureAwait(true);
+                monitor.UseRevision("another");
                 signal();
                 await WaitAsync(() => window.ViewModel.HasExternalChange).ConfigureAwait(true);
                 Assert.True(await window.ViewModel.ReloadAsync().ConfigureAwait(true));
@@ -166,7 +188,7 @@ public sealed class ExternalFileNotificationTests
                 Assert.Equal(second, monitor.Path);
                 window.Editor.Document.Insert(0, "local ");
                 Assert.True(await window.ViewModel.SaveAsync().ConfigureAwait(true));
-                await VerifyEventsAsync(monitor).ConfigureAwait(true);
+                await VerifyEventsAsync(monitor, window).ConfigureAwait(true);
                 Assert.False(window.ViewModel.HasExternalChange);
                 window.Close();
                 await window.ExternalChanges.Work.ConfigureAwait(true);
@@ -304,15 +326,20 @@ public sealed class ExternalFileNotificationTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
-    private static async Task VerifyEventsAsync(Monitor monitor)
+    private static async Task VerifyEventsAsync(Monitor monitor, EditorWindow window)
     {
-        // The next read starts only after the previous result reaches the dispatcher.
+        // The dispatcher applies each signal before the next signal starts.
         for (int check = 0; check < 2; check++)
         {
-            int reads = monitor.Reads;
+            int delivered = window.ExternalChanges.DeliveredResults;
             monitor.Signal!();
-            await WaitAsync(() => monitor.Reads > reads).ConfigureAwait(true);
+            await WaitForDeliveryAsync(window, delivered).ConfigureAwait(true);
         }
+    }
+
+    private static async Task WaitForDeliveryAsync(EditorWindow window, int delivered)
+    {
+        await WaitAsync(() => window.ExternalChanges.DeliveredResults > delivered).ConfigureAwait(true);
     }
 
     private static async Task WaitAsync(Func<bool> condition)
@@ -324,7 +351,14 @@ public sealed class ExternalFileNotificationTests
     private sealed class Monitor : IDocumentFileMonitor
     {
         private int reads;
+        private volatile string? scriptedRevision;
+        private volatile bool scriptRevisions;
         internal int Reads => Volatile.Read(ref reads);
+        internal void UseRevision(string? revision)
+        {
+            scriptedRevision = revision;
+            scriptRevisions = true;
+        }
         internal int Active { get; private set; }
         internal string? Path { get; private set; }
         internal Action? Signal { get; private set; }
@@ -346,7 +380,9 @@ public sealed class ExternalFileNotificationTests
             _ = Interlocked.Increment(ref reads);
             return ReadFails
                 ? throw new IOException("Verification is unavailable.")
-                : pending ?? new LocalDocumentFileMonitor().ReadRevisionAsync(destination, cancellationToken);
+                : pending ?? (scriptRevisions
+                    ? Task.FromResult(scriptedRevision)
+                    : new LocalDocumentFileMonitor().ReadRevisionAsync(destination, cancellationToken));
         }
         private sealed class Subscription(Monitor owner) : IDisposable
         {

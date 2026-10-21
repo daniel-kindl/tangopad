@@ -314,6 +314,8 @@ def exercise_line_numbers(ui, files):
     ui.key("ctrl+z")
     ui.key("ctrl+s")
     ui.bytes(fixture, original)
+    # Saved bytes can appear before Save enables the document commands again.
+    ui.editor(fixture)
 
 
 def exercise_reload(ui, files):
