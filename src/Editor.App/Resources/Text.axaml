@@ -27,6 +27,7 @@
   <x:String x:Key="Text.Search.ReplaceAll">Replace all</x:String>
   <x:String x:Key="Text.Search.Close">Close search</x:String>
   <x:String x:Key="Text.Search.MatchCase">Match case</x:String>
+  <x:String x:Key="Text.Search.MatchWholeWord">Match whole word</x:String>
   <x:String x:Key="Text.Search.NoMatches">No matches</x:String>
   <x:String x:Key="Text.Search.Empty">Enter text to find</x:String>
   <x:String x:Key="Text.Search.MatchCount" xml:space="preserve">Matches: </x:String>

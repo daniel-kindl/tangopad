@@ -10,6 +10,28 @@ Search uses ordinal comparison. Match case selects case-sensitive comparison.
 The default uses `StringComparison.OrdinalIgnoreCase`, independent of the current culture.
 Search preserves Unicode and exact LF, CRLF, and CR sequences.
 It does not normalize text. A pasted query can span lines.
+Match whole word is off by default. It filters the same literal matches for
+navigation, match counts, Replace current, and Replace all. Match case remains independent.
+Both ends of a whole-word match must be Unicode scalar boundaries.
+The scalar before the match and the scalar after it must be absent or non-word characters.
+The query itself can contain punctuation, whitespace, or multiple words.
+
+Word characters use these Unicode categories:
+
+- Letters: uppercase, lowercase, titlecase, modifier, and other letters.
+- Decimal digits, including non-ASCII decimal digits.
+- Marks: nonspacing, spacing combining, and enclosing marks.
+- Connector punctuation, including `_` and `‿`.
+
+Thus `cat` does not match inside `cat_cat`, `cat2`, `猫cat`, or `cat` followed by a combining mark.
+The query `e` does not match the start of `e\u0301`, but the exact query `e\u0301` matches that complete sequence.
+Precomposed `é` and decomposed `e\u0301` remain different text.
+Spaces, line endings, apostrophes, hyphens, and other punctuation separate words.
+Both straight and curly apostrophes separate words, so `cat` matches in `cat's` and `cat’s`.
+Supplementary letters and decimal digits are word characters. Emoji separate words.
+Whole-word matches cannot split a UTF-16 surrogate pair. Isolated surrogates count as non-word characters.
+This rule does not perform linguistic segmentation or grapheme-cluster matching.
+It uses literal `IndexOf` searches with constant-size boundary checks and no regular expressions.
 An empty query has no matches and disables navigation and replacement.
 A nonempty query without results displays No matches.
 
@@ -21,7 +43,7 @@ Find previous selects a match before the selection, or wraps to the last match.
 Search does not change the document or its undo history.
 
 Replace current requires an exact selection of a valid match.
-A changed query, text, case option, or selection updates command availability.
+A changed query, text, matching option, or selection updates command availability.
 The replacement remains selected after the operation.
 Replace all chooses non-overlapping matches from left to right.
 For example, replacing `ana` with `x` in `banana` produces `bxna` with a replacement count of one.
@@ -29,9 +51,11 @@ Replacement text is literal, including dollar signs, backslashes, Unicode, and n
 Inserted text is not searched again during the same replacement operation.
 
 The panel reports match and replacement counts separately.
-Text, query, or case changes clear the previous replacement count.
+Text, query, or matching option changes clear the previous replacement count.
 Closing the panel preserves the query and replacement text.
 It returns focus to the editor without changing the document.
+Matching options remain in the current window across panel changes, New, Open, and Reload.
+Each new window starts with Match whole word off. The option is not saved to preferences.
 
 ## Presentation boundary
 
@@ -63,6 +87,11 @@ The panel uses the existing light and dark resources.
 SearchViewModelTests exercises commands without Avalonia initialization.
 It covers wrap navigation, overlapping candidates, Unicode, mixed line endings,
 ordinal case comparison, literal replacement, empty queries, and command availability.
+Whole-word cases cover Unicode categories, supplementary scalars, combining sequences,
+identifier fragments, punctuation, mixed line endings, and repeated input.
+WholeWordSearchTests checks keyboard toggling in both themes, accessible names,
+selection and caret stability, wrap navigation, replacements, grouped undo and redo,
+window-local options, document transitions, and exact Markdown persistence.
 Headless EditorBindingTests exercise production AXAML, keyboard gestures, query focus,
 selection, horizontal scrolling, replacement, grouped undo and redo, dirty state, Save, and close protection.
 Architecture tests enforce text and token resources, including field accessibility names.
