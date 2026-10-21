@@ -632,3 +632,45 @@ The first hosted Windows run found a sharing conflict between monitoring reads
 and an external writer. Monitoring reads now permit concurrent writes and deletion.
 Save-time checks retain their existing sharing restrictions. A real-file test
 keeps an external write handle open during verification to check this distinction.
+
+## External notification acceptance, issue #79
+
+Date: 2026-10-21. [Issue #79](https://github.com/daniel-kindl/tangopad/issues/79).
+
+Hosted macOS verification for pull request #78 failed once in
+`ExternalFileNotificationTests.VerifiedEventsAndDismissal(change: "edit")`.
+The assertion is `HasExternalChange` after Dismiss and another verification.
+The retry passed on the same commit. The job is
+`39626088885`, attempt 1, macOS job `119311602231`.
+
+The headless monitor read real filesystem revisions. A revision includes the
+last-write timestamp. The test continued when a read started. It did not wait
+until the dispatcher applied the result. A later read can observe a different
+timestamp for the same bytes. Dismiss applies to one revision, so the banner
+returns. That result matches the revision rule. The adapter still compares the
+delivered revision with the dismissed revision on the dispatcher. A stale
+callback still checks the active subscription. The comparison did not change.
+
+The dismissal test copies the loaded session revision and injects later
+revisions. One thousand signals produce one read. `DeliveredResults` increases
+only after the dispatcher applies that result. Signals for the dismissed
+revision leave the banner hidden. A new injected revision shows it again.
+Reload still reads the file bytes. An infrastructure test raises the watcher
+error callback. `DeliveredResults` is internal to `ExternalFileChangeAdapter`
+in `Editor.App/Views`. No public API, namespace, or dependency changes.
+
+The Linux X11 native script passed all 59 workflow groups on Fedora Linux 44,
+x64, with Xvfb, a private D-Bus session, and the GTK portal.
+Evidence is in `artifacts/native-editor-zlfm_eam`.
+The external-edit groups still show the banner and reload the external bytes.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and both builds passed with zero
+diagnostics. Tests passed 400 cases and skipped one Windows-only filesystem case.
+All seven TRX reports passed validation. Native startup passed.
+Debug repeated `VerifiedEventsAndDismissal` 11 times on this host. Each run
+passed its 4 cases.
+
+This host cannot run the hosted macOS job. Windows and macOS verification remain
+for the pull request. Native Windows, macOS, Wayland, screen-reader, and
+network-mount checks remain untested on this host.

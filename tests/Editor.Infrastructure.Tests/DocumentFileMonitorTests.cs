@@ -1,3 +1,4 @@
+using System.Reflection;
 using Editor.Application;
 using Xunit;
 
@@ -46,6 +47,21 @@ public sealed class DocumentFileMonitorTests : IDisposable
         Assert.Null(await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken));
         Directory.Delete(directory, true);
         Assert.Null(await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>A watcher error uses the same callback as a filesystem event.</summary>
+    [Fact]
+    public async Task WatcherErrorRequestsVerification()
+    {
+        string path = Path.Combine(directory, "current.txt");
+        await File.WriteAllTextAsync(path, "original", TestContext.Current.CancellationToken);
+        TaskCompletionSource signal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using IDisposable subscription = monitor.Watch(path, () => signal.TrySetResult());
+        FileSystemWatcher watcher = Assert.IsType<FileSystemWatcher>(subscription);
+        MethodInfo? onError = typeof(FileSystemWatcher).GetMethod("OnError", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(onError);
+        _ = onError.Invoke(watcher, [new ErrorEventArgs(new IOException("The watcher buffer overflowed."))]);
+        await signal.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
     /// <summary>Monitoring can verify a file while an external writer keeps its handle open.</summary>
