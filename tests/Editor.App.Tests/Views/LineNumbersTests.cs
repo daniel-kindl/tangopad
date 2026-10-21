@@ -153,6 +153,7 @@ public sealed class LineNumbersTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal string? OpenPath { get; init; }
         internal string? SavePath { get; init; }
         public Task<string?> ChooseOpenAsync() { return Task.FromResult(OpenPath); }

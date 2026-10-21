@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Editor.App.Views.Dialogs.FileConflictDialog"
+        Classes="dialog"
+        Title="{StaticResource Text.Dialog.Conflict.Title}">
+  <StackPanel Classes="dialog-body">
+    <TextBlock Text="{StaticResource Text.Dialog.Conflict.Prompt}" TextWrapping="Wrap" />
+    <TextBlock x:Name="DestinationText" TextWrapping="Wrap" />
+    <TextBlock Text="{StaticResource Text.Dialog.Conflict.Consequences}" TextWrapping="Wrap" />
+    <StackPanel Classes="dialog-actions">
+      <Button x:Name="ReloadButton" Content="{StaticResource Text.Command.Reload}" />
+      <Button x:Name="OverwriteButton" Content="{StaticResource Text.Command.Overwrite}" />
+      <Button x:Name="CancelButton" Content="{StaticResource Text.Command.Cancel}" IsCancel="True" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

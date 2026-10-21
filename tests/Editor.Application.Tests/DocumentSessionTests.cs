@@ -26,7 +26,7 @@ public sealed class DocumentSessionTests
         Assert.Equal(cancellation.Token, store.LoadToken);
         Assert.Equal("original.txt", store.LoadDestination);
 
-        await session.SaveAsync(cancellation.Token);
+        _ = await session.SaveAsync(cancellation.Token);
 
         Assert.Equal(("original.txt", text), Assert.Single(store.Writes));
         Assert.Equal(cancellation.Token, store.SaveToken);
@@ -49,11 +49,11 @@ public sealed class DocumentSessionTests
         _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
         Assert.Empty(store.Writes);
 
-        await session.SaveAsAsync("first.txt", TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync("first.txt", false, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("draft");
-        await session.SaveAsAsync("second.txt", TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync("second.txt", false, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("final");
-        await session.SaveAsync(TestContext.Current.CancellationToken);
+        _ = await session.SaveAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(new[] { ("first.txt", ""), ("second.txt", "draft"), ("second.txt", "final") }, store.Writes);
         Assert.Equal("second.txt", session.Destination);
@@ -72,13 +72,13 @@ public sealed class DocumentSessionTests
         session.Document.ReplaceText("snapshot");
         store.Save = _ => completion.Task;
 
-        Task save = session.SaveAsAsync("new.md", TestContext.Current.CancellationToken);
+        Task save = session.SaveAsAsync("new.md", false, TestContext.Current.CancellationToken);
         Assert.False(save.IsCompleted);
         Assert.Equal("old.txt", session.Destination);
         Assert.Equal(DocumentFormat.PlainText, session.Format);
         session.Document.ReplaceText("newer edit");
         _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
-        _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsAsync("overlap.txt", TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAsync<InvalidOperationException>(() => session.SaveAsAsync("overlap.txt", false, TestContext.Current.CancellationToken));
         Assert.Equal(("new.md", "snapshot"), Assert.Single(store.Writes));
 
         completion.SetResult();
@@ -94,7 +94,7 @@ public sealed class DocumentSessionTests
         session.Document.ReplaceText("snapshot");
         Assert.False(session.Document.IsDirty);
         store.Save = _ => Task.CompletedTask;
-        await session.SaveAsync(TestContext.Current.CancellationToken);
+        _ = await session.SaveAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, store.Writes.Count);
     }
 
@@ -113,7 +113,7 @@ public sealed class DocumentSessionTests
         store.Save = _ => Task.FromException(failure);
 
         Exception actual = await Assert.ThrowsAsync<InvalidOperationException>(() => saveAs
-            ? session.SaveAsAsync("new.md", TestContext.Current.CancellationToken)
+            ? session.SaveAsAsync("new.md", false, TestContext.Current.CancellationToken)
             : session.SaveAsync(TestContext.Current.CancellationToken));
 
         Assert.Same(failure, actual);
@@ -125,7 +125,7 @@ public sealed class DocumentSessionTests
         session.Document.ReplaceText("loaded");
         Assert.False(session.Document.IsDirty);
         store.Save = _ => Task.CompletedTask;
-        await session.SaveAsync(TestContext.Current.CancellationToken);
+        _ = await session.SaveAsync(TestContext.Current.CancellationToken);
         Assert.Equal(("old.txt", "loaded"), store.Writes[1]);
     }
 
@@ -137,7 +137,7 @@ public sealed class DocumentSessionTests
         MemoryStore store = new() { Save = token => Task.Delay(Timeout.Infinite, token) };
         DocumentSession session = DocumentSession.CreateUntitled(store);
         session.Document.ReplaceText("draft");
-        Task save = session.SaveAsAsync("cancelled.md", cancellation.Token);
+        Task save = session.SaveAsAsync("cancelled.md", false, cancellation.Token);
         Assert.False(save.IsCompleted);
         await cancellation.CancelAsync();
 
@@ -150,7 +150,7 @@ public sealed class DocumentSessionTests
         session.Document.ReplaceText("");
         Assert.False(session.Document.IsDirty);
         store.Save = _ => Task.CompletedTask;
-        await session.SaveAsAsync("retry.txt", TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync("retry.txt", false, TestContext.Current.CancellationToken);
         Assert.Equal("retry.txt", session.Destination);
     }
 
@@ -163,7 +163,7 @@ public sealed class DocumentSessionTests
         MemoryStore store = new();
         DocumentSession session = DocumentSession.CreateUntitled(store);
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => DocumentSession.LoadAsync(store, "file.txt", cancellation.Token));
-        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => session.SaveAsAsync("file.txt", cancellation.Token));
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => session.SaveAsAsync("file.txt", false, cancellation.Token));
         Assert.Null(store.LoadDestination);
         Assert.Empty(store.Writes);
         Assert.Null(session.Destination);
@@ -179,7 +179,7 @@ public sealed class DocumentSessionTests
         MemoryStore store = new() { Save = _ => completion.Task };
         DocumentSession session = await DocumentSession.LoadAsync(store, "old.txt", TestContext.Current.CancellationToken);
         session.Document.ReplaceText("snapshot");
-        Task save = session.SaveAsAsync("new.md", cancellation.Token);
+        Task save = session.SaveAsAsync("new.md", false, cancellation.Token);
         session.Document.ReplaceText("newer edit");
         await cancellation.CancelAsync();
         completion.SetResult();
@@ -207,9 +207,9 @@ public sealed class DocumentSessionTests
         first.Document.ReplaceText("first");
         second.Document.ReplaceText("second");
 
-        Task firstSave = first.SaveAsAsync("first.txt", TestContext.Current.CancellationToken);
+        Task firstSave = first.SaveAsAsync("first.txt", false, TestContext.Current.CancellationToken);
         store.Save = _ => Task.CompletedTask;
-        await second.SaveAsAsync("second.txt", TestContext.Current.CancellationToken);
+        _ = await second.SaveAsAsync("second.txt", false, TestContext.Current.CancellationToken);
         Assert.False(firstSave.IsCompleted);
         Assert.True(first.Document.IsDirty);
         Assert.False(second.Document.IsDirty);
@@ -268,7 +268,7 @@ public sealed class DocumentSessionTests
         MemoryStore store = new();
         DocumentSession session = DocumentSession.CreateUntitled(store);
         _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => DocumentSession.LoadAsync(store, destination!, TestContext.Current.CancellationToken));
-        _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => session.SaveAsAsync(destination!, TestContext.Current.CancellationToken));
+        _ = await Assert.ThrowsAnyAsync<ArgumentException>(() => session.SaveAsAsync(destination!, false, TestContext.Current.CancellationToken));
         Assert.Null(session.Destination);
         Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.Null(store.LoadDestination);
@@ -296,7 +296,7 @@ public sealed class DocumentSessionTests
         Assert.Equal(initialFormat, session.Format);
         Assert.False(session.Document.IsDirty);
 
-        await session.SaveAsAsync(renamed, TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync(renamed, false, TestContext.Current.CancellationToken);
 
         Assert.Equal(savedFormat, session.Format);
         Assert.Equal(renamed, session.Destination);
@@ -304,7 +304,7 @@ public sealed class DocumentSessionTests
         Assert.Equal(text, session.Document.Text);
         Assert.False(session.Document.IsDirty);
         Assert.Equal((renamed, text), Assert.Single(store.Writes));
-        await session.SaveAsync(TestContext.Current.CancellationToken);
+        _ = await session.SaveAsync(TestContext.Current.CancellationToken);
         Assert.Equal(savedFormat, session.Format);
         Assert.Equal((renamed, text), store.Writes[1]);
     }
@@ -321,12 +321,61 @@ public sealed class DocumentSessionTests
         Assert.Equal(DocumentFormat.PlainText, session.Format);
         Assert.True(session.Document.IsDirty);
 
-        await session.SaveAsAsync("first.md", TestContext.Current.CancellationToken);
+        _ = await session.SaveAsAsync("first.md", false, TestContext.Current.CancellationToken);
 
         Assert.Equal(DocumentFormat.Markdown, session.Format);
         Assert.Equal(identity, session.Document.Id);
         Assert.Equal("# draft", session.Document.Text);
         Assert.False(session.Document.IsDirty);
+    }
+
+    /// <summary>A conflict preserves the revision and text baseline. Success advances both to the persisted snapshot.</summary>
+    [Fact]
+    public async Task ConflictAndPendingSuccessKeepCorrectRevisions()
+    {
+        RevisionStore store = new();
+        DocumentSession session = await DocumentSession.LoadAsync(store, "current.txt", TestContext.Current.CancellationToken);
+        Guid identity = session.Document.Id;
+        session.Document.ReplaceText("snapshot");
+        Assert.False(await session.SaveAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("disk-v1", store.Expected);
+        Assert.Equal(identity, session.Document.Id);
+        Assert.Equal("current.txt", session.Destination);
+        Assert.True(session.Document.IsDirty);
+        store.Pending = new();
+        Task<bool> pending = session.SaveAsAsync("current.txt", true, TestContext.Current.CancellationToken);
+        Assert.True(store.Overwrite);
+        Assert.Equal("disk-v1", store.Expected);
+        session.Document.ReplaceText("newer");
+        store.Pending.SetResult("disk-v2");
+        Assert.True(await pending.ConfigureAwait(true));
+        Assert.Equal("newer", session.Document.Text);
+        Assert.True(session.Document.IsDirty);
+        session.Document.ReplaceText("snapshot");
+        Assert.False(session.Document.IsDirty);
+        store.Pending = null;
+        Assert.False(await session.SaveAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("disk-v2", store.Expected);
+        Assert.False(store.Overwrite);
+        Assert.False(session.Document.IsDirty);
+    }
+
+    private sealed class RevisionStore : ITextDocumentStore
+    {
+        internal string? Expected { get; private set; }
+        internal bool Overwrite { get; private set; }
+        internal TaskCompletionSource<string?>? Pending { get; set; }
+        public Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new StoredDocument("loaded", "disk-v1"));
+        }
+
+        public Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
+        {
+            Expected = expectedRevision;
+            Overwrite = overwrite;
+            return Pending?.Task ?? Task.FromResult<string?>(null);
+        }
     }
 
     private sealed class MemoryStore : ITextDocumentStore
@@ -339,18 +388,19 @@ public sealed class DocumentSessionTests
         public CancellationToken LoadToken { get; private set; }
         public CancellationToken SaveToken { get; private set; }
 
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
         {
             LoadDestination = destination;
             LoadToken = cancellationToken;
-            return Load?.Invoke(cancellationToken) ?? Task.FromResult(Text);
+            return new(await (Load?.Invoke(cancellationToken) ?? Task.FromResult(Text)).ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
         {
             Writes.Add((destination, text));
             SaveToken = cancellationToken;
-            return Save(cancellationToken);
+            await Save(cancellationToken).ConfigureAwait(true);
+            return destination;
         }
     }
 }

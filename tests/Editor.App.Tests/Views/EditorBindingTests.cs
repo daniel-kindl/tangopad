@@ -145,7 +145,7 @@ public sealed class EditorBindingTests
             {
                 const string original = "A😀e\u0301\r\nB\nC\r";
                 await File.WriteAllTextAsync(path, original).ConfigureAwait(true);
-                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = saved })
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { OpenPath = path, SavePath = saved, Conflict = ConflictDecision.Overwrite })
                 {
                     RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light
                 };
@@ -1253,6 +1253,8 @@ public sealed class EditorBindingTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        internal ConflictDecision Conflict { get; init; } = ConflictDecision.Cancel;
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(Conflict); }
         internal UnsavedDecision Decision { get; set; } = UnsavedDecision.Discard;
         internal string? OpenPath { get; init; }
         internal string? SavePath { get; init; }
@@ -1266,14 +1268,15 @@ public sealed class EditorBindingTests
     {
         internal TaskCompletionSource<string> Load { get; } = new();
 
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        public async Task<Application.StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
         {
-            return Load.Task;
+            return new(await Load.Task.ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
-            throw new InvalidOperationException("This test does not save documents.");
+            await Task.FromException(new InvalidOperationException("This test does not save documents.")).ConfigureAwait(true);
+            return destination;
         }
     }
 }

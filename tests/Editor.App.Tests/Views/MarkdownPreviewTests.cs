@@ -465,20 +465,22 @@ public sealed class MarkdownPreviewTests
         internal Task Save { get; set; } = Task.CompletedTask;
         internal bool Failure { get; set; }
         internal string? SavedText { get; private set; }
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(LoadedText);
+            return new(await Task.FromResult(LoadedText).ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             SavedText = text;
-            return Failure ? Task.FromException(new IOException("Save failed.")) : Save.WaitAsync(cancellationToken);
+            await (Failure ? Task.FromException(new IOException("Save failed.")) : Save.WaitAsync(cancellationToken)).ConfigureAwait(true);
+            return destination;
         }
     }
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal string? Path { get; set; }
         public Task<string?> ChooseOpenAsync() { return Task.FromResult(Path); }
         public Task<string?> ChooseSaveAsync(string? destination) { return Task.FromResult(Path); }

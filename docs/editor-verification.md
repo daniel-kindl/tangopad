@@ -536,3 +536,63 @@ The second hosted attempt passed the toggle and navigation checks, then failed
 while restoring toolbar state after a modal dialog. The script now restores
 Word Wrap before that dialog. It leaves line numbers hidden for the remaining
 native document workflows and avoids another toolbar traversal after the modal closes.
+
+## External file changes, issue #73
+
+Date: 2026-10-20. [ADR 0009](adr/0009-optimistic-file-concurrency.md)
+defines the revision checks and filesystem limits.
+
+Application retains the loaded or saved disk revision in `DocumentSession`.
+Infrastructure hashes raw file bytes and checks again before replacement.
+App owns conflict decisions in `Services`, command transitions in `ViewModels`,
+and the resource-backed `FileConflictDialog` in `Views/Dialogs`.
+No project or package references change.
+
+The first two real-file tests reproduced silent overwrites, including equal-length
+external text with the original timestamp restored. Real-file tests now check
+those conflicts, removal, rename and replacement, separate instances, Save As,
+BOM handling, Unicode, mixed line endings, repeated saves, and failed overwrite.
+Application tests check revision retention and pending-save acknowledgement.
+Headless tests check Cancel, Overwrite anyway, guarded Reload, pending edits,
+operation cancellation, and Save before Open or Reload. Rejected saves retain
+identity, dirty state, text, selection, caret, undo, and redo.
+The owned dialog tests cover all choices, Enter, Escape, and window close.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and Debug and Release builds passed
+with zero diagnostics. Tests passed 349 cases and skipped one Windows-only
+filesystem case. All seven TRX reports passed validation. Native startup passed.
+The initial full run caught a generated collection dependency in the new record.
+An immutable class preserves the existing Application API allowlist.
+
+The Linux native script passed all 54 workflow groups with Xvfb, a private D-Bus
+session, and the GTK portal on Fedora Linux 44, x64. Evidence is in
+`artifacts/native-editor-hibk2uy7`. The inspected conflict screenshot shows the
+destination and all action consequences without clipped text or buttons.
+The script checks Cancel with retained undo, deliberate overwrite, Reload through
+unsaved confirmation, explicit recreation of a missing file, and Save As overwrite.
+
+### Remaining desktop checks on Windows and macOS
+
+Run the following checks in an interactive desktop session on each platform.
+Use Control shortcuts on Windows and Command shortcuts on macOS.
+
+1. Open one UTF-8 file in two Tangopad instances. Edit and save in the first instance.
+2. Edit in the second instance. Select text, then save. Confirm that the conflict dialog identifies the destination.
+3. Choose Cancel. Confirm that disk bytes, text, dirty state, selection, caret, undo, and redo remain unchanged.
+4. Save again. Choose Overwrite anyway. Confirm that exact UTF-8 bytes match the editor and that another ordinary save succeeds.
+5. Edit the file externally again. Choose Reload from Disk from the conflict dialog.
+6. Cancel the unsaved-changes confirmation. Confirm that the buffer and file remain unchanged.
+7. Repeat Reload and choose Discard. Confirm that the external text loads and that undo history resets.
+8. Delete the open file externally. Confirm that ordinary Save requires a decision and Cancel does not recreate the file.
+9. Choose Overwrite anyway. Confirm that the missing file contains the exact editor text.
+10. Use Save As to an existing file. Cancel each overwrite prompt and confirm that both files remain unchanged.
+11. Repeat Save As and explicitly confirm overwrite. Confirm that only the selected destination changes.
+12. Check keyboard access in both themes. Tab and Shift+Tab must reach every action.
+13. Press Escape, press Enter without selecting another action, and close the dialog window in separate attempts. Each action must cancel.
+14. With a screen reader, check the prompt, destination, consequences, and action names.
+
+Windows and macOS native interaction remains untested on this Linux host.
+Hosted Linux, Windows, and macOS verification must pass before a normal merge.
+The final check and replacement remain separate filesystem operations. The tests
+do not prove perfect exclusion of concurrent writers. ADR 0009 states those limits.

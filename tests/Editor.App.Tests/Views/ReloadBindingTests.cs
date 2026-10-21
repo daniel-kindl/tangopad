@@ -159,6 +159,7 @@ public sealed class ReloadBindingTests
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal UnsavedDecision Decision { get; init; } = UnsavedDecision.Discard;
         internal string? Error { get; private set; }
         public Task<string?> ChooseOpenAsync()

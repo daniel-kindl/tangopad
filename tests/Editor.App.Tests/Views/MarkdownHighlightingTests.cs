@@ -208,20 +208,22 @@ public sealed class MarkdownHighlightingTests
     {
         internal Task Save { get; set; } = Task.CompletedTask;
         internal string? SavedText { get; private set; }
-        public Task<string> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult("# Heading\r\nordinary text");
+            return new(await Task.FromResult("# Heading\r\nordinary text").ConfigureAwait(true), destination);
         }
 
-        public Task SaveAsync(string destination, string text, CancellationToken cancellationToken = default)
+        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             SavedText = text;
-            return Save.WaitAsync(cancellationToken);
+            await Save.WaitAsync(cancellationToken).ConfigureAwait(true);
+            return destination;
         }
     }
 
     private sealed class Dialogs : IEditorDialogs
     {
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
         internal string? Path { get; set; }
         internal string? Error { get; private set; }
         public Task<string?> ChooseOpenAsync()
