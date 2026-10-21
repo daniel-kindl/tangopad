@@ -671,6 +671,26 @@ All seven TRX reports passed validation. Native startup passed.
 Debug repeated `VerifiedEventsAndDismissal` 11 times on this host. Each run
 passed its 4 cases.
 
-This host cannot run the hosted macOS job. Windows and macOS verification remain
-for the pull request. Native Windows, macOS, Wayland, screen-reader, and
-network-mount checks remain untested on this host.
+Hosted Windows and macOS verification passed on the first pull request #80 run.
+Native Windows, macOS, Wayland, screen-reader, and network-mount checks remain
+untested on this host.
+
+### Native picker readiness
+
+The [first Ubuntu run for pull request #80](https://github.com/daniel-kindl/tangopad/actions/runs/39633318817/job/119336996441)
+passed repository verification but timed out opening the file picker in
+`exercise_reload`. The preceding line-number check waited for saved bytes.
+Save can replace the destination before its continuation reaches the UI dispatcher.
+Document commands remain disabled until that continuation finishes.
+Open can therefore receive its shortcut while its command is disabled.
+
+The line-number check now waits for the clean editor title after verifying the
+saved bytes. Save publishes that title after it enables the document commands.
+The following Open shortcut therefore waits for UI completion.
+
+A temporary probe delayed the final line-number save for 1,000 milliseconds
+after `File.Move`. The original script reproduced the picker timeout in
+`exercise_reload`. With the title wait, all six line-number and reload workflow
+groups passed under the same delay. The probe was removed before final verification.
+No persistence behavior changed. Final local and hosted results are recorded in
+the pull request.
