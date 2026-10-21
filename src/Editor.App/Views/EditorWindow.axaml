@@ -79,6 +79,7 @@
       </Grid>
       <WrapPanel>
         <CheckBox x:Name="MatchCaseInput" Content="{StaticResource Text.Search.MatchCase}" IsChecked="{Binding Search.MatchCase, Mode=TwoWay}" />
+        <CheckBox x:Name="MatchWholeWordInput" Content="{StaticResource Text.Search.MatchWholeWord}" IsChecked="{Binding Search.MatchWholeWord, Mode=TwoWay}" />
         <Button x:Name="PreviousMatchButton" Content="{StaticResource Text.Search.Previous}" Command="{Binding Search.PreviousCommand}" />
         <Button x:Name="NextMatchButton" Content="{StaticResource Text.Search.Next}" Command="{Binding Search.NextCommand}" />
         <Button x:Name="ReplaceCurrentButton" Content="{StaticResource Text.Search.ReplaceCurrent}" Command="{Binding Search.ReplaceCurrentCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />

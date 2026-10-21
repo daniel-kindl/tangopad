@@ -660,8 +660,8 @@ def exercise(ui, files, app):
         ui.key("shift+Return")
         ui.key("Tab")
         ui.type("$1")
-        # Query, replacement, case option, previous, next, current, all, close.
-        for _ in range(5):
+        # Query, replacement, case, whole word, previous, next, current, all, close.
+        for _ in range(6):
             ui.key("Tab")
         ui.key("space")
         ui.record("find-replace-panel")
@@ -856,6 +856,47 @@ def exercise_preferences(ui, files, launch, executable):
         raise RuntimeError(f"Editor exited with code {app.returncode}.")
 
 
+def exercise_whole_word(ui, files):
+    path = files / "whole-word.md"
+    original = "# cat_cat Cat cat\r\ncat’s 😀cat😀 e\u0301 cat𐐀\n"
+    path.write_bytes(original.encode("utf-8"))
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(path, saving=False)
+    ui.editor(path)
+    ui.key("ctrl+h")
+    ui.type("cat")
+    ui.key("Tab")
+    ui.key("ctrl+a")
+    ui.type("dog")
+    ui.key("Tab")
+    ui.key("space")  # Match case.
+    ui.key("Tab")
+    ui.key("space")  # Match whole word.
+    time.sleep(0.2)
+    ui.record("whole-word-options")
+    # Replace current is disabled because no match is selected.
+    for _ in range(3):
+        ui.key("Tab")
+    ui.key("space")  # Replace all.
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    ui.bytes(path, "# cat_cat Cat dog\r\ndog’s 😀dog😀 e\u0301 cat𐐀\n".encode("utf-8"))
+    ui.editor(path)
+    ui.key("ctrl+z")
+    ui.key("ctrl+s")
+    ui.bytes(path, original.encode("utf-8"))
+    ui.editor(path)
+    ui.key("ctrl+f")
+    ui.type("e")
+    ui.key("Return")
+    ui.key("shift+Return")
+    ui.record("whole-word-combining-mark-no-match")
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    ui.bytes(path, original.encode("utf-8"))
+    ui.record("whole-word-unicode-replace-and-grouped-undo")
+
+
 def main():
     if sys.platform != "linux" or os.geteuid() == 0 or ctypes.sizeof(ctypes.c_long) != 8:
         raise RuntimeError("NOT TESTED: Run as a non-root user on 64-bit Linux with X11 test dependencies.")
@@ -919,6 +960,13 @@ def main():
             exercise_external_notification(ui, files)
             exercise_conflicts(ui, files)
             exercise(ui, files, app)
+            whole_word_app = launch([str(executable)], "editor-whole-word")
+            ui.editor()
+            exercise_whole_word(ui, files)
+            ui.close(ui.editor(files / "whole-word.md"))
+            wait("exit after whole-word checks", lambda: whole_word_app.poll() is not None)
+            if whole_word_app.returncode != 0:
+                raise RuntimeError(f"Editor exited with code {whole_word_app.returncode}.")
             exercise_preferences(ui, files, launch, executable)
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")

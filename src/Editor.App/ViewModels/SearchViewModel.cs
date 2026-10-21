@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -10,6 +12,7 @@ internal sealed partial class SearchViewModel : ObservableObject
     private string? scannedText;
     private string? scannedQuery;
     private bool scannedMatchCase;
+    private bool scannedMatchWholeWord;
 
     internal SearchViewModel(ISearchBuffer? buffer = null)
     {
@@ -24,6 +27,9 @@ internal sealed partial class SearchViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool MatchCase { get; set; }
+
+    [ObservableProperty]
+    public partial bool MatchWholeWord { get; set; }
 
     [ObservableProperty]
     public partial bool IsOpen { get; private set; }
@@ -55,6 +61,7 @@ internal sealed partial class SearchViewModel : ObservableObject
 
     partial void OnQueryChanged(string value) { Refresh(); }
     partial void OnMatchCaseChanged(bool value) { Refresh(); }
+    partial void OnMatchWholeWordChanged(bool value) { Refresh(); }
     partial void OnCanEditChanged(bool value) { NotifyCommands(); }
     partial void OnIsOpenChanged(bool value) { NotifyCommands(); }
     partial void OnIsReplaceVisibleChanged(bool value) { NotifyCommands(); }
@@ -64,12 +71,13 @@ internal sealed partial class SearchViewModel : ObservableObject
     private void Refresh()
     {
         string text = buffer?.Text ?? string.Empty;
-        if (text != scannedText || Query != scannedQuery || MatchCase != scannedMatchCase)
+        if (text != scannedText || Query != scannedQuery || MatchCase != scannedMatchCase || MatchWholeWord != scannedMatchWholeWord)
         {
             ReplacementCount = 0;
             scannedText = text;
             scannedQuery = Query;
             scannedMatchCase = MatchCase;
+            scannedMatchWholeWord = MatchWholeWord;
             matches = [];
             if (buffer is not null && Query.Length != 0)
             {
@@ -83,7 +91,11 @@ internal sealed partial class SearchViewModel : ObservableObject
                         break;
                     }
 
-                    matches.Add(new SearchMatch(start, Query.Length));
+                    if (!MatchWholeWord || IsWholeWordMatch(text, start, Query.Length))
+                    {
+                        matches.Add(new SearchMatch(start, Query.Length));
+                    }
+
                     offset = start + 1;
                 }
             }
@@ -93,6 +105,31 @@ internal sealed partial class SearchViewModel : ObservableObject
         OnPropertyChanged(nameof(HasQuery));
         OnPropertyChanged(nameof(NoMatches));
         NotifyCommands();
+    }
+
+    private static bool IsWholeWordMatch(string text, int start, int length)
+    {
+        int end = start + length;
+        if (SplitsScalar(text, start) || SplitsScalar(text, end))
+        {
+            return false;
+        }
+
+        _ = Rune.DecodeLastFromUtf16(text.AsSpan(0, start), out Rune before, out _);
+        _ = Rune.DecodeFromUtf16(text.AsSpan(end), out Rune after, out _);
+        return (start == 0 || !IsWordCharacter(before)) && (end == text.Length || !IsWordCharacter(after));
+    }
+
+    private static bool SplitsScalar(string text, int offset)
+    {
+        return offset > 0 && offset < text.Length && char.IsHighSurrogate(text[offset - 1]) && char.IsLowSurrogate(text[offset]);
+    }
+
+    private static bool IsWordCharacter(Rune value)
+    {
+        return Rune.IsLetterOrDigit(value) || Rune.GetUnicodeCategory(value) is
+            UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or
+            UnicodeCategory.EnclosingMark or UnicodeCategory.ConnectorPunctuation;
     }
 
     private bool CanNavigate => IsOpen && buffer is not null && matches.Count != 0;
