@@ -622,8 +622,13 @@ and mixed line endings. A subsequent edit and save produces the expected bytes.
 
 `dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
 Locked restore, audit, formatting, analyzers, and both builds passed with zero
-diagnostics. Tests passed 368 cases and skipped one Windows-only filesystem case.
+diagnostics. Tests passed 369 cases and skipped one Windows-only filesystem case.
 All seven TRX reports passed validation. Native startup passed.
 
 Native Windows, macOS, Wayland, screen-reader, and network-mount checks remain
 untested on this host. Use the platform checklist before claiming those results.
+
+The first hosted Windows run found a sharing conflict between monitoring reads
+and an external writer. Monitoring reads now permit concurrent writes and deletion.
+Save-time checks retain their existing sharing restrictions. A real-file test
+keeps an external write handle open during verification to check this distinction.

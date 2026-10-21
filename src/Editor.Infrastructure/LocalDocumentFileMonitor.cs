@@ -35,6 +35,6 @@ public sealed class LocalDocumentFileMonitor : IDocumentFileMonitor
     /// <inheritdoc />
     public Task<string?> ReadRevisionAsync(string destination, CancellationToken cancellationToken)
     {
-        return FileTextDocumentStore.ReadRevisionAsync(Path.GetFullPath(destination), null, cancellationToken);
+        return FileTextDocumentStore.ReadRevisionAsync(Path.GetFullPath(destination), null, true, cancellationToken);
     }
 }

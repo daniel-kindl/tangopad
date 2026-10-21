@@ -23,6 +23,8 @@ The monitor cannot change that revision or the document.
 in its parent directory. It receives modification, creation, deletion, rename,
 and backend error events. It reuses `FileTextDocumentStore` revision checks.
 These checks hash raw bytes, including a BOM and invalid UTF-8, without decoding.
+Monitoring reads permit concurrent writers and deletion. Save-time reads retain
+their existing sharing restrictions.
 A missing file or parent directory produces a missing revision.
 The check uses one 64 KiB buffer and reads at most the captured file length.
 

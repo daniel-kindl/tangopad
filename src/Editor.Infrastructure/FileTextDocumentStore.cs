@@ -46,7 +46,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
         ArgumentNullException.ThrowIfNull(text);
         cancellationToken.ThrowIfCancellationRequested();
         string path = Path.GetFullPath(destination);
-        string? before = await ReadRevisionAsync(path, overwrite ? null : expectedRevision ?? string.Empty, cancellationToken).ConfigureAwait(false);
+        string? before = await ReadRevisionAsync(path, overwrite ? null : expectedRevision ?? string.Empty, false, cancellationToken).ConfigureAwait(false);
         if (!overwrite && (expectedRevision is not null && expectedRevision.StartsWith(path + "\n", StringComparison.Ordinal)
             ? !string.Equals(before, expectedRevision, StringComparison.Ordinal)
             : before is not null))
@@ -78,10 +78,10 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
                 await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            string persisted = await ReadRevisionAsync(temporary, null, cancellationToken).ConfigureAwait(false)
+            string persisted = await ReadRevisionAsync(temporary, null, false, cancellationToken).ConfigureAwait(false)
                 ?? throw new IOException("The temporary file disappeared before saving.");
             persisted = path + persisted[temporary.Length..];
-            string? current = await ReadRevisionAsync(path, before ?? string.Empty, cancellationToken).ConfigureAwait(false);
+            string? current = await ReadRevisionAsync(path, before ?? string.Empty, false, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (!string.Equals(current, before, StringComparison.Ordinal))
             {
@@ -125,7 +125,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
         return string.Create(CultureInfo.InvariantCulture, $"{path}\n{length}\n{modified.Ticks}\n{Convert.ToHexString(hash)}");
     }
 
-    internal static async Task<string?> ReadRevisionAsync(string path, string? comparison, CancellationToken token)
+    internal static async Task<string?> ReadRevisionAsync(string path, string? comparison, bool allowConcurrentWrites, CancellationToken token)
     {
         try
         {
@@ -133,7 +133,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             {
                 Mode = FileMode.Open,
                 Access = FileAccess.Read,
-                Share = FileShare.Read | FileShare.Delete,
+                Share = allowConcurrentWrites ? FileShare.ReadWrite | FileShare.Delete : FileShare.Read | FileShare.Delete,
                 Options = FileOptions.Asynchronous | FileOptions.SequentialScan,
             });
             long length = stream.Length;

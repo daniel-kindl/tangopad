@@ -48,6 +48,26 @@ public sealed class DocumentFileMonitorTests : IDisposable
         Assert.Null(await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>Monitoring can verify a file while an external writer keeps its handle open.</summary>
+    [Fact]
+    public async Task VerificationPermitsConcurrentWriters()
+    {
+        string path = Path.Combine(directory, "current.txt");
+        await File.WriteAllTextAsync(path, "original", TestContext.Current.CancellationToken);
+        string? before = await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken);
+        using FileStream writer = new(path, new FileStreamOptions
+        {
+            Mode = FileMode.Open,
+            Access = FileAccess.Write,
+            Share = FileShare.ReadWrite | FileShare.Delete,
+            Options = FileOptions.Asynchronous,
+        });
+        Assert.Equal(before, await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken));
+        await writer.WriteAsync("external"u8.ToArray(), TestContext.Current.CancellationToken);
+        await writer.FlushAsync(TestContext.Current.CancellationToken);
+        Assert.NotEqual(before, await monitor.ReadRevisionAsync(path, TestContext.Current.CancellationToken));
+    }
+
     /// <summary>Revision verification observes cancellation without reading file contents.</summary>
     [Fact]
     public async Task VerificationCanBeCancelled()
