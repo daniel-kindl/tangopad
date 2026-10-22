@@ -5,11 +5,11 @@ public static class DocumentFormats
 {
     /// <summary>Identifies a format from the final filename extension, ignoring case.</summary>
     /// <param name="path">A filename or path, or null for an untitled document.</param>
-    /// <returns>Markdown for .md and .markdown. Plain text for .txt and all other names.</returns>
+    /// <returns>Markdown for .md and .markdown. Textile for .textile. Plain text for .txt, .wiki, and all other names.</returns>
     /// <remarks>
     /// Both slash characters separate path components on every host.
     /// A leading dot alone does not introduce an extension. No path normalization or content validation occurs.
-    /// Missing names, unknown extensions, extensionless names, and trailing dots default to plain text.
+    /// Missing names, unknown extensions, extensionless names, .wiki names, and trailing dots default to plain text.
     /// </remarks>
     public static DocumentFormat Identify(string? path)
     {
@@ -25,6 +25,8 @@ public static class DocumentFormats
         return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase)
             || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase)
             ? DocumentFormat.Markdown
-            : DocumentFormat.PlainText;
+            : string.Equals(extension, ".textile", StringComparison.OrdinalIgnoreCase)
+                ? DocumentFormat.Textile
+                : DocumentFormat.PlainText;
     }
 }

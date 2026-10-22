@@ -35,6 +35,8 @@ public sealed class FileTextDocumentStoreTests : IDisposable
     [InlineData(".md", DocumentFormat.Markdown)]
     [InlineData(".MARKDOWN", DocumentFormat.Markdown)]
     [InlineData(".unknown", DocumentFormat.PlainText)]
+    [InlineData(".textile", DocumentFormat.Textile)]
+    [InlineData(".WIKI", DocumentFormat.PlainText)]
     [InlineData("", DocumentFormat.PlainText)]
     public async Task FormatTransitionsPreserveUtf8Bytes(string extension, DocumentFormat format)
     {

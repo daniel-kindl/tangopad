@@ -694,3 +694,24 @@ after `File.Move`. The original script reproduced the picker timeout in
 groups passed under the same delay. The probe was removed before final verification.
 No persistence behavior changed. Final local and hosted results are recorded in
 the pull request.
+
+## Textile source highlighting, issue #84
+
+Date: 2026-10-22. [Issue #84](https://github.com/daniel-kindl/tangopad/issues/84).
+
+`DocumentFormat.Textile` and `DocumentFormats.Identify` stay in `Editor.Core`.
+The final extension `.textile` selects Textile. `.wiki` stays plain text.
+`SourceHighlightingAdapter` in `Editor.App/Views` loads `Textile.xshd` or `Markdown.xshd`.
+Theme brushes stay in `Resources/Themes`. No project or package reference changes.
+[Textile highlighting](textile-highlighting.md) records the source baseline and its limits.
+
+`dotnet msbuild eng/verify.proj` passed on Linux with SDK 10.0.402.
+Locked restore, audit, formatting, analyzers, and both builds passed with zero
+diagnostics. Tests passed 482 cases and skipped one Windows-only filesystem case.
+All seven TRX reports passed validation. Native startup passed.
+
+The Linux X11 native script passed all 65 workflow groups on Fedora Linux 44,
+x64, with Xvfb, a private D-Bus session, and the GTK portal.
+Evidence is in `artifacts/native-editor-0sy8c1iy`.
+The Textile groups open `page.TEXTILE`, save it as plain text, and check exact bytes.
+Windows, macOS, Wayland, screen-reader, and network-mount checks remain untested on this host.

@@ -1,8 +1,9 @@
 # Document format identification
 
 [Issue #35](https://github.com/daniel-kindl/tangopad/issues/35) adds filename-based
-classification for plain text and Markdown. Classification does not validate
-content or select a different editor, encoding, parser, or renderer.
+classification for plain text and Markdown.
+[Issue #84](https://github.com/daniel-kindl/tangopad/issues/84) adds Redmine Textile.
+Classification does not validate content or select a different editor, encoding, parser, or renderer.
 
 ## Filename policy
 
@@ -14,19 +15,25 @@ content or select a different editor, encoding, parser, or renderer.
 | `.txt` | `PlainText` |
 | `.md` | `Markdown` |
 | `.markdown` | `Markdown` |
-| Any other extension, or no extension | `PlainText` |
+| `.textile` | `Textile` |
+| `.wiki`, any other extension, or no extension | `PlainText` |
 
 Matching uses `StringComparison.OrdinalIgnoreCase`. Only the final filename
 component and its last extension count. Both `/` and `\` separate components
 on every host. A directory named `draft.md` does not classify its children as Markdown.
 
-A leading dot alone does not introduce an extension. `.md` and `.markdown`
-are plain text. `.notes.md` is Markdown. A null or empty name, a trailing dot,
+A leading dot alone does not introduce an extension. `.md`, `.markdown`, and `.textile`
+are plain text. `.notes.md` is Markdown. `.notes.textile` is Textile. A null or empty name, a trailing dot,
 and an empty final component default to plain text. Names are not trimmed or
 normalized. Unicode paths follow the same rule.
 
 Unknown extensions do not prevent opening readable files. A recognized extension
-does not prove that the text is valid Markdown. Text contents never affect classification.
+does not prove that the text is valid for that format. Text contents never affect classification.
+
+`.wiki` stays plain text. A Redmine export with that name can be Textile or Markdown.
+This editor does not guess. Save the file with a `.textile` name to select Textile.
+The open and save pickers do not filter names. Any local path remains valid.
+There is no operating-system file-type registration in this version.
 
 ## Document association
 
@@ -61,7 +68,9 @@ filename transitions and reopens the saved documents.
 
 ## Markdown presentation
 
-Source highlighting and the optional preview consume the authoritative session
-format. Neither feature checks file extensions.
-[ADR 0008](adr/0008-safe-markdown-preview.md) defines parser ownership, rendering,
+Source highlighting and the optional Markdown preview consume the authoritative
+session format. Neither feature checks file extensions.
+[ADR 0008](adr/0008-safe-markdown-preview.md) defines Markdown parser ownership, rendering,
 security, and resource limits.
+[Textile highlighting](textile-highlighting.md) defines the `.textile` source colors.
+Textile has no preview in this version.

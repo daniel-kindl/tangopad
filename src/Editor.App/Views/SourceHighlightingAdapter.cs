@@ -10,13 +10,13 @@ using Editor.Core;
 
 namespace Editor.App.Views;
 
-internal sealed class MarkdownHighlightingAdapter
+internal sealed class SourceHighlightingAdapter
 {
     private readonly TextEditor editor;
     private readonly EditorViewModel viewModel;
     private readonly IBrush plainTextLinkBrush;
 
-    internal MarkdownHighlightingAdapter(TextEditor editor, EditorViewModel viewModel)
+    internal SourceHighlightingAdapter(TextEditor editor, EditorViewModel viewModel)
     {
         this.editor = editor;
         this.viewModel = viewModel;
@@ -41,19 +41,20 @@ internal sealed class MarkdownHighlightingAdapter
 
     private void Refresh()
     {
-        if (viewModel.Format != DocumentFormat.Markdown)
+        if (viewModel.Format is not (DocumentFormat.Markdown or DocumentFormat.Textile))
         {
             editor.SyntaxHighlighting = null;
             editor.TextArea.TextView.LinkTextForegroundBrush = plainTextLinkBrush;
             return;
         }
 
-        using Stream stream = typeof(MarkdownHighlightingAdapter).Assembly.GetManifestResourceStream("Editor.App.Views.Markdown.xshd")!;
+        string format = viewModel.Format.ToString();
+        using Stream stream = typeof(SourceHighlightingAdapter).Assembly.GetManifestResourceStream($"Editor.App.Views.{format}.xshd")!;
         using XmlReader reader = XmlReader.Create(stream);
         IHighlightingDefinition definition = HighlightingLoader.Load(reader, HighlightingManager.Instance);
         foreach (HighlightingColor color in definition.NamedHighlightingColors)
         {
-            ISolidColorBrush brush = (ISolidColorBrush)editor.FindResource(editor.ActualThemeVariant, $"Brush.Markdown.{color.Name}")!;
+            ISolidColorBrush brush = (ISolidColorBrush)editor.FindResource(editor.ActualThemeVariant, $"Brush.{format}.{color.Name}")!;
             color.Foreground = new SimpleHighlightingBrush(brush.Color);
         }
 

@@ -37,4 +37,8 @@ Markdig preview issue.
 
 Schedule Markdown parsing and rendering after the first document slice proves the
 contracts. Define separate acceptance criteria for parser adaptation and visual output.
-Recheck Markdig before adding it. Defer tabs, exports, plugins, and additional formats.
+Recheck Markdig before adding it. Defer tabs, exports, and plugins.
+[Issue #82](https://github.com/daniel-kindl/tangopad/issues/82) adds Redmine Textile after this slice.
+[Issue #84](https://github.com/daniel-kindl/tangopad/issues/84) covers filename identity and source highlighting.
+[Issue #85](https://github.com/daniel-kindl/tangopad/issues/85) and
+[issue #86](https://github.com/daniel-kindl/tangopad/issues/86) cover the later preview slices.

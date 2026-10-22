@@ -620,6 +620,37 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.bytes(plain, markdown_text)
+        textile = files / "page.TEXTILE"
+        textile_text = "\n".join([
+            "h1. Heading",
+            "*strong* and _emphasis_ and @code@",
+            "\"link\":https://example.com",
+            "[[WikiPage]]",
+            "#123",
+            "bq. quote",
+            "* item",
+            "|cell|",
+            "----",
+            "p. paragraph",
+            "ordinary text",
+            "<script>alert(1)</script>",
+        ]).encode()
+        textile.write_bytes(textile_text)
+        ui.picker("ctrl+o", "Open text file")
+        ui.choose(textile, saving=False)
+        ui.editor(textile)
+        ui.record("textile-highlighting")
+        textile_plain = files / "page.txt"
+        ui.picker("ctrl+shift+s", "Save text file")
+        ui.choose(textile_plain, saving=True)
+        ui.editor(textile_plain)
+        ui.bytes(textile_plain, textile_text)
+        ui.record("textile-to-plain-text")
+        ui.key("ctrl+End")
+        ui.type("!")
+        ui.key("ctrl+z")
+        ui.key("ctrl+s")
+        ui.bytes(textile_plain, textile_text)
         ui.key("ctrl+n")
         ui.editor()
         ui.type("retain me")
