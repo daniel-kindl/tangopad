@@ -31,7 +31,7 @@ public sealed class SearchViewModelTests
     [InlineData("a.a.", "a.", false, 1)]
     public void WholeWordCountsRespectUnicodeBoundaries(string text, string query, bool matchCase, int expected)
     {
-        SearchViewModel search = new(new Buffer(text)) { Query = query, MatchCase = matchCase, MatchWholeWord = true };
+        using SearchViewModel search = new(new Buffer(text)) { Query = query, MatchCase = matchCase, MatchWholeWord = true };
         Assert.Equal(expected, search.MatchCount);
     }
 
@@ -41,7 +41,7 @@ public sealed class SearchViewModelTests
     [InlineData('\ude00')]
     public void WholeWordQueryCannotSplitSupplementaryScalar(char surrogate)
     {
-        SearchViewModel search = new(new Buffer("😀 😀")) { Query = surrogate.ToString(), MatchWholeWord = true };
+        using SearchViewModel search = new(new Buffer("😀 😀")) { Query = surrogate.ToString(), MatchWholeWord = true };
         Assert.Equal(0, search.MatchCount);
     }
 
@@ -50,7 +50,7 @@ public sealed class SearchViewModelTests
     public void WholeWordReplaceAllHandlesLongInput()
     {
         Buffer buffer = new(string.Concat(Enumerable.Repeat("cat_cat cat ", 20000)));
-        SearchViewModel search = new(buffer) { Query = "cat", Replacement = "cat cat", MatchWholeWord = true };
+        using SearchViewModel search = new(buffer) { Query = "cat", Replacement = "cat cat", MatchWholeWord = true };
         search.ShowReplaceCommand.Execute(null);
         search.ReplaceAllCommand.Execute(null);
         Assert.Equal(20000, search.ReplacementCount);
@@ -65,7 +65,7 @@ public sealed class SearchViewModelTests
     public void WholeWordReplacementUsesNonOverlappingLiteralMatches(string text, string query, string replacement, string expected, int count)
     {
         Buffer buffer = new(text);
-        SearchViewModel search = new(buffer) { Query = query, Replacement = replacement, MatchWholeWord = true };
+        using SearchViewModel search = new(buffer) { Query = query, Replacement = replacement, MatchWholeWord = true };
         search.ShowReplaceCommand.Execute(null);
         search.ReplaceAllCommand.Execute(null);
         Assert.Equal(expected, buffer.Text);
@@ -77,7 +77,7 @@ public sealed class SearchViewModelTests
     public void NavigationWrapsAndTracksSelection()
     {
         Buffer buffer = new("😀 banana λ\r\nλ");
-        SearchViewModel search = new(buffer) { Query = "ana" };
+        using SearchViewModel search = new(buffer) { Query = "ana" };
         search.ShowFindCommand.Execute(null);
         Assert.Equal(2, search.MatchCount);
         search.NextCommand.Execute(null);
@@ -105,7 +105,7 @@ public sealed class SearchViewModelTests
     public void ReplaceAllUsesLiteralText(string text, string query, string replacement, string expected, int count)
     {
         Buffer buffer = new(text);
-        SearchViewModel search = new(buffer) { Query = query, Replacement = replacement };
+        using SearchViewModel search = new(buffer) { Query = query, Replacement = replacement };
         search.ShowReplaceCommand.Execute(null);
         search.ReplaceAllCommand.Execute(null);
         Assert.Equal(expected, buffer.Text);
@@ -117,7 +117,7 @@ public sealed class SearchViewModelTests
     public void CommandsFollowQuerySelectionAndEditingState()
     {
         Buffer buffer = new("One one");
-        SearchViewModel search = new(buffer);
+        using SearchViewModel search = new(buffer);
         search.ShowReplaceCommand.Execute(null);
         Assert.False(search.NextCommand.CanExecute(null));
         search.Query = "one";
@@ -152,7 +152,7 @@ public sealed class SearchViewModelTests
     [InlineData("I ı İ i", "i", false, 2)]
     public void SearchUsesExactLineEndings(string text, string query, bool matchCase, int expected)
     {
-        SearchViewModel search = new(new Buffer(text)) { Query = query, MatchCase = matchCase };
+        using SearchViewModel search = new(new Buffer(text)) { Query = query, MatchCase = matchCase };
         Assert.Equal(expected, search.MatchCount);
     }
 
@@ -169,11 +169,11 @@ public sealed class SearchViewModelTests
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
-        public void Replace(IReadOnlyList<SearchMatch> matches, string replacement)
+        public void Replace(IReadOnlyList<SearchReplacement> replacements)
         {
-            foreach (SearchMatch match in matches.Reverse())
+            foreach (SearchReplacement replacement in replacements.Reverse())
             {
-                Text = Text.Remove(match.Start, match.Length).Insert(match.Start, replacement);
+                Text = Text.Remove(replacement.Match.Start, replacement.Match.Length).Insert(replacement.Match.Start, replacement.Text);
             }
 
             Select(0, 0);

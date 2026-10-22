@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text;
 using AvaloniaEdit;
 using Editor.App.ViewModels;
 
@@ -31,20 +32,31 @@ internal sealed class EditorBufferAdapter : ISearchBuffer
         editor.TextArea.Caret.BringCaretToView();
     }
 
-    public void Replace(IReadOnlyList<SearchMatch> matches, string replacement)
+    public void Replace(IReadOnlyList<SearchReplacement> replacements)
     {
-        using (editor.Document.RunUpdate())
+        if (replacements.Count == 0)
         {
-            foreach (SearchMatch match in matches.Reverse())
-            {
-                editor.Document.Replace(match.Start, match.Length, replacement);
-            }
+            return;
         }
 
-        if (matches.Count != 0)
+        string source = Text;
+        int start = replacements[0].Match.Start;
+        int end = replacements[^1].Match.Start + replacements[^1].Match.Length;
+        int offset = start;
+        StringBuilder text = new();
+        foreach (SearchReplacement replacement in replacements)
         {
-            Select(matches[0].Start, replacement.Length);
+            _ = text.Append(source.AsSpan(offset, replacement.Match.Start - offset));
+            _ = text.Append(replacement.Text);
+            offset = replacement.Match.Start + replacement.Match.Length;
         }
+
+        using (editor.Document.RunUpdate())
+        {
+            editor.Document.Replace(start, end - start, text.ToString());
+        }
+
+        Select(start, replacements[0].Text.Length);
     }
 
     private void OnCaretPositionChanged(object? sender, EventArgs args)

@@ -69,7 +69,7 @@ internal sealed partial class EditorWindow : Window
         DragDrop.SetAllowDrop(this, true);
         RegisterDropHandlers(this);
         Closing += OnClosing;
-        Closed += (_, _) => { ViewModel.Search.Attach(null); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); ExternalChanges.Dispose(); };
+        Closed += (_, _) => { ViewModel.Search.Dispose(); buffer.Detach(); highlighting.Detach(); Preview.Dispose(); ExternalChanges.Dispose(); };
         Opened += async (_, _) =>
         {
             _ = Editor.TextArea.Focus();
