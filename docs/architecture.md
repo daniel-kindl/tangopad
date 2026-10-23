@@ -101,6 +101,7 @@ Editor.App uses these directories:
   `SourcePreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text and tables.
   `SourceHighlightingAdapter` and its embedded `Markdown.xshd` and `Textile.xshd`
   definitions also stay here. `Json.xshd` adapts AvaloniaEdit JSON rules.
+  `Yaml.xshd`, `Csv.xshd`, and `Tsv.xshd` define lexical source highlighting without parsers.
   XML and XAML use the XML definition from the pinned AvaloniaEdit package. The adapter selects visual highlighting from the session format.
 - `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
 - `ViewModels/` contains `EditorViewModel`, `SearchViewModel`, and the search

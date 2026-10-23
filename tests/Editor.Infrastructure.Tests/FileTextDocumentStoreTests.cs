@@ -40,10 +40,14 @@ public sealed class FileTextDocumentStoreTests : IDisposable
     [InlineData(".JSON", DocumentFormat.Json)]
     [InlineData(".XML", DocumentFormat.Xml)]
     [InlineData(".XAML", DocumentFormat.Xaml)]
+    [InlineData(".YAML", DocumentFormat.Yaml)]
+    [InlineData(".yml", DocumentFormat.Yaml)]
+    [InlineData(".CSV", DocumentFormat.Csv)]
+    [InlineData(".TSV", DocumentFormat.Tsv)]
     [InlineData("", DocumentFormat.PlainText)]
     public async Task FormatTransitionsPreserveUtf8Bytes(string extension, DocumentFormat format)
     {
-        const string text = "# Příliš 🐈\r\n漢字\n\0e\u0301";
+        const string text = "# Příliš 🐈\r\n漢字\n\0e\u0301\rname,value\r\n\"a\"\"b,c\nnext\",001\t=SUM(A1)\rkey: [true, null]\n";
         string original = Path.Combine(directory, "original.txt");
         string destination = Path.Combine(directory, "renamed" + extension);
         byte[] bytes = Encoding.UTF8.GetBytes(text);

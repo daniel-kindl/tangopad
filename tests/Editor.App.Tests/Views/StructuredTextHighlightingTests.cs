@@ -22,6 +22,10 @@ public sealed class StructuredTextHighlightingTests(ITestOutputHelper output)
     [InlineData("data.JSON", "Json")]
     [InlineData("data.XML", "XML")]
     [InlineData("view.XAML", "XML")]
+    [InlineData("data.YAML", "Yaml")]
+    [InlineData("data.yMl", "Yaml")]
+    [InlineData("data.CSV", "Csv")]
+    [InlineData("data.TSV", "Tsv")]
     public async Task HighlightingPreservesSourceAndUsesTheme(string path, string definition)
     {
         HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
@@ -134,6 +138,9 @@ public sealed class StructuredTextHighlightingTests(ITestOutputHelper output)
     [Theory]
     [InlineData("large.json", /*lang=json,strict*/ "{\"text\": \"λ café 🐈\", \"value\": true, \"number\": -1.25e+2}\n", "Bool")]
     [InlineData("large.xml", "<Text title=\"λ café 🐈 &amp; text\">content</Text>\n", "XmlTag")]
+    [InlineData("large.yaml", "text: [true, null, -1.25e+2, \"λ café 🐈\"]\n", "Literal")]
+    [InlineData("large.csv", "λ café 🐈,\"quoted, value\",001\n", "QuotedField")]
+    [InlineData("large.tsv", "λ café 🐈\t\"quoted\tvalue\"\t001\n", "QuotedField")]
     public async Task LargeBufferRetainsSource(string path, string line, string role)
     {
         HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
@@ -152,6 +159,108 @@ public sealed class StructuredTextHighlightingTests(ITestOutputHelper output)
             }
             elapsed.Stop();
             output.WriteLine($"{path}: {source.Length} UTF-16 code units, {elapsed.ElapsedMilliseconds} ms, {GC.GetAllocatedBytesForCurrentThread() - allocated} allocated bytes.");
+            Assert.Equal(source, window.Editor.Text);
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Checks YAML keys, quoted strings, scalar values, and explicit syntax markers.</summary>
+    [Fact]
+    public async Task YamlRecognizesSourceTokens()
+    {
+        await CheckTokens("data.yml", """
+            %YAML 1.2
+            ---
+            title: "a\"b # literal"
+            'quoted key': 'it''s text'
+            values: [true, null, -1.25e+2, 0xFF]
+            default: &base {enabled: false}
+            copy: *base # comment
+            tagged: !!str 001
+            literal: |-
+              plain content
+            folded: >+
+              other content
+            multiline: "first
+              second"
+            ...
+            """, [(1, "%YAML", "Directive"), (2, "---", "Directive"),
+                (3, "title", "Key"), (3, "# literal", "String"), (4, "quoted key", "Key"), (4, "text", "String"),
+                (5, "true", "Literal"), (5, "null", "Literal"), (5, "-1.25e+2", "Number"), (5, "0xFF", "Number"),
+                (6, "&base", "Anchor"), (6, "enabled", "Key"), (6, "false", "Literal"),
+                (7, "*base", "Anchor"), (7, "# comment", "Comment"), (8, "!!str", "Tag"),
+                (9, "|-", "Punctuation"), (11, ">+", "Punctuation"), (14, "second", "String"),
+                (15, "...", "Directive")]).ConfigureAwait(true);
+    }
+
+    /// <summary>Checks sequence markers and scalar types inside a flow mapping.</summary>
+    [Fact]
+    public async Task YamlRecognizesSequenceMappings()
+    {
+        await CheckTokens("sequence.yaml", "- name: true\n- {other: false, count: 12}\n",
+            [(1, "-", "Punctuation"), (1, "name", "Key"), (1, "true", "Literal"),
+                (2, "other", "Key"), (2, "false", "Literal"), (2, "count", "Key"), (2, "12", "Number")]).ConfigureAwait(true);
+    }
+
+    /// <summary>Checks quoted fields, doubled quotes, embedded newlines, and fixed separators.</summary>
+    /// <param name="path">The source destination.</param>
+    /// <param name="separator">The separator selected by the format.</param>
+    [Theory]
+    [InlineData("data.csv", ",")]
+    [InlineData("data.tsv", "\t")]
+    public async Task DelimitedTextRecognizesSourceTokens(string path, string separator)
+    {
+        string source = $"name{separator}value{separator}\r\n\"λ café 🐈\"{separator}\"a\"\"b{separator}c\ncontinued\"{separator}001\r\nlast{separator}\"unfinished\nraw";
+        await CheckTokens(path, source, [(1, separator, "Separator"), (2, "λ café 🐈", "QuotedField"),
+            (2, $"b{separator}c", "QuotedField"), (3, "continued", "QuotedField"),
+            (4, "unfinished", "QuotedField"), (5, "raw", "QuotedField")]).ConfigureAwait(true);
+    }
+
+    /// <summary>Checks that plain values do not acquire comment, number, or formula semantics.</summary>
+    /// <param name="path">The source destination.</param>
+    /// <param name="source">Text with no syntax tokens.</param>
+    [Theory]
+    [InlineData("data.yaml", "https://example.com/path#fragment yes no trueish 123abc can't a\"b")]
+    [InlineData("data.csv", "001\ttrue #comment =SUM(A1) a\"b")]
+    [InlineData("data.tsv", "001,true #comment =SUM(A1) a\"b")]
+    public async Task PlainValuesRemainUncolored(string path, string source)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            EditorWindow window = new(new Store(), new Dialogs(path));
+            Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+            window.Editor.Text = source;
+            using DocumentHighlighter highlighter = new(window.Editor.Document, window.Editor.SyntaxHighlighting);
+            Assert.Empty(highlighter.HighlightLine(1).Sections);
+            Assert.Equal(source, window.Editor.Text);
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>Checks multiline state after a quote edit and undo with an existing highlighter.</summary>
+    /// <param name="path">The source destination.</param>
+    /// <param name="prefix">The text before the quoted value.</param>
+    /// <param name="role">The expected quoted value role.</param>
+    [Theory]
+    [InlineData("data.yaml", "value: ", "String")]
+    [InlineData("data.csv", "value,", "QuotedField")]
+    [InlineData("data.tsv", "value\t", "QuotedField")]
+    public async Task QuoteEditsUpdateMultilineState(string path, string prefix, string role)
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            EditorWindow window = new(new Store(), new Dialogs(path));
+            Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
+            string source = prefix + "\"open\ncontinued\nlast";
+            window.Editor.Text = source;
+            using DocumentHighlighter highlighter = new(window.Editor.Document, window.Editor.SyntaxHighlighting);
+            Assert.Contains(highlighter.HighlightLine(3).Sections, section => section.Color.Name == role);
+            window.Editor.Document.Insert(prefix.Length + 5, "\"");
+            Assert.Empty(highlighter.HighlightLine(3).Sections);
+            window.Editor.Document.UndoStack.Undo();
+            Assert.Contains(highlighter.HighlightLine(3).Sections, section => section.Color.Name == role);
             Assert.Equal(source, window.Editor.Text);
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);

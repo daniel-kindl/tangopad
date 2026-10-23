@@ -15,7 +15,7 @@ namespace Editor.App.Tests.Views;
 public sealed class MarkdownHighlightingTests
 {
     private static readonly string[] Roles = ["Heading", "Strong", "Emphasis", "Code", "Link", "Quote", "List"];
-    private static readonly string[] Destinations = ["notes.markdown", "notes.txt", "notes.md", "notes.unknown", "notes.textile", "notes.wiki", "data.json", "data.xml", "view.xaml"];
+    private static readonly string[] Destinations = ["notes.markdown", "notes.txt", "notes.md", "notes.unknown", "notes.textile", "notes.wiki", "data.json", "data.xml", "view.xaml", "data.yaml", "data.yml", "data.csv", "data.tsv", "notes.md"];
 
     /// <summary>Open selects highlighting from the authoritative session format.</summary>
     /// <param name="path">The selected document destination.</param>
@@ -129,6 +129,9 @@ public sealed class MarkdownHighlightingTests
                     "notes.markdown" or "notes.md" => "Markdown",
                     "notes.textile" => "Textile",
                     "data.json" => "Json",
+                    "data.yaml" or "data.yml" => "Yaml",
+                    "data.csv" => "Csv",
+                    "data.tsv" => "Tsv",
                     "data.xml" or "view.xaml" => "XML",
                     _ => null,
                 };
@@ -168,6 +171,10 @@ public sealed class MarkdownHighlightingTests
     [InlineData("data.json", "data.xml")]
     [InlineData("data.xml", "view.xaml")]
     [InlineData("view.xaml", "data.json")]
+    [InlineData("data.yaml", "data.csv")]
+    [InlineData("data.csv", "data.tsv")]
+    [InlineData("data.tsv", "data.yml")]
+    [InlineData("data.yml", "notes.txt")]
     public async Task UnsuccessfulOperationsRetainHighlighting(string source, string destination)
     {
         HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
