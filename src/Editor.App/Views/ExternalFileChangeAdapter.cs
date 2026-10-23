@@ -11,6 +11,7 @@ internal sealed class ExternalFileChangeAdapter : IDisposable
 {
     private readonly EditorViewModel viewModel;
     private readonly IDocumentFileMonitor monitor;
+    private readonly Dispatcher dispatcher = Dispatcher.UIThread;
     private CancellationTokenSource? cancellation;
     private IDisposable? subscription;
     private string? baseline;
@@ -99,7 +100,7 @@ internal sealed class ExternalFileChangeAdapter : IDisposable
                 try
                 {
                     string? revision = await monitor.ReadRevisionAsync(path, token).ConfigureAwait(false);
-                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    await dispatcher.InvokeAsync(() =>
                     {
                         if (disposed || !ReferenceEquals(cancellation, source) || token.IsCancellationRequested)
                         {
@@ -108,7 +109,7 @@ internal sealed class ExternalFileChangeAdapter : IDisposable
                         observed = revision;
                         viewModel.HasExternalChange = revision != baseline && !(hasDismissed && revision == dismissed);
                         DeliveredResults++;
-                    });
+                    }, DispatcherPriority.Default, token);
                 }
                 catch (Exception error) when (IsMonitoringFailure(error))
                 {

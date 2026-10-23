@@ -17,4 +17,17 @@
   <SolidColorBrush x:Key="Brush.Markdown.Link" Color="#9CDCFE" />
   <StaticResource x:Key="Brush.Markdown.Quote" ResourceKey="SystemControlForegroundBaseMediumBrush" />
   <StaticResource x:Key="Brush.Markdown.List" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <SolidColorBrush x:Key="Brush.Textile.Heading" Color="#9CDCFE" />
+  <StaticResource x:Key="Brush.Textile.Strong" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.Textile.Emphasis" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.Textile.Underline" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.Textile.Strike" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <SolidColorBrush x:Key="Brush.Textile.Code" Color="#DCAFE9" />
+  <SolidColorBrush x:Key="Brush.Textile.Link" Color="#9CDCFE" />
+  <StaticResource x:Key="Brush.Textile.Quote" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Textile.List" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Textile.Table" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Textile.Rule" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Textile.Paragraph" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <StaticResource x:Key="Brush.Textile.Macro" ResourceKey="SystemControlForegroundBaseMediumBrush" />
 </ResourceDictionary>

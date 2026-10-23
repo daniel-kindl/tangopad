@@ -13,8 +13,10 @@ for extension rules and failure behavior.
 Untitled, plain-text, and unknown-extension documents have no syntax definition.
 Pending, failed, and cancelled saves retain the current highlighting.
 
-`src/Editor.App/Views/MarkdownHighlightingAdapter.cs` and `Markdown.xshd` stay
+`src/Editor.App/Views/SourceHighlightingAdapter.cs` and `Markdown.xshd` stay
 beside their consuming window. The adapter uses namespace `Editor.App.Views`.
+The same adapter loads `Textile.xshd` for Textile documents.
+See [Textile source highlighting](textile-highlighting.md).
 The XSHD file is an embedded resource. The adapter assigns `TextEditor.SyntaxHighlighting` and the visual URL foreground.
 It removes its subscriptions when the window closes.
 Core, Application, persistence, and the dependency graph retain their current ownership.

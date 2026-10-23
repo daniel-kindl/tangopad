@@ -9,6 +9,9 @@ use the existing document session and strict UTF-8 file store.
 Markdown source highlighting and an optional read-only preview are available.
 Open a `.md` or `.markdown` file, then select Show Preview. Select Hide Preview to
 restore the full-width editor. Links are inactive, and images show descriptions only.
+Open a `.textile` file for Redmine Textile source highlighting.
+Show Preview stays available for Markdown files.
+[Textile highlighting](docs/textile-highlighting.md) lists the recognized source forms.
 Large documents can exceed the [preview limits](docs/adr/0008-safe-markdown-preview.md).
 Export and multiple tabs remain unimplemented.
 

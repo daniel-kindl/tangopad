@@ -8,4 +8,7 @@ public enum DocumentFormat
 
     /// <summary>Markdown source text.</summary>
     Markdown,
+
+    /// <summary>Redmine Textile source text.</summary>
+    Textile,
 }

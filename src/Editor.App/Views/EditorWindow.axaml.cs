@@ -36,7 +36,7 @@ internal sealed partial class EditorWindow : Window
         ExternalChanges = new ExternalFileChangeAdapter(ViewModel, fileMonitor ?? new LocalDocumentFileMonitor());
         Preview = new MarkdownPreviewAdapter(this, previewParser);
         EditorBufferAdapter buffer = new(Editor, ViewModel);
-        MarkdownHighlightingAdapter highlighting = new(Editor, ViewModel);
+        SourceHighlightingAdapter highlighting = new(Editor, ViewModel);
         ViewModel.Search.Attach(buffer);
         ViewModel.Search.PropertyChanged += (_, args) =>
         {

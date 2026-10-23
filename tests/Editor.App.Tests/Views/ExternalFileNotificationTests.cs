@@ -1,6 +1,7 @@
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Editor.App.Services;
 using Editor.App.Views;
@@ -13,6 +14,40 @@ namespace Editor.App.Tests.Views;
 /// <summary>Checks disk notifications through the editor and injected file events.</summary>
 public sealed class ExternalFileNotificationTests
 {
+    /// <summary>A closed window's pending read finishes without dispatcher processing.</summary>
+    [Fact]
+    public async Task ClosedWindowDoesNotDispatchLateVerification()
+    {
+        HeadlessUnitTestSession ui = HeadlessUnitTestSession.GetOrStartForAssembly(typeof(EditorBindingTests).Assembly);
+        _ = await ui.Dispatch(async () =>
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                TaskCompletionSource<string?> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                Monitor monitor = new() { Pending = pending };
+                EditorWindow window = new(new FileTextDocumentStore(), new Dialogs(), fileMonitor: monitor);
+                window.Show();
+                Assert.True(await window.ViewModel.OpenPathAsync(path).ConfigureAwait(true));
+                await WaitAsync(() => monitor.Reads > 0).ConfigureAwait(true);
+                Task work = window.ExternalChanges.Work;
+                window.Close();
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(window.IsVisible);
+                pending.SetResult("late revision");
+
+                // Keep the UI thread busy to prove that cancellation needs no dispatcher jobs.
+                Assert.True(SpinWait.SpinUntil(() => work.IsCompleted, TimeSpan.FromSeconds(5)));
+                await work.ConfigureAwait(true);
+                Assert.False(window.ViewModel.HasExternalChange);
+                Assert.Equal(0, window.ExternalChanges.DeliveredResults);
+                Assert.Equal(0, monitor.Active);
+            }
+            finally { File.Delete(path); }
+            return true;
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
+    }
+
     /// <summary>A disk change must expose an accessible banner without changing the buffer.</summary>
     [Fact]
     public async Task ExternalChangePreservesBufferAndDismissDoesNotPermitOverwrite()
