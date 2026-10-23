@@ -104,16 +104,13 @@ public sealed class TextileParserTests
         Assert.DoesNotContain(block.Runs, run => run.Text.Contains("tracker", StringComparison.Ordinal));
     }
 
-    /// <summary>HTML, CSS attributes, and unsupported Redmine forms stay inactive literal text.</summary>
+    /// <summary>HTML, CSS attributes, and incomplete macros stay inactive literal text.</summary>
     [Theory]
     [InlineData("<script>*alert(1)*</script>")]
     [InlineData("<img src=\"file:///etc/passwd\" onerror=\"alert(1)\">")]
     [InlineData("h1{background:url(https://127.0.0.1/a)}. styled")]
     [InlineData("p(class#id). *text*")]
     [InlineData("p{color:red}. _text_")]
-    [InlineData("[[Page|*Caption*]] {{include(*remote*)}} #123#note-6 attachment:file.png")]
-    [InlineData("[[Outer|[[Inner]] *raw*]]")]
-    [InlineData("{{outer({{inner}} *raw*)}}")]
     [InlineData("{{outer({{unfinished}} *raw*")]
     public void PreservesInactiveSource(string source)
     {

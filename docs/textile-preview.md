@@ -62,10 +62,44 @@ The renderer obtains its fonts, dimensions, and colors from fixed presentation r
 Both themes use the existing Textile heading and code colors.
 The accessible pane name is Textile preview.
 
-Redmine wiki links, issue references, attachments, and macros remain literal source.
-For example, `[[Page|Caption]]`, `#123`, and `{{toc}}` do not resolve or execute.
-Local table-of-contents generation and named macro placeholders belong to
-[Issue #86](https://github.com/daniel-kindl/tangopad/issues/86).
+## Redmine-specific forms
+
+[Issue #86](https://github.com/daniel-kindl/tangopad/issues/86) adds local text for
+Redmine references. The syntax follows the Redmine references linked above.
+The preview does not check whether a page, issue, attachment, or plugin exists.
+
+| Source form | Classification | Preview |
+| --- | --- | --- |
+| `[[Page]]` | Supported text | Page title |
+| `[[Page|Caption]]` | Supported text | Literal caption, without interpreting inner markup |
+| `[[project:Page#Section]]` | Supported text | Page title without the project qualifier or anchor |
+| `[[project:Page|Caption]]` | Supported text | Literal caption |
+| `[[project:]]` or `[[#section]]` | Supported text | The project or anchor reference itself, because no page title is available |
+| `#123`, `##123`, `#123-6`, `#123#note-6`, and `#note-6` | Supported text | Exact reference text, without an invented issue title or state |
+| `attachment:file.zip` or `attachment:"file name.zip"` | Supported text | Inactive filename |
+| `!image!` or `!image(label)!` | Supported text | Inactive name or label, without reading an image |
+| `{{toc}}` | Local-only | Inactive list of parsed local headings |
+| `{{include(...)}}` | Unsupported execution | `[macro: include]` |
+| `{{collapse...}}` | Unsupported execution | `[macro: collapse]`, with its whole balanced body replaced |
+| `{{child_pages}}` | Unsupported execution | `[macro: child_pages]` |
+| `{{thumbnail(...)}}` | Unsupported execution | `[macro: thumbnail]` |
+| `{{custom_plugin(...)}}` | Unsupported execution | `[macro: custom_plugin]`, using the actual macro name |
+| Other server references, malformed forms, and macro names outside ASCII letters, digits, and underscore | Unsupported interpretation | Literal source |
+
+The contents list follows document order and indents entries by heading level.
+It includes headings after the marker. Code, table headers, and hidden macro bodies
+cannot contribute headings. An empty contents list shows `[toc: no local headings]`.
+The preview does not generate anchors, links, remote headings, or navigation.
+
+Balanced nested macro arguments stay inside their outer placeholder.
+A nested wiki form in a caption remains literal caption text.
+An exclamation mark or backslash before a wiki link or macro suppresses interpretation
+and shows the reference without the escape prefix. The same escapes suppress
+attachment interpretation. Issue references can use the same escape prefix.
+Existing inline code, `==literal==`, and `notextile` spans also suppress these forms.
+Unmatched delimiters remain literal. A backslash can escape a pipe in a caption.
+Complete wiki links, macros, code spans, and quoted attachments protect their inner
+pipes from table-cell splitting. Table layout attributes remain unsupported.
 
 ## Scheduling and limits
 
@@ -82,6 +116,7 @@ Synchronous parsing already in progress continues within its budgets.
 | List and inline nesting | 32 |
 | Blocks, including table containers, and table rows | 256 |
 | Text runs across the document | 2,048 |
+| Rendered text, including generated contents lists and placeholders | 32,768 UTF-16 code units |
 | Table cells across the document | 1,024 |
 | Inline scan work | 2,097,152 counted scanner steps |
 
@@ -115,7 +150,14 @@ On 2026-10-23, `/usr/bin/python3 eng/check-native-editor.py` passed all 68 workf
 groups on Fedora Linux 44, x64. The session used Xvfb, a private D-Bus, and the GTK portal.
 Evidence is in `artifacts/native-editor-6s2p3ctb`.
 The inspected Textile screenshot shows the heading, styled text, table cells,
-inactive resource labels, raw script text, and unsupported Redmine references.
+inactive resource labels, raw script text, and literal Redmine references from the first preview slice.
 The resource monitors detected no network request or local asset access.
 Live edits, exact saved bytes, undo, and the transition to plain text passed.
 Native Windows, macOS, Wayland, and screen-reader interaction remain untested on this host.
+
+On 2026-10-23, the Issue #86 native fixture passed all 69 groups in
+`artifacts/native-editor-xns3d4jw`. Its inspected screenshot shows wiki captions,
+attachment names, named macro placeholders, and a local contents list.
+The collapsed macro's internal heading is absent from the preview and contents list.
+Socket and file-access monitors detected no resource access. Exact save bytes and
+undo checks passed with the reference source unchanged.

@@ -29,10 +29,12 @@ public static class TextilePreviewParser
         private readonly string[] lines = source.ReplaceLineEndings("\n").Split('\n');
         private readonly List<PreviewBlock> blocks = [];
         private readonly Dictionary<string, int> listNumbers = new(StringComparer.Ordinal);
+        private readonly HashSet<PreviewRun> contentsRuns = new(ReferenceEqualityComparer.Instance);
         private int position;
         private int blockCount;
         private int runCount;
         private int cellCount;
+        private int renderedLength;
         private int remainingWork = MaximumSourceLength * 64;
         private bool limited;
 
@@ -57,7 +59,36 @@ public static class TextilePreviewParser
                     ParseTextBlock(line);
                 }
             }
+            ExpandContents();
             return new PreviewDocument(blocks.AsReadOnly(), limited);
+        }
+
+        private bool TryReadMultilineMacro(string line, out string content)
+        {
+            content = "";
+            int start = line.IndexOf("{{", StringComparison.Ordinal);
+            if (start < 0) { return false; }
+            string remaining = string.Join('\n', lines.Skip(position));
+            while (start >= 0 && start < line.Length)
+            {
+                int end = FindOpaqueEnd(remaining, start, "{{", "}}");
+                if (end < 0) { return false; }
+                if (remaining.AsSpan(0, end).Contains('\n'))
+                {
+                    content = remaining[..end];
+                    int lastLine = 0;
+                    for (int index = 0; index < end; index++)
+                    {
+                        if (remaining[index] == '\n') { position++; lastLine = index + 1; }
+                    }
+                    string tail = lines[position][(end - lastLine)..];
+                    if (tail.Length == 0) { position++; }
+                    else { lines[position] = tail; }
+                    return true;
+                }
+                start = FindLiteral(remaining, "{{", end);
+            }
+            return false;
         }
 
         private void ParseTextBlock(string line)
@@ -79,8 +110,9 @@ public static class TextilePreviewParser
                     listNumbers[marker] = number;
                     prefix = number.ToString(CultureInfo.InvariantCulture) + ". ";
                 }
-                blocks.Add(new PreviewTextBlock(Inline(line[(listDepth + 1)..]), prefix, listDepth));
-                position++;
+                bool multiline = TryReadMultilineMacro(line, out string listContent);
+                blocks.Add(new PreviewTextBlock(Inline((multiline ? listContent : line)[(listDepth + 1)..]), prefix, listDepth));
+                if (!multiline) { position++; }
                 return;
             }
             listNumbers.Clear();
@@ -97,6 +129,7 @@ public static class TextilePreviewParser
                 return;
             }
             string prefixText = "";
+            string originalLine = line;
             int heading = 0;
             bool code = false;
             if (line.Length > 3 && line[0] == 'h' && line[1] is >= '1' and <= '6' && line[2] == '.' && line[3] == ' ')
@@ -108,11 +141,17 @@ public static class TextilePreviewParser
             else if (line.StartsWith("bq. ", StringComparison.Ordinal)) { line = line[4..]; prefixText = "› "; }
             else if (line.StartsWith("bc. ", StringComparison.Ordinal)) { line = line[4..]; code = true; }
             else if (line.StartsWith("pre. ", StringComparison.Ordinal)) { line = line[5..]; code = true; }
-            position++;
+            if (!code && TryReadMultilineMacro(originalLine, out string macroContent))
+            {
+                line = macroContent[(originalLine.Length - line.Length)..];
+            }
+            else { position++; }
             StringBuilder text = new(line);
             while (position < lines.Length && !string.IsNullOrWhiteSpace(lines[position]) && (code || !StartsBlock(lines[position])))
             {
-                _ = text.Append('\n').Append(lines[position++]);
+                string next = !code && TryReadMultilineMacro(lines[position], out string paragraphContent)
+                    ? paragraphContent : lines[position++];
+                _ = text.Append('\n').Append(next);
             }
             string content = text.ToString();
             bool literal = IsAttributedBlock(content) || (content.StartsWith('<') && !content.StartsWith("<notextile>", StringComparison.Ordinal));
@@ -163,6 +202,28 @@ public static class TextilePreviewParser
                 for (int index = 1; index < line.Length && !limited; index++)
                 {
                     char character = line[index];
+                    string? close = line.AsSpan(index).StartsWith("[[", StringComparison.Ordinal) ? "]]"
+                        : line.AsSpan(index).StartsWith("{{", StringComparison.Ordinal) ? "}}" : null;
+                    int protectedEnd = close is null ? -1 : FindOpaqueEnd(line, index, line.Substring(index, 2), close);
+                    if (!escaped && protectedEnd < 0 && character is '@' or '=')
+                    {
+                        string delimiter = character == '@' ? "@" : "==";
+                        if (line.AsSpan(index).StartsWith(delimiter, StringComparison.Ordinal))
+                        {
+                            int end = FindClose(line, delimiter, index + delimiter.Length);
+                            if (end >= 0) { protectedEnd = end + delimiter.Length; }
+                        }
+                    }
+                    if (!escaped && protectedEnd < 0 && TryAttachment(line, index, out int attachmentEnd, out _))
+                    {
+                        protectedEnd = attachmentEnd;
+                    }
+                    if (protectedEnd >= 0)
+                    {
+                        index = protectedEnd - 1;
+                        escaped = false;
+                        continue;
+                    }
                     if (character == '|' && !escaped)
                     {
                         if (cellCount >= MaximumCells) { limited = true; break; }
@@ -195,6 +256,33 @@ public static class TextilePreviewParser
             {
                 if (!SpendWork()) { break; }
                 char character = text[index];
+                if (character is '!' or '\\' && index + 1 < text.Length)
+                {
+                    string? escapedClose = text.AsSpan(index + 1).StartsWith("[[", StringComparison.Ordinal) ? "]]"
+                        : text.AsSpan(index + 1).StartsWith("{{", StringComparison.Ordinal) ? "}}" : null;
+                    if (escapedClose is not null)
+                    {
+                        int end = FindOpaqueEnd(text, index + 1, text.Substring(index + 1, 2), escapedClose);
+                        if (end >= 0)
+                        {
+                            _ = plain.Append(text.AsSpan(index + 1, end - index - 1));
+                            index = end;
+                            continue;
+                        }
+                    }
+                    if (TryAttachment(text, index + 1, out int escapedEnd, out _))
+                    {
+                        _ = plain.Append(text.AsSpan(index + 1, escapedEnd - index - 1));
+                        index = escapedEnd;
+                        continue;
+                    }
+                    if (text[index + 1] == '#')
+                    {
+                        _ = plain.Append(text[index + 1]);
+                        index += 2;
+                        continue;
+                    }
+                }
                 if (character == '\\' && index + 1 < text.Length && "\\*_+-@=!|\"".Contains(text[index + 1], StringComparison.Ordinal))
                 {
                     _ = plain.Append(text[index + 1]);
@@ -207,8 +295,36 @@ public static class TextilePreviewParser
                 {
                     int end = FindOpaqueEnd(text, index, text.Substring(index, 2), literalEnd);
                     if (end < 0) { _ = plain.Append(text.AsSpan(index)); break; }
-                    _ = plain.Append(text.AsSpan(index, end - index));
+                    Flush();
+                    string content = text[(index + 2)..(end - 2)];
+                    if (literalEnd == "]]")
+                    {
+                        bool valid = content.Length > 0 && content[0] != '|' && !content.EndsWith('|');
+                        AddRun(runs, style with { Text = valid ? WikiLabel(content) : text[index..end], Link = valid });
+                    }
+                    else if (content == "toc")
+                    {
+                        PreviewRun contents = style with { Text = "" };
+                        int previous = runCount;
+                        AddRun(runs, contents);
+                        if (runCount > previous) { _ = contentsRuns.Add(contents); }
+                    }
+                    else
+                    {
+                        int nameEnd = 0;
+                        while (nameEnd < content.Length && (char.IsAsciiLetterOrDigit(content[nameEnd]) || content[nameEnd] == '_')) { nameEnd++; }
+                        bool named = nameEnd > 0 && (nameEnd == content.Length || content[nameEnd] == '(' || char.IsWhiteSpace(content[nameEnd]));
+                        string macroLabel = named ? "[macro: " + content[..nameEnd] + "]" : text[index..end];
+                        AddRun(runs, style with { Text = macroLabel });
+                    }
                     index = end;
+                    continue;
+                }
+                if (TryAttachment(text, index, out int referenceEnd, out string name))
+                {
+                    Flush();
+                    AddRun(runs, style with { Text = name, Link = true });
+                    index = referenceEnd;
                     continue;
                 }
                 if (text.AsSpan(index).StartsWith("<code>", StringComparison.Ordinal) || text.AsSpan(index).StartsWith("<notextile>", StringComparison.Ordinal))
@@ -350,9 +466,129 @@ public static class TextilePreviewParser
 
         private void AddRun(List<PreviewRun> runs, PreviewRun run)
         {
-            if (runCount >= MaximumRuns) { limited = true; return; }
+            if (runCount >= MaximumRuns || run.Text.Length > MaximumSourceLength - renderedLength) { limited = true; return; }
             runCount++;
+            renderedLength += run.Text.Length;
             runs.Add(run);
+        }
+
+        private static string WikiLabel(string content)
+        {
+            int separator = -1;
+            for (int index = 0; index < content.Length; index++)
+            {
+                if (content[index] == '\\') { index++; }
+                else if (content[index] == '|') { separator = index; break; }
+            }
+            string label = separator >= 0 ? content[(separator + 1)..] : content;
+            if (separator < 0)
+            {
+                int project = label.IndexOf(':', StringComparison.Ordinal);
+                if (project > 0 && project + 1 < label.Length && label[..project].All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_'))
+                {
+                    label = label[(project + 1)..];
+                }
+                int anchor = label.IndexOf('#', StringComparison.Ordinal);
+                if (anchor > 0) { label = label[..anchor]; }
+            }
+            return UnescapeLabel(label);
+        }
+
+        private static string UnescapeLabel(string label)
+        {
+            StringBuilder result = new();
+            for (int index = 0; index < label.Length; index++)
+            {
+                if (label[index] == '\\' && index + 1 < label.Length && "\\[]|\"".Contains(label[index + 1], StringComparison.Ordinal)) { index++; }
+                _ = result.Append(label[index]);
+            }
+            return result.ToString();
+        }
+
+        private bool TryAttachment(string text, int start, out int end, out string name)
+        {
+            end = start;
+            name = "";
+            const string prefix = "attachment:";
+            if (!text.AsSpan(start).StartsWith(prefix, StringComparison.Ordinal) || (start > 0 && IsWord(text[start - 1]))) { return false; }
+            int value = start + prefix.Length;
+            if (value >= text.Length || char.IsWhiteSpace(text[value])) { return false; }
+            if (text[value] == '"')
+            {
+                int close = value + 1;
+                while (close < text.Length && text[close] != '"')
+                {
+                    if (!SpendWork() || text[close] == '\n') { return false; }
+                    if (text[close] == '\\' && close + 1 < text.Length) { close++; }
+                    close++;
+                }
+                if (close == text.Length || close == value + 1) { return false; }
+                name = UnescapeLabel(text[(value + 1)..close]);
+                end = close + 1;
+            }
+            else
+            {
+                end = value;
+                while (end < text.Length && !char.IsWhiteSpace(text[end]) && text[end] != '|')
+                {
+                    if (!SpendWork()) { return false; }
+                    end++;
+                }
+                name = text[value..end];
+            }
+            return name.Length > 0;
+        }
+
+        private void ExpandContents()
+        {
+            if (contentsRuns.Count == 0) { return; }
+            (int Level, string Text)[] headings = [.. blocks.OfType<PreviewTextBlock>()
+                .Where(block => block.HeadingLevel > 0)
+                .Select(block => (block.HeadingLevel, string.Concat(block.Runs.Where(run => !contentsRuns.Contains(run)).Select(run => run.Text))))
+                .Where(heading => heading.Item2.Length > 0)];
+            for (int index = 0; index < blocks.Count; index++)
+            {
+                blocks[index] = blocks[index] switch
+                {
+                    PreviewTextBlock text => text with { Runs = ExpandRuns(text.Runs) },
+                    PreviewTableBlock table => table with
+                    {
+                        Rows = table.Rows.Select(row => row with
+                        {
+                            Cells = row.Cells.Select(cell => cell with { Runs = ExpandRuns(cell.Runs) }).ToList().AsReadOnly(),
+                        }).ToList().AsReadOnly(),
+                    },
+                    _ => blocks[index],
+                };
+            }
+
+            ReadOnlyCollection<PreviewRun> ExpandRuns(IReadOnlyList<PreviewRun> runs)
+            {
+                return runs.Select(run => contentsRuns.Contains(run) ? run with { Text = BuildContents() } : run).ToList().AsReadOnly();
+            }
+
+            string BuildContents()
+            {
+                StringBuilder contents = new();
+                if (headings.Length == 0)
+                {
+                    const string empty = "[toc: no local headings]";
+                    if (empty.Length > MaximumSourceLength - renderedLength) { limited = true; return ""; }
+                    renderedLength += empty.Length;
+                    return empty;
+                }
+                foreach ((int level, string title) in headings)
+                {
+                    if (!SpendWork()) { break; }
+                    int indentation = (level - 1) * 2;
+                    int length = indentation + 2 + title.Length + (contents.Length == 0 ? 0 : 1);
+                    if (length > MaximumSourceLength - renderedLength) { limited = true; break; }
+                    if (contents.Length > 0) { _ = contents.Append('\n'); }
+                    _ = contents.Append(' ', indentation).Append("• ").Append(title);
+                    renderedLength += length;
+                }
+                return contents.ToString();
+            }
         }
 
         private bool ReserveBlock()

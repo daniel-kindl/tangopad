@@ -6,6 +6,15 @@ namespace Editor.Formats.Markdown.Tests;
 /// <summary>Checks the framework-independent, inert preview representation.</summary>
 public sealed class MarkdownParserTests
 {
+    /// <summary>Redmine constructs do not select the Textile interpretation in Markdown.</summary>
+    [Fact]
+    public void RedmineFormsRemainMarkdownText()
+    {
+        const string source = "[[Page|Caption]] {{include(Page)}} {{toc}} attachment:file.zip #123";
+        PreviewDocument result = MarkdownPreviewParser.Parse(source);
+        Assert.Equal(source, string.Concat(result.Blocks.SelectMany(block => Assert.IsType<PreviewTextBlock>(block).Runs).Select(run => run.Text)));
+    }
+
     /// <summary>Basic Markdown becomes structured text without HTML rendering.</summary>
     [Fact]
     public void ParsesBaseline()
