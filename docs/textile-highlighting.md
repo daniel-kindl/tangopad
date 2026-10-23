@@ -2,7 +2,7 @@
 
 [Issue #84](https://github.com/daniel-kindl/tangopad/issues/84) adds visual source
 highlighting for Redmine Textile. The definition uses AvaloniaEdit's native XSHD loader.
-This slice does not add a Textile parser or a rendered preview.
+Highlighting works independently of the [Textile preview](textile-preview.md).
 
 ## Dialect
 
@@ -13,8 +13,8 @@ The supported name is Redmine Textile. The source forms follow these references:
 
 The highlighter does not target one Redmine server version.
 It does not claim the same result as Redmine HTML output.
-[Issue #85](https://github.com/daniel-kindl/tangopad/issues/85) and
-[issue #86](https://github.com/daniel-kindl/tangopad/issues/86) own the later preview slices.
+[Issue #85](https://github.com/daniel-kindl/tangopad/issues/85) adds the offline preview baseline.
+[Issue #86](https://github.com/daniel-kindl/tangopad/issues/86) owns Redmine-specific preview forms.
 
 ## Selection and ownership
 
@@ -98,8 +98,9 @@ Plain text restores the previous URL brush.
 
 Highlighting does not assign document text, caret, selection, or undo state.
 Save As retains editing history and persists the exact captured text.
-The Markdown preview closes when a successful save changes the format away from Markdown.
-A Textile document does not show the preview control.
+An open preview closes when a successful save changes the format.
+A Textile document offers its own optional preview. Its syntax baseline differs
+from the source highlighter. See [Textile preview](textile-preview.md).
 The existing session rules still control dirty state and edits during a pending save.
 
 ## Verification

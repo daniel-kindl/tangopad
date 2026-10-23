@@ -9,9 +9,11 @@ use the existing document session and strict UTF-8 file store.
 Markdown source highlighting and an optional read-only preview are available.
 Open a `.md` or `.markdown` file, then select Show Preview. Select Hide Preview to
 restore the full-width editor. Links are inactive, and images show descriptions only.
-Open a `.textile` file for Redmine Textile source highlighting.
-Show Preview stays available for Markdown files.
+Open a `.textile` file for Redmine Textile source highlighting and an optional offline preview.
+Textile preview supports a bounded syntax baseline with native tables and inactive resource labels.
+Show Preview stays available for Markdown files. Each format uses its own parser.
 [Textile highlighting](docs/textile-highlighting.md) lists the recognized source forms.
+[Textile preview](docs/textile-preview.md) lists rendered forms and limits.
 Large documents can exceed the [preview limits](docs/adr/0008-safe-markdown-preview.md).
 Export and multiple tabs remain unimplemented.
 
@@ -103,12 +105,17 @@ src/
   Editor.Application/         Plain-text load and save use cases
   Editor.Core/                Plain-text document behavior
   Editor.Infrastructure/      Local UTF-8 file persistence
+  Editor.Formats.Markdown/    Bounded Markdown parser
+  Editor.Formats.Textile/     Bounded Textile parser
+  Editor.Preview/             Inert preview data
 tests/
   Editor.App.Tests/           Presentation commands and editor control
   Editor.Application.Tests/   Document load and save behavior
   Editor.Infrastructure.Tests/ Real filesystem integration
   Editor.Architecture.Tests/  Executable dependency policy
   Editor.Core.Tests/          Document identity, text, and baseline
+  Editor.Formats.Markdown.Tests/ Markdown parser behavior
+  Editor.Formats.Textile.Tests/ Textile parser behavior
   Editor.Desktop.SmokeTests/  Native editor startup
 eng/                         Verification and dependency policy
 docs/                        Architecture, decisions, research, and planned issues

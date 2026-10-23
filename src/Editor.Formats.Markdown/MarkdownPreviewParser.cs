@@ -1,4 +1,5 @@
 using System.Globalization;
+using Editor.Preview;
 using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -78,7 +79,7 @@ public static class MarkdownPreviewParser
                         AddInline(inline, new PreviewRun(""), runs);
                     }
 
-                    blocks.Add(new PreviewBlock(runs.AsReadOnly(), prefix, depth,
+                    blocks.Add(new PreviewTextBlock(runs.AsReadOnly(), prefix, depth,
                         leaf is HeadingBlock heading ? heading.Level : 0, leaf is CodeBlock, leaf is ThematicBreakBlock));
                     prefix = "";
                 }

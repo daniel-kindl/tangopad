@@ -132,8 +132,12 @@
       "editor.formats.markdown": {
         "type": "Project",
         "dependencies": {
+          "Editor.Preview": "[0.1.0, )",
           "Markdig": "[1.4.1, )"
         }
+      },
+      "editor.preview": {
+        "type": "Project"
       },
       "Markdig": {
         "type": "CentralTransitive",

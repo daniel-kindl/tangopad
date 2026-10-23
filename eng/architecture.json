@@ -3,7 +3,9 @@
     "projects": [
       "src/Editor.Application/Editor.Application.csproj",
       "src/Editor.Infrastructure/Editor.Infrastructure.csproj",
-      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj"
+      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj",
+      "src/Editor.Preview/Editor.Preview.csproj",
+      "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj"
     ],
     "packages": [
       "Avalonia.Desktop",
@@ -76,7 +78,9 @@
     ]
   },
   "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj": {
-    "projects": [],
+    "projects": [
+      "src/Editor.Preview/Editor.Preview.csproj"
+    ],
     "packages": [
       "Markdig"
     ]
@@ -84,6 +88,24 @@
   "tests/Editor.Formats.Markdown.Tests/Editor.Formats.Markdown.Tests.csproj": {
     "projects": [
       "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "src/Editor.Preview/Editor.Preview.csproj": {
+    "projects": [],
+    "packages": []
+  },
+  "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj": {
+    "projects": [
+      "src/Editor.Preview/Editor.Preview.csproj"
+    ],
+    "packages": []
+  },
+  "tests/Editor.Formats.Textile.Tests/Editor.Formats.Textile.Tests.csproj": {
+    "projects": [
+      "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj"
     ],
     "packages": [
       "xunit.v3"

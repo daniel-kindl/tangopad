@@ -80,7 +80,7 @@ public sealed class TextileHighlightingTests
             IBrush plainLink = window.Editor.TextArea.TextView.LinkTextForegroundBrush;
             Assert.True(await window.ViewModel.OpenAsync().ConfigureAwait(true));
             Assert.Equal(definition, window.Editor.SyntaxHighlighting?.Name);
-            Assert.Equal(definition == "Markdown", window.PreviewToggle.IsVisible);
+            Assert.Equal(definition is "Markdown" or "Textile", window.PreviewToggle.IsVisible);
             Assert.False(window.PreviewScroll.IsVisible);
             if (definition is null)
             {
@@ -185,7 +185,7 @@ public sealed class TextileHighlightingTests
             dialogs.Path = "notes.textile";
             Assert.True(await window.ViewModel.SaveAsAsync().ConfigureAwait(true));
             Assert.Equal("Textile", window.Editor.SyntaxHighlighting.Name);
-            Assert.False(window.PreviewToggle.IsVisible);
+            Assert.True(window.PreviewToggle.IsVisible);
             Assert.False(window.PreviewScroll.IsVisible);
             Assert.Empty(window.PreviewBlocks.Children);
             Assert.Equal(text, store.SavedText);

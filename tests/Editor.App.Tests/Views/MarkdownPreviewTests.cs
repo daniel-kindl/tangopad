@@ -10,8 +10,10 @@ using Avalonia.Threading;
 using Editor.App.Services;
 using Editor.App.Views;
 using Editor.Application;
+using Editor.Core;
 using Editor.Formats.Markdown;
 using Editor.Infrastructure;
+using Editor.Preview;
 using Xunit;
 
 namespace Editor.App.Tests.Views;
@@ -179,14 +181,15 @@ public sealed class MarkdownPreviewTests
             int calls = 0;
             Store store = new();
             Dialogs dialogs = new() { Path = "notes.md" };
-            EditorWindow window = new(store, dialogs, source =>
+            EditorWindow window = new(store, dialogs, (format, source) =>
             {
+                Assert.Equal(DocumentFormat.Markdown, format);
                 return (Interlocked.Increment(ref calls), failure) switch
                 {
                     (1, "cancel") => throw new OperationCanceledException("Parser cancellation."),
                     (1, "render") => new PreviewDocument([
-                        new PreviewBlock([new PreviewRun("Partial output")]),
-                        new PreviewBlock([], HeadingLevel: 7),
+                        new PreviewTextBlock([new PreviewRun("Partial output")]),
+                        new PreviewTextBlock([], HeadingLevel: 7),
                     ], false),
                     (1, _) => throw new InvalidOperationException("Parser failure."),
                     _ => MarkdownPreviewParser.Parse(source),
@@ -304,8 +307,9 @@ public sealed class MarkdownPreviewTests
             int active = 0;
             Store store = new();
             Dialogs dialogs = new() { Path = "notes.md" };
-            EditorWindow window = new(store, dialogs, source =>
+            EditorWindow window = new(store, dialogs, (format, source) =>
             {
+                Assert.Equal(DocumentFormat.Markdown, format);
                 Assert.False(Dispatcher.UIThread.CheckAccess());
                 Assert.Equal(1, Interlocked.Increment(ref active));
                 if (Interlocked.Increment(ref calls) == 1)
@@ -433,8 +437,9 @@ public sealed class MarkdownPreviewTests
         _ = await ui.Dispatch(async () =>
         {
             int calls = 0;
-            EditorWindow window = new(new Store(), new Dialogs { Path = "notes.md" }, source =>
+            EditorWindow window = new(new Store(), new Dialogs { Path = "notes.md" }, (format, source) =>
             {
+                Assert.Equal(DocumentFormat.Markdown, format);
                 _ = Interlocked.Increment(ref calls);
                 return MarkdownPreviewParser.Parse(source);
             });

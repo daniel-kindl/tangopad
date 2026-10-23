@@ -18,6 +18,10 @@ flowchart LR
     Infrastructure[Editor.Infrastructure] --> Application
     App --> Avalonia[Avalonia desktop, Fluent theme, and AvaloniaEdit]
     App --> Markdown[Editor.Formats.Markdown]
+    App --> Textile[Editor.Formats.Textile]
+    App --> Preview[Editor.Preview]
+    Markdown --> Preview
+    Textile --> Preview
     Markdown --> Markdig
     App --> Toolkit[CommunityToolkit.Mvvm]
     ArchitectureTests[Editor.Architecture.Tests] -. evaluates MSBuild .-> Policy[eng/architecture.json]
@@ -25,6 +29,7 @@ flowchart LR
     CoreTests[Editor.Core.Tests] --> Core
     InfrastructureTests[Editor.Infrastructure.Tests] --> Infrastructure
     MarkdownTests[Editor.Formats.Markdown.Tests] --> Markdown
+    TextileTests[Editor.Formats.Textile.Tests] --> Textile
     AppTests[Editor.App.Tests] --> App
     SmokeTests[Editor.Desktop.SmokeTests] --> App
 ```
@@ -34,9 +39,12 @@ flowchart LR
 | Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
 | Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format and an optional file monitor contract |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, clean baseline, and document format identification |
-| Editor.Formats.Markdown | Markdown parsing and inert preview records | Bounded Markdig adapter without UI or resource loading |
+| Editor.Preview | Inert preview data | Text, table, and run records without actions or resource destinations |
+| Editor.Formats.Markdown | Markdown parsing | Bounded Markdig adapter without UI or resource loading |
+| Editor.Formats.Textile | Textile parsing | Bounded baseline parser without UI, packages, or resource loading |
 | Editor.Infrastructure | Local persistence and monitoring | Strict UTF-8 document storage, bounded recent-path storage, and optional file events with revision checks |
 | Editor.Formats.Markdown.Tests | Parser behavior | Baseline syntax, hostile text, and resource limits without Avalonia |
+| Editor.Formats.Textile.Tests | Parser behavior | Textile fixtures, hostile text, and resource limits without Avalonia |
 | Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
 | Editor.Infrastructure.Tests | Real filesystem integration | Encoding, replacement, failure, cancellation, cleanup, and session state |
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
@@ -59,7 +67,10 @@ EditorPreferences in Infrastructure stores editor presentation preferences separ
 See [editor preferences](editor-preferences.md) for startup precedence, storage, and privacy.
 Application and Core reference no NuGet packages. Production code never references tests.
 Infrastructure references Application only and adds no packages.
-Editor.Formats.Markdown references Markdig only. App renders its inert records with native controls. App composes the adapter through Program.Main.
+Editor.Formats.Markdown references Markdig and Editor.Preview.
+Editor.Formats.Textile references Editor.Preview only.
+Neither format parser references the other. Editor.Preview has no project or package dependencies.
+App selects the parser from the session format and renders inert records with native controls.
 `Editor.Desktop.SmokeTests` references `Editor.App` so the shell builds first.
 The test starts that executable. It does not call shell types.
 
@@ -87,7 +98,7 @@ Editor.App uses these directories:
   stays beside its consuming view because it connects that window to AvaloniaEdit.
   `EditorWindow` also owns desktop file-drop validation and routes accepted paths
   to the existing ViewModel Open workflow. See [file drops](file-drop.md).
-  `MarkdownPreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text.
+  `SourcePreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text and tables.
   `SourceHighlightingAdapter` and its embedded `Markdown.xshd` and `Textile.xshd`
   definitions also stay here. The adapter selects visual highlighting from the session format.
 - `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
@@ -131,18 +142,25 @@ Record directory and namespace placement in new issues and pull request reviews.
 For each move, check consumers, compiled bindings, resource URIs, test fixtures,
 native acceptance scripts, and build tooling. Update affected references together.
 
-## Markdown boundary
+## Format and preview boundaries
 
-Editor.Formats.Markdown owns parser adaptation and preview records at its project root.
-Its namespace is `Editor.Formats.Markdown`. It has no project references.
+Editor.Formats.Markdown owns Markdown parser adaptation at its project root.
+Its namespace is `Editor.Formats.Markdown`.
 See [ADR 0008](adr/0008-safe-markdown-preview.md) for limits, security, and dependency rationale.
+
+Editor.Formats.Textile owns the bounded Textile parser at its project root.
+Its namespace is `Editor.Formats.Textile`.
+Editor.Preview owns the shared display records at its project root, with namespace `Editor.Preview`.
+Neither module owns format identification, scheduling, or UI controls.
+See [ADR 0010](adr/0010-safe-textile-preview.md) for parser assessment and shared data ownership.
+[Textile preview](textile-preview.md) defines the supported baseline and limits.
 
 ## Future boundaries
 
 Create a module when a real use case requires it. Update the dependency policy
 and ADR before adding its implementation. These are intended permissions, not existing references:
 
-- `Editor.Formats.Markdown` may reference Application and Core when a use case needs their contracts. It currently references neither. Filename classification remains in Core.
+- Format modules may reference Application and Core when a use case needs their contracts. The current parsers reference neither. Filename classification remains in Core.
 - App may reference concrete adapters to compose them.
 - Adapters cannot reference App or one another.
 - Core references no project. Application references only Core.

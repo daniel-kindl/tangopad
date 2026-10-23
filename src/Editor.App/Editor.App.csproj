@@ -9,6 +9,8 @@
     <None Include="../../docs/licenses/Markdig.txt" Link="licenses/Markdig.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <EmbeddedResource Include="Views/Markdown.xshd" />
     <EmbeddedResource Include="Views/Textile.xshd" />
+    <ProjectReference Include="../Editor.Preview/Editor.Preview.csproj" />
+    <ProjectReference Include="../Editor.Formats.Textile/Editor.Formats.Textile.csproj" />
     <ProjectReference Include="../Editor.Formats.Markdown/Editor.Formats.Markdown.csproj" />
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
