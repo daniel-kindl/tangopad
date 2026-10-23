@@ -3,6 +3,8 @@
 
 import contextlib
 import ctypes
+import hashlib
+import struct
 import json
 import os
 import platform
@@ -18,6 +20,27 @@ import time
 from PIL import ImageGrab
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_state(path):
+    if not path.exists():
+        return None
+    data = path.read_bytes()
+    if data[:8] != b"TANGOST\0" or hashlib.sha256(data[:-32]).digest() != data[-32:]:
+        raise RuntimeError("The binary state header or checksum is invalid.")
+    version, wrap, numbers, font, count = struct.unpack_from("<IBBdI", data, 8)
+    if version != 1 or count > 10:
+        raise RuntimeError("The binary state version or path count is invalid.")
+    paths = []
+    offset = 26
+    for _ in range(count):
+        length, = struct.unpack_from("<I", data, offset)
+        offset += 4
+        paths.append(data[offset:offset + length].decode("utf-8"))
+        offset += length
+    if offset != len(data) - 32:
+        raise RuntimeError("The binary state length is invalid.")
+    return {"wordWrap": bool(wrap), "showLineNumbers": bool(numbers), "fontSize": font, "paths": paths}
 
 
 def wait(description, probe):
@@ -238,10 +261,10 @@ def exercise_drops(ui, files, launch):
 def exercise_recent(ui, files):
     fixture = files / "recent.md"
     fixture.write_bytes(b"# Recent file\r\ntext")
-    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "recent-files.json"
+    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
 
     def paths():
-        return json.loads(settings.read_text())["paths"] if settings.exists() else []
+        return (read_state(settings) or {"paths": []})["paths"]
 
     ui.picker("ctrl+o", "Open text file")
     ui.choose(fixture, saving=False)
@@ -920,8 +943,9 @@ def exercise(ui, files, app):
         blocked.chmod(0o700)
 
 
-def exercise_preferences(ui, files, launch, executable):
-    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "editor-preferences.json"
+def exercise_preferences(ui, files, launch, executable, settings=None, arguments=()):
+    mode = "portable" if settings else "installed"
+    settings = settings or Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
     settings.unlink(missing_ok=True)
     fixture = files / "preferences.txt"
     original = ("first\n" + "wrapped presentation " * 80 + "\nlast\n").encode()
@@ -937,7 +961,7 @@ def exercise_preferences(ui, files, launch, executable):
         shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
         return (shot.crop((680, 10, 940, 40)).tobytes(), shot.crop((0, 100, 800, 250)).tobytes())
 
-    app = launch([str(executable)], "preferences-first")
+    app = launch([str(executable), *arguments], f"preferences-{mode}-first", cwd=files)
     window = open_fixture()
     time.sleep(0.5)
     defaults = pixels()
@@ -948,25 +972,35 @@ def exercise_preferences(ui, files, launch, executable):
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
-    wait("persisted presentation changes", lambda: settings.exists() and json.loads(settings.read_text()) ==
-         {"version": 1, "wordWrap": True, "showLineNumbers": False, "fontSize": 18})
+    wait("persisted presentation changes", lambda: settings.exists() and all(read_state(settings)[key] == value for key, value in
+         {"wordWrap": True, "showLineNumbers": False, "fontSize": 18}.items()))
     # Keep the caret outside the compared text region in both processes.
     ui.key("ctrl+Home")
     time.sleep(0.5)
     changed = pixels()
     if changed[0] == defaults[0] or changed[1] == defaults[1]:
         raise RuntimeError("Preference input did not change the native controls.")
-    ui.record("preferences-before-relaunch")
+    ui.record(f"preferences-{mode}-before-relaunch")
     ui.close(window)
     wait("first preference process exit", lambda: app.poll() is not None)
     if app.returncode != 0:
         raise RuntimeError(f"Editor exited with code {app.returncode}.")
-    app = launch([str(executable)], "preferences-restored")
-    window = open_fixture()
+    # Simulate updater replacement of the application executable while state stays in place.
+    before = settings.read_bytes()
+    replacement = executable.with_name("Editor.App.update")
+    shutil.copy2(executable, replacement)
+    os.replace(replacement, executable)
+    if settings.read_bytes() != before:
+        raise RuntimeError("The simulated update changed persistent state.")
+    app = launch([str(executable), *arguments], f"preferences-{mode}-restored", cwd=files)
+    window = ui.editor()
+    ui.click(window, 185, 25)
+    ui.key("Return")
+    window = ui.editor(fixture)
     ui.key("ctrl+Home")
     wait("restored native preference controls", lambda: pixels() == changed)
     ui.bytes(fixture, original)
-    ui.record("preferences-restored-after-process-relaunch")
+    ui.record(f"preferences-{mode}-restored-after-process-relaunch")
     ui.close(window)
     wait("restored preference process exit", lambda: app.poll() is not None)
     if app.returncode != 0:
@@ -1142,7 +1176,17 @@ def main():
             wait("exit after regex checks", lambda: regex_app.poll() is not None)
             if regex_app.returncode != 0:
                 raise RuntimeError(f"Editor exited with code {regex_app.returncode}.")
-            exercise_preferences(ui, files, launch, executable)
+            installed = scratch / "installed"
+            shutil.copytree(executable.parent, installed)
+            exercise_preferences(ui, files, launch, installed / executable.name)
+            installed_state = Path(env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
+            installed_before = installed_state.read_bytes()
+            portable = scratch / "portable"
+            shutil.copytree(executable.parent, portable)
+            (portable / "tangopad.portable").touch()
+            exercise_preferences(ui, files, launch, portable / executable.name, portable / "data" / "state.bin")
+            if installed_state.read_bytes() != installed_before:
+                raise RuntimeError("Portable mode changed installed state.")
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()

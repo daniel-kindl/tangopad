@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Xunit;
 
 namespace Editor.Infrastructure.Tests;
@@ -44,17 +43,13 @@ public sealed class RecentFileHistoryTests : IDisposable
     [Fact]
     public async Task PersistenceContainsOnlyPathsAndClearSurvivesRestart()
     {
-        string settings = Path.Combine(directory, "settings", "recent-files.json");
+        string settings = Path.Combine(directory, "settings", "state.bin");
         RecentFileHistory history = new(settings);
         await history.Ready.ConfigureAwait(true);
         history.Record(Path.Combine(directory, "λ.txt"));
         history.Record(Path.Combine(directory, "other", "λ.txt"));
         await history.FlushAsync().ConfigureAwait(true);
-        using (JsonDocument json = JsonDocument.Parse(await File.ReadAllTextAsync(settings, TestContext.Current.CancellationToken)))
-        {
-            Assert.Equal(["version", "paths"], json.RootElement.EnumerateObject().Select(property => property.Name));
-            Assert.Equal(1, json.RootElement.GetProperty("version").GetInt32());
-        }
+        Assert.Equal(new EditorPresentation(false, true, 15), BinaryAppState.Decode(await File.ReadAllBytesAsync(settings, TestContext.Current.CancellationToken)).Presentation);
 
         RecentFileHistory restored = new(settings);
         await restored.Ready.ConfigureAwait(true);
@@ -71,7 +66,7 @@ public sealed class RecentFileHistoryTests : IDisposable
         }
     }
 
-    /// <summary>Corrupt or unsupported settings do not prevent later history updates.</summary>
+    /// <summary>Invalid legacy data remains intact during in-memory history changes.</summary>
     /// <param name="contents">The invalid settings contents.</param>
     [Theory]
     [InlineData("broken")]
@@ -83,16 +78,15 @@ public sealed class RecentFileHistoryTests : IDisposable
     [InlineData(/*lang=json,strict*/ "{\"version\":1,\"paths\":[null,17,\"relative.txt\",\"\"]}")]
     public async Task CorruptStorageIsIgnored(string contents)
     {
-        string settings = Path.Combine(directory, "recent-files.json");
-        await File.WriteAllTextAsync(settings, contents, TestContext.Current.CancellationToken);
-        RecentFileHistory history = new(settings);
+        string settings = Path.Combine(directory, "state.bin");
+        await File.WriteAllTextAsync(Path.Combine(directory, "recent-files.json"), contents, TestContext.Current.CancellationToken);
+        RecentFileHistory history = new AppStateStore(settings, directory).History;
         await history.Ready.ConfigureAwait(true);
         Assert.Empty(history.Paths);
         history.Record(Path.Combine(directory, "valid.md"));
         await history.FlushAsync().ConfigureAwait(true);
-        RecentFileHistory restored = new(settings);
-        await restored.Ready.ConfigureAwait(true);
-        Assert.Equal([Path.Combine(directory, "valid.md")], restored.Paths);
+        Assert.Equal([Path.Combine(directory, "valid.md")], history.Paths);
+        Assert.Equal(contents, await File.ReadAllTextAsync(Path.Combine(directory, "recent-files.json"), TestContext.Current.CancellationToken));
     }
 
     /// <summary>An unavailable settings directory does not prevent memory-only history or clearing.</summary>
@@ -101,7 +95,7 @@ public sealed class RecentFileHistoryTests : IDisposable
     {
         string blocker = Path.Combine(directory, "file");
         await File.WriteAllTextAsync(blocker, "keep", TestContext.Current.CancellationToken);
-        RecentFileHistory history = new(Path.Combine(blocker, "recent-files.json"));
+        RecentFileHistory history = new(Path.Combine(blocker, "state.bin"));
         await history.Ready.ConfigureAwait(true);
         history.Record(Path.Combine(directory, "document.txt"));
         await history.FlushAsync().ConfigureAwait(true);
@@ -117,7 +111,7 @@ public sealed class RecentFileHistoryTests : IDisposable
     [Fact]
     public async Task EarlyClearAndUpdatesSurviveInitialization()
     {
-        string settings = Path.Combine(directory, "recent-files.json");
+        string settings = Path.Combine(directory, "state.bin");
         RecentFileHistory first = new(settings);
         first.Record(Path.Combine(directory, "old.txt"));
         await first.FlushAsync().ConfigureAwait(true);
@@ -135,7 +129,7 @@ public sealed class RecentFileHistoryTests : IDisposable
     [Fact]
     public async Task EarlyRecordMergesLoadedHistory()
     {
-        string settings = Path.Combine(directory, "recent-files.json");
+        string settings = Path.Combine(directory, "state.bin");
         string old = Path.Combine(directory, "old.txt");
         string recent = Path.Combine(directory, "new.txt");
         RecentFileHistory first = new(settings);
@@ -150,21 +144,19 @@ public sealed class RecentFileHistoryTests : IDisposable
         Assert.Equal([recent, old], restored.Paths);
     }
 
-    /// <summary>Large settings files are ignored without blocking later writes.</summary>
+    /// <summary>Oversized binary state remains intact and blocks subsequent writes.</summary>
     [Fact]
     public async Task OversizedStorageIsIgnored()
     {
-        string settings = Path.Combine(directory, "recent-files.json");
+        string settings = Path.Combine(directory, "state.bin");
         await File.WriteAllTextAsync(settings, new string(' ', 65537), TestContext.Current.CancellationToken);
-        RecentFileHistory history = new(settings);
+        RecentFileHistory history = new AppStateStore(settings, directory).History;
         await history.Ready.ConfigureAwait(true);
         Assert.Empty(history.Paths);
         history.Record(Path.Combine(directory, "new.txt"));
         await history.FlushAsync().ConfigureAwait(true);
-        Assert.False(history.StorageFailed);
-        RecentFileHistory restored = new(settings);
-        await restored.Ready.ConfigureAwait(true);
-        Assert.Equal([Path.Combine(directory, "new.txt")], restored.Paths);
+        Assert.True(history.StorageFailed);
+        Assert.Equal(new string(' ', 65537), await File.ReadAllTextAsync(settings, TestContext.Current.CancellationToken));
     }
 
     /// <inheritdoc />

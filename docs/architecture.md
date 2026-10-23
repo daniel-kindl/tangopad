@@ -60,7 +60,9 @@ DesktopEditorDialogs owns native pickers and owned dialogs.
 
 `Program.Main` is the single composition root. `App.axaml` owns the theme resources.
 App code-behind performs framework lifecycle setup only. The document service receives its persistence port directly. No service container is necessary.
-RecentFileHistory in Infrastructure stores recent paths separately from document semantics.
+AppStateStore in Infrastructure owns versioned binary state and one shared writer.
+RecentFileHistory keeps recent paths separate from document semantics.
+See [application state](app-state.md) for mode selection and migration.
 The ViewModel exposes history commands and snapshots. See [recent files](recent-files.md)
 for storage format, placement, concurrency, and privacy decisions.
 EditorPreferences in Infrastructure stores editor presentation preferences separately.

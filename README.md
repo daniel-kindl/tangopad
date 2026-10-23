@@ -68,7 +68,12 @@ Word Wrap in the toolbar fits long lines to the editor width. It is off by defau
 preserves your choice across document changes and app restarts.
 Wrapping changes only the display. It preserves text, saved line endings, and undo history.
 Word Wrap, Line Numbers, and font size use local per-user storage.
-See [editor preferences](docs/editor-preferences.md) for locations, privacy, failures, and reset steps.
+See [editor preferences](docs/editor-preferences.md) for presentation behavior.
+Preferences and recent paths share a versioned `state.bin` in the OS user-data directory.
+Use `--portable` or place `tangopad.portable` beside the application to keep state in
+its sibling `data/` directory. `--installed` overrides the marker.
+See [application state](docs/app-state.md) for locations, JSON migration, backup,
+and the data-preservation requirements for updates.
 
 Find searches literal text with optional case sensitivity. Enter finds the next match
 while focus is in a search field. Shift+Enter finds the previous match.

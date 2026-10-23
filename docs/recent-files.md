@@ -29,54 +29,23 @@ Future successful opens and saves start a new list.
 History storage is best effort. The list remains usable in memory if storage fails.
 The menu reports a failed write because previously stored paths can return after
 restart if Clear cannot reach storage. Retry Clear after restoring access, or
-close Tangopad and remove the settings file directly.
+close Tangopad and follow the recovery procedure in [application state](app-state.md).
 Clearing does not erase filesystem backups or guarantee recovery-proof deletion.
 
 ## Storage format and locations
 
-`Editor.Infrastructure/RecentFileHistory.cs`, namespace `Editor.Infrastructure`,
-owns the bounded history and filesystem storage. `EditorViewModel` exposes its
-paths and commands. `ViewModels/RecentFileEntry.cs` in `Editor.App.ViewModels`
-formats each menu label. `Program.Main` composes persistent history for the desktop app.
-Tests can supply memory-only history or an isolated settings path.
-No Core or Application API or dependency changes are required.
+Recent Files shares `state.bin` with editor preferences.
+See [application state](app-state.md) for storage locations, portable mode,
+schema bounds, migration, backup, and update rules.
+`RecentFileHistory` owns ordering and normalization in `Editor.Infrastructure`.
+`AppStateStore` serializes writes from both consumers.
+No Core or Application dependency changes are required.
 
-The settings file is `Tangopad/recent-files.json` under the per-user data directory:
-
-| Platform | Location |
-| --- | --- |
-| Linux | `$XDG_DATA_HOME/Tangopad/recent-files.json`, normally `~/.local/share/Tangopad/recent-files.json` |
-| Windows | `%LOCALAPPDATA%\Tangopad\recent-files.json` |
-| macOS | `~/Library/Application Support/Tangopad/recent-files.json` |
-
-Linux and Windows use .NET's `LocalApplicationData` directory. macOS explicitly
-uses the user's `Library/Application Support` directory. No administrator access
-is required. Tangopad creates the settings directory on the first update.
-An unavailable per-user location produces memory-only history.
-
-The UTF-8 JSON format has two properties, `version` with integer value `1`, and
-`paths` with an array of absolute local path strings. No timestamps, document
-contents, or other settings are stored. Paths normalize through `Path.GetFullPath`.
-Windows uses ordinal case-insensitive comparison. Linux and macOS use ordinal
-comparison to preserve distinct names on case-sensitive filesystems.
-Symbolic links and filesystem identities are not resolved.
-
-Loading happens in the background without delaying document commands. Settings
-larger than 64 KiB, corrupt JSON, unknown versions, and inaccessible files produce
-an empty initial list. Non-string and relative stored entries are ignored.
-Valid paths are normalized, deduplicated, and bounded again during loading.
-Early opens merge ahead of loaded paths. Clear suppresses the initial loaded list.
-A later history change replaces corrupt or unsupported settings with version 1.
-
-Updates run in order on background tasks. Each update writes a unique temporary
-file in the settings directory, flushes and closes it, then replaces the settings
-file with `File.Move(..., overwrite: true)`. There is no truncate or delete fallback.
-Atomicity depends on the local filesystem, as it does for document replacement.
-Unix temporary files permit owner read and write only. Windows inherits directory
-permissions. Cleanup removes temporary files where access permits.
-Shutdown allows up to 250 milliseconds for queued writes. Crashes or unavailable
-storage can lose recent updates. Separate application processes use the last
-successful write. There is no cross-process history merge or session restoration.
+Paths normalize through `Path.GetFullPath`. Windows uses ordinal case-insensitive
+comparison. Linux and macOS use ordinal comparison. Symbolic links and filesystem
+identities are not resolved. Early opens merge ahead of loaded paths.
+Clear suppresses the initial loaded list. Invalid or unsupported binary state
+remains unchanged and blocks writes until recovery.
 
 ## Verification
 
