@@ -293,6 +293,11 @@ public sealed class DocumentSessionTests
     [InlineData("old.json", "new.XML", DocumentFormat.Json, DocumentFormat.Xml)]
     [InlineData("old.xml", "new.XAML", DocumentFormat.Xml, DocumentFormat.Xaml)]
     [InlineData("old.xaml", "new.txt", DocumentFormat.Xaml, DocumentFormat.PlainText)]
+    [InlineData("old.txt", "new.YAML", DocumentFormat.PlainText, DocumentFormat.Yaml)]
+    [InlineData("old.yaml", "new.YML", DocumentFormat.Yaml, DocumentFormat.Yaml)]
+    [InlineData("old.yml", "new.CSV", DocumentFormat.Yaml, DocumentFormat.Csv)]
+    [InlineData("old.csv", "new.TSV", DocumentFormat.Csv, DocumentFormat.Tsv)]
+    [InlineData("old.tsv", "new.txt", DocumentFormat.Tsv, DocumentFormat.PlainText)]
     public async Task SaveAsUpdatesFormatAfterSuccess(string original, string renamed,
         DocumentFormat initialFormat, DocumentFormat savedFormat)
     {

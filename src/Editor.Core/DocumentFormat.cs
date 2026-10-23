@@ -20,4 +20,13 @@ public enum DocumentFormat
 
     /// <summary>XAML source text with general XML highlighting.</summary>
     Xaml,
+
+    /// <summary>YAML source text without content validation.</summary>
+    Yaml,
+
+    /// <summary>Comma-separated source text without field conversion.</summary>
+    Csv,
+
+    /// <summary>Tab-separated source text without field conversion.</summary>
+    Tsv,
 }

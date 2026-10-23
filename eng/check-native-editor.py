@@ -624,6 +624,10 @@ def exercise(ui, files, app):
             ("JSON", '{\r\n  "text": "λ café 🐈", "escaped": "a\\\"b",\n  "values": [true, null, -1.25e+2]\r\n}'),
             ("XML", '<?xml version="1.0"?>\r\n<Root title="a &amp; b">\n<!-- comment -->\n<![CDATA[<raw>]]>λ café 🐈</Root>'),
             ("XAML", '<Panel xmlns="urn:test" Title="λ café 🐈">\r\n  <Text Text="{Binding Name}" />\n</Panel>'),
+            ("YAML", 'title: "λ café 🐈"\r\nvalues: [true, null, -1.25e+2]\ncopy: &base {enabled: false} # comment\n'),
+            ("YML", "title: 'it''s YAML'\r\ncopy: *base\n"),
+            ("CSV", 'name,value,empty\r\n"λ café 🐈","a""b,c\ncontinued",001\r\n=SUM(A1),true,\n'),
+            ("TSV", 'name\tvalue\tempty\r\n"λ café 🐈"\t"a""b\tc\ncontinued"\t001\r\n=SUM(A1)\ttrue\t\n'),
         ):
             structured = files / f"structured.{extension}"
             structured_bytes = source.encode("utf-8")

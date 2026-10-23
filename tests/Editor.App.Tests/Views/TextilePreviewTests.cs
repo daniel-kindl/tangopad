@@ -373,7 +373,7 @@ public sealed class TextilePreviewTests
         {
             DocumentFormat.Textile => TextilePreviewParser.Parse(source),
             DocumentFormat.Markdown => MarkdownPreviewParser.Parse(source),
-            DocumentFormat.Json or DocumentFormat.Xml or DocumentFormat.Xaml => throw new InvalidOperationException("The document format has no preview parser."),
+            DocumentFormat.Json or DocumentFormat.Xml or DocumentFormat.Xaml or DocumentFormat.Yaml or DocumentFormat.Csv or DocumentFormat.Tsv => throw new InvalidOperationException("The document format has no preview parser."),
             DocumentFormat.PlainText => throw new InvalidOperationException("Plain text must not enter a preview parser."),
             _ => throw new InvalidOperationException("Plain text must not enter a preview parser."),
         };

@@ -29,6 +29,9 @@ public static class DocumentFormats
             ".JSON" => DocumentFormat.Json,
             ".XML" => DocumentFormat.Xml,
             ".XAML" => DocumentFormat.Xaml,
+            ".YAML" or ".YML" => DocumentFormat.Yaml,
+            ".CSV" => DocumentFormat.Csv,
+            ".TSV" => DocumentFormat.Tsv,
             _ => DocumentFormat.PlainText,
         };
     }

@@ -1,8 +1,8 @@
 # Structured-text source highlighting
 
-The first implementation phase of [Issue #50](https://github.com/daniel-kindl/tangopad/issues/50)
-adds visual syntax highlighting for `.json`, `.xml`, and `.xaml` files.
-YAML and CSV/TSV remain outside this phase. `.jsonc` and `.axaml` remain plain text.
+The source-highlighting phases of [Issue #50](https://github.com/daniel-kindl/tangopad/issues/50)
+add visual syntax highlighting for `.json`, `.xml`, `.xaml`, `.yaml`, `.yml`, `.csv`, and `.tsv` files.
+`.jsonc` and `.axaml` remain plain text.
 
 ## Selection and ownership
 
@@ -41,9 +41,45 @@ load assemblies, evaluate bindings, or validate platform schemas.
 The highlighter does not parse the document with an XML parser or resolve external entities.
 No preview, diagnostics, formatting, grid, folding, or completion behavior is added.
 
+## YAML baseline and limits
+
+`Views/Yaml.xshd` supplies local lexical rules. The pinned AvaloniaEdit package
+has no YAML definition. The rules add no parser dependency.
+YAML highlighting recognizes plain and quoted mapping keys, quoted strings,
+backslash escapes in double quotes, and doubled single quotes.
+Quoted strings can cross lines. Unclosed quotes continue to the end of the buffer.
+The rules also recognize common YAML 1.2 boolean, null, and number spellings,
+flow punctuation, sequence markers, anchors, aliases, tags, directives, and document markers.
+A comment starts with `#` at the start of a line or after whitespace.
+Hashes inside quoted strings and URL fragments do not start comments.
+
+Block scalar indicators such as `|-` and `>+` receive punctuation colors.
+The rules do not track block indentation or assign a string role to block scalar content.
+That content receives the same lexical rules as other unquoted text.
+Complex keys and schema-dependent scalar types have no semantic interpretation.
+Highlighting does not validate YAML, construct objects, expand aliases, or process tags.
+
+## CSV and TSV baseline and limits
+
+`Views/Csv.xshd` uses commas as separators. `Views/Tsv.xshd` uses tabs.
+The extension selects the separator. The editor does not detect a delimiter from the contents.
+Semicolons and the other format's separator remain ordinary field text.
+A double quote at the start of a field opens a quoted field.
+Quoted fields can contain separators, doubled quotes, and newlines.
+An unclosed quoted field retains its color through the end of the buffer.
+Quotes inside an unquoted field do not open a quoted field.
+Malformed input remains editable without validation or repair.
+
+Unquoted fields keep the normal text color. The highlighter does not infer a header,
+convert numbers or dates, trim whitespace, or evaluate formulas.
+Leading zeros, empty fields, trailing separators, and literal formula text remain source text.
+There is no grid, delimiter conversion, or automatic formatting.
+The existing storage policy supports strict UTF-8. A save removes an initial UTF-8 BOM.
+Legacy encodings remain unsupported. The highlighting phase does not change these storage limits.
+
 ## Themes and source preservation
 
-Both theme dictionaries define `Brush.Json.<token>` and `Brush.XML.<token>` roles.
+Both theme dictionaries define `Brush.<definition>.<token>` roles for every structured-text definition.
 Colors use the existing source palette and Fluent foreground resources.
 Tests require a contrast ratio of at least 4.5:1 in both default themes.
 The editor retains its normal URL foreground for these formats.
@@ -63,11 +99,11 @@ selection, caret, undo/redo, New, saves, and format transitions.
 Large-buffer tests highlight 20,000 lines per format and report time and allocation counts.
 These measurements describe the test host. They are not performance guarantees.
 
-`python3 eng/check-native-editor.py` opens JSON, XML, and XAML fixtures on Linux.
+`python3 eng/check-native-editor.py` opens JSON, XML, XAML, YAML, CSV, and TSV fixtures on Linux.
 It captures screenshots and checks exact bytes after edits, undo, Save, and Save As to plain text.
 Screenshots need visual inspection. The script does not infer syntax colors from pixels.
 
-### Recorded local result
+### Recorded JSON and XML/XAML phase result
 
 Date: 2026-10-23. Fedora Linux 44, x64, .NET SDK 10.0.402 and runtime 10.0.13.
 
@@ -95,3 +131,31 @@ A separate Release run measured the large-buffer tests with captured output:
 Each buffer contains 20,000 lines. Allocations include the highlighter and per-line test assertions.
 They measure cumulative allocated bytes, not retained memory or peak process memory.
 The editor normally highlights visible lines. These full scans exercise the complete buffer.
+
+### Recorded YAML and CSV/TSV phase result
+
+Date: 2026-10-23. Fedora Linux 44, x64, .NET SDK 10.0.402 and runtime 10.0.13.
+
+`dotnet msbuild eng/verify.proj` passed with zero build warnings and errors.
+Tests passed 648 cases and skipped one Windows-only filesystem case.
+All eight TRX reports passed validation.
+The new extension tests failed before implementation.
+A negative YAML test exposed a quote inside an unquoted word that incorrectly opened a string span.
+Quote boundary rules corrected this behavior. Multiline edits and undo also passed.
+
+The Linux native script passed all 83 groups with Xvfb, a private D-Bus session,
+and the GTK portal. Evidence is in `artifacts/native-editor-u1n77hx5`.
+The inspected YAML, YML, CSV, and TSV screenshots show source colors.
+Exact bytes and undo checks passed for every new extension, including Save As to plain text.
+Windows and macOS native interaction remain untested on this host.
+Hosted CI still needs to run for this phase.
+
+A separate Release run measured the new large-buffer cases with captured output:
+
+| Format | UTF-16 code units | Full scan | Thread allocations |
+| --- | ---: | ---: | ---: |
+| YAML | 840,000 | 211 ms | 99,705,712 bytes |
+| CSV | 600,000 | 83 ms | 45,124,808 bytes |
+| TSV | 580,000 | 175 ms | 45,124,792 bytes |
+
+Each buffer contains 20,000 lines. The allocation and host limits stated above also apply here.

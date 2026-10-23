@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SyntaxDefinition name="Yaml" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Key" foreground="Blue" />
+  <Color name="String" foreground="Purple" />
+  <Color name="Number" foreground="Purple" />
+  <Color name="Literal" foreground="Blue" />
+  <Color name="Comment" foreground="Gray" />
+  <Color name="Punctuation" foreground="Blue" />
+  <Color name="Anchor" foreground="Blue" />
+  <Color name="Tag" foreground="Blue" />
+  <Color name="Directive" foreground="Blue" />
+  <RuleSet>
+    <Span color="Comment" begin="(?&lt;!\S)\#" />
+    <Rule color="Directive">^%.*$|^(?:---|\.\.\.)(?=\s|$)</Rule>
+    <Span color="Key" multiline="true">
+      <Begin>(?&lt;![^\s\[\]{},:?\-])"(?=(?:[^"\\]|\\.)*"\s*:(?:\s|$|[\[\]{},]))</Begin>
+      <End>"</End>
+      <RuleSet><Span begin="\\" end="." /></RuleSet>
+    </Span>
+    <Span color="Key" multiline="true">
+      <Begin>(?&lt;![^\s\[\]{},:?\-])'(?=(?:[^']|'')*'\s*:(?:\s|$|[\[\]{},]))</Begin>
+      <End>'</End>
+      <RuleSet><Span begin="''" end="" /></RuleSet>
+    </Span>
+    <Span color="String" multiline="true">
+      <Begin>(?&lt;![^\s\[\]{},:?\-])"</Begin>
+      <End>"</End>
+      <RuleSet><Span begin="\\" end="." /></RuleSet>
+    </Span>
+    <Span color="String" multiline="true">
+      <Begin>(?&lt;![^\s\[\]{},:?\-])'</Begin>
+      <End>'</End>
+      <RuleSet><Span begin="''" end="" /></RuleSet>
+    </Span>
+    <Rule color="Key">(?&lt;![^\s{,?\-])(?![?\-](?:\s|$))[^\s\[\]{},:#'"&amp;*!|&gt;%@`][^\[\]{},:#\r\n]*?(?=:(?:\s|$|[\[\]{},]))</Rule>
+    <Rule color="Anchor">[&amp;*][^\s\[\]{},]+</Rule>
+    <Rule color="Tag">!&lt;[^&gt;]*&gt;|![^\s\[\]{},]+</Rule>
+    <Rule color="Literal">(?&lt;![^\s\[\]{},:])(?:true|True|TRUE|false|False|FALSE|null|Null|NULL|~)(?=\s|$|[\[\]{},])</Rule>
+    <Rule color="Number">(?&lt;![^\s\[\]{},:])[-+]?(?:0x[0-9a-fA-F]+|0o[0-7]+|(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|\.(?:inf|Inf|INF|nan|NaN|NAN))(?=\s|$|[\[\]{},])</Rule>
+    <Rule color="Punctuation">[\[\]{},]|:(?=\s|$|[\[\]{},])|(?&lt;!\S)[?\-](?=\s|$)|[|&gt;][1-9+\-]*(?=\s|$)</Rule>
+    <Rule>[^\s\[\]{},:#'"&amp;*!|&gt;][^\s\[\]{},:#]*</Rule>
+  </RuleSet>
+</SyntaxDefinition>

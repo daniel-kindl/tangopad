@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SyntaxDefinition name="Tsv" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="QuotedField" foreground="Purple" />
+  <Color name="Separator" foreground="Blue" />
+  <RuleSet>
+    <Span color="QuotedField" multiline="true">
+      <Begin>(?&lt;![^\t])"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <Span begin='""' end="" />
+      </RuleSet>
+    </Span>
+    <Rule color="Separator">\t</Rule>
+    <Rule>[^"\t]+</Rule>
+  </RuleSet>
+</SyntaxDefinition>
