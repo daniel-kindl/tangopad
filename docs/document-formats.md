@@ -3,6 +3,7 @@
 [Issue #35](https://github.com/daniel-kindl/tangopad/issues/35) adds filename-based
 classification for plain text and Markdown.
 [Issue #84](https://github.com/daniel-kindl/tangopad/issues/84) adds Redmine Textile.
+[Issue #50](https://github.com/daniel-kindl/tangopad/issues/50) adds JSON and XML/XAML source highlighting.
 Classification does not validate content or select a different editor, encoding, parser, or renderer.
 
 ## Filename policy
@@ -16,9 +17,12 @@ Classification does not validate content or select a different editor, encoding,
 | `.md` | `Markdown` |
 | `.markdown` | `Markdown` |
 | `.textile` | `Textile` |
+| `.json` | `Json` |
+| `.xml` | `Xml` |
+| `.xaml` | `Xaml` |
 | `.wiki`, any other extension, or no extension | `PlainText` |
 
-Matching uses `StringComparison.OrdinalIgnoreCase`. Only the final filename
+Matching uses invariant uppercase extensions and ordinal switch patterns. Only the final filename
 component and its last extension count. Both `/` and `\` separate components
 on every host. A directory named `draft.md` does not classify its children as Markdown.
 
@@ -74,5 +78,6 @@ session format. These features do not check file extensions.
 security, and resource limits.
 [Textile highlighting](textile-highlighting.md) defines the `.textile` source colors.
 [Textile preview](textile-preview.md) defines its offline baseline and inert output.
+[Structured-text highlighting](structured-text-highlighting.md) defines JSON and XML/XAML colors and limits.
 A successful format transition hides an open preview. The user can show the preview
-for the new format. Plain text has no preview.
+for the new format. Plain text, JSON, XML, and XAML have no preview.

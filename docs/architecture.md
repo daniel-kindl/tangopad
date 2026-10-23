@@ -100,7 +100,8 @@ Editor.App uses these directories:
   to the existing ViewModel Open workflow. See [file drops](file-drop.md).
   `SourcePreviewAdapter` also stays beside the view. It schedules parsing and renders native preview text and tables.
   `SourceHighlightingAdapter` and its embedded `Markdown.xshd` and `Textile.xshd`
-  definitions also stay here. The adapter selects visual highlighting from the session format.
+  definitions also stay here. `Json.xshd` adapts AvaloniaEdit JSON rules.
+  XML and XAML use the XML definition from the pinned AvaloniaEdit package. The adapter selects visual highlighting from the session format.
 - `Views/Dialogs/` contains each dialog's AXAML and adjacent code-behind.
 - `ViewModels/` contains `EditorViewModel`, `SearchViewModel`, and the search
   consumer's `ISearchBuffer` contract and `SearchMatch` value.

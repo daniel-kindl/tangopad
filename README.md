@@ -17,6 +17,9 @@ Show Preview stays available for Markdown files. Each format uses its own parser
 [Textile highlighting](docs/textile-highlighting.md) lists the recognized source forms.
 [Textile preview](docs/textile-preview.md) lists rendered forms and limits.
 Large documents can exceed the [preview limits](docs/adr/0008-safe-markdown-preview.md).
+JSON, XML, and XAML files have visual source highlighting in the same text editor.
+See [structured-text highlighting](docs/structured-text-highlighting.md) for supported syntax and limits.
+YAML and CSV/TSV highlighting remain planned.
 Export and multiple tabs remain unimplemented.
 
 Install the exact .NET SDK from [global.json](global.json). Run the shared verification command from the repository root:

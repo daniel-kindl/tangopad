@@ -30,4 +30,19 @@
   <StaticResource x:Key="Brush.Textile.Rule" ResourceKey="SystemControlForegroundBaseMediumBrush" />
   <StaticResource x:Key="Brush.Textile.Paragraph" ResourceKey="SystemControlForegroundBaseMediumBrush" />
   <StaticResource x:Key="Brush.Textile.Macro" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <SolidColorBrush x:Key="Brush.Json.Bool" Color="#005A9E" />
+  <SolidColorBrush x:Key="Brush.Json.Number" Color="#7A285F" />
+  <SolidColorBrush x:Key="Brush.Json.String" Color="#7A285F" />
+  <SolidColorBrush x:Key="Brush.Json.Null" Color="#005A9E" />
+  <SolidColorBrush x:Key="Brush.Json.FieldName" Color="#005A9E" />
+  <StaticResource x:Key="Brush.Json.Punctuation" ResourceKey="SystemControlForegroundBaseHighBrush" />
+  <StaticResource x:Key="Brush.XML.Comment" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <SolidColorBrush x:Key="Brush.XML.CData" Color="#7A285F" />
+  <SolidColorBrush x:Key="Brush.XML.DocType" Color="#005A9E" />
+  <SolidColorBrush x:Key="Brush.XML.XmlDeclaration" Color="#005A9E" />
+  <SolidColorBrush x:Key="Brush.XML.XmlTag" Color="#005A9E" />
+  <SolidColorBrush x:Key="Brush.XML.AttributeName" Color="#7A285F" />
+  <SolidColorBrush x:Key="Brush.XML.AttributeValue" Color="#7A285F" />
+  <SolidColorBrush x:Key="Brush.XML.Entity" Color="#005A9E" />
+  <StaticResource x:Key="Brush.XML.BrokenEntity" ResourceKey="SystemControlForegroundBaseMediumBrush" />
 </ResourceDictionary>

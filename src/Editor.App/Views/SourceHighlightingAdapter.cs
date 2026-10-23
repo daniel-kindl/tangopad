@@ -41,15 +41,26 @@ internal sealed class SourceHighlightingAdapter
 
     private void Refresh()
     {
-        if (viewModel.Format is not (DocumentFormat.Markdown or DocumentFormat.Textile))
+        string? format = viewModel.Format switch
+        {
+            DocumentFormat.Markdown => "Markdown",
+            DocumentFormat.Textile => "Textile",
+            DocumentFormat.Json => "Json",
+            DocumentFormat.Xml or DocumentFormat.Xaml => "XML",
+            DocumentFormat.PlainText => null,
+            _ => null,
+        };
+        if (format is null)
         {
             editor.SyntaxHighlighting = null;
             editor.TextArea.TextView.LinkTextForegroundBrush = plainTextLinkBrush;
             return;
         }
 
-        string format = viewModel.Format.ToString();
-        using Stream stream = typeof(SourceHighlightingAdapter).Assembly.GetManifestResourceStream($"Editor.App.Views.{format}.xshd")!;
+        using Stream stream = format == "XML"
+            ? typeof(HighlightingManager).Assembly.GetManifestResourceStream(
+                "AvaloniaEdit.Highlighting.Resources.XML-Mode.xshd")!
+            : typeof(SourceHighlightingAdapter).Assembly.GetManifestResourceStream($"Editor.App.Views.{format}.xshd")!;
         using XmlReader reader = XmlReader.Create(stream);
         IHighlightingDefinition definition = HighlightingLoader.Load(reader, HighlightingManager.Instance);
         foreach (HighlightingColor color in definition.NamedHighlightingColors)
@@ -59,7 +70,7 @@ internal sealed class SourceHighlightingAdapter
         }
 
         editor.SyntaxHighlighting = definition;
-        editor.TextArea.TextView.LinkTextForegroundBrush = definition.GetNamedColor("Link").Foreground.GetBrush(null);
+        editor.TextArea.TextView.LinkTextForegroundBrush = definition.GetNamedColor("Link")?.Foreground.GetBrush(null) ?? plainTextLinkBrush;
     }
 
     internal void Detach()
