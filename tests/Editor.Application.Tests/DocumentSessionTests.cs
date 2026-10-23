@@ -289,6 +289,10 @@ public sealed class DocumentSessionTests
     [InlineData("old.txt", "new.TEXTILE", DocumentFormat.PlainText, DocumentFormat.Textile)]
     [InlineData("old.textile", "new.md", DocumentFormat.Textile, DocumentFormat.Markdown)]
     [InlineData("old.wiki", "new.textile", DocumentFormat.PlainText, DocumentFormat.Textile)]
+    [InlineData("old.txt", "new.JSON", DocumentFormat.PlainText, DocumentFormat.Json)]
+    [InlineData("old.json", "new.XML", DocumentFormat.Json, DocumentFormat.Xml)]
+    [InlineData("old.xml", "new.XAML", DocumentFormat.Xml, DocumentFormat.Xaml)]
+    [InlineData("old.xaml", "new.txt", DocumentFormat.Xaml, DocumentFormat.PlainText)]
     public async Task SaveAsUpdatesFormatAfterSuccess(string original, string renamed,
         DocumentFormat initialFormat, DocumentFormat savedFormat)
     {

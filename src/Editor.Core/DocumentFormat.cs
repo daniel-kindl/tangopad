@@ -11,4 +11,13 @@ public enum DocumentFormat
 
     /// <summary>Redmine Textile source text.</summary>
     Textile,
+
+    /// <summary>JSON source text without content validation.</summary>
+    Json,
+
+    /// <summary>XML source text without content validation.</summary>
+    Xml,
+
+    /// <summary>XAML source text with general XML highlighting.</summary>
+    Xaml,
 }

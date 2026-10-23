@@ -620,6 +620,29 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.bytes(plain, markdown_text)
+        for extension, source in (
+            ("JSON", '{\r\n  "text": "λ café 🐈", "escaped": "a\\\"b",\n  "values": [true, null, -1.25e+2]\r\n}'),
+            ("XML", '<?xml version="1.0"?>\r\n<Root title="a &amp; b">\n<!-- comment -->\n<![CDATA[<raw>]]>λ café 🐈</Root>'),
+            ("XAML", '<Panel xmlns="urn:test" Title="λ café 🐈">\r\n  <Text Text="{Binding Name}" />\n</Panel>'),
+        ):
+            structured = files / f"structured.{extension}"
+            structured_bytes = source.encode("utf-8")
+            structured.write_bytes(structured_bytes)
+            ui.picker("ctrl+o", "Open text file")
+            ui.choose(structured, saving=False)
+            ui.editor(structured)
+            ui.record(f"{extension.lower()}-source-highlighting")
+            ui.key("ctrl+End")
+            ui.type("!")
+            ui.key("ctrl+z")
+            ui.key("ctrl+s")
+            ui.bytes(structured, structured_bytes)
+            destination = files / f"structured-{extension.lower()}.txt"
+            ui.picker("ctrl+shift+s", "Save text file")
+            ui.choose(destination, saving=True)
+            ui.editor(destination)
+            ui.bytes(destination, structured_bytes)
+            ui.record(f"{extension.lower()}-to-plain-preserves-bytes-and-undo")
         with socket.socket() as server:
             server.bind(("127.0.0.1", 0))
             server.listen()

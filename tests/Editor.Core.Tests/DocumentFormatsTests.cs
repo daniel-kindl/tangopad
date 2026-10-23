@@ -53,4 +53,31 @@ public sealed class DocumentFormatsTests
     {
         Assert.Equal(expected, DocumentFormats.Identify(path));
     }
+    /// <summary>Checks the first structured-text formats and their explicit extension boundaries.</summary>
+    /// <param name="path">The filename or path to classify.</param>
+    /// <param name="expected">The expected format name.</param>
+    [Theory]
+    [InlineData("data.json", "Json")]
+    [InlineData("C:\\folder.xml\\data.JSON", "Json")]
+    [InlineData("folder.json/document.Xml", "Xml")]
+    [InlineData("view.XAML", "Xaml")]
+    [InlineData(".data.json", "Json")]
+    [InlineData("data.xml.json", "Json")]
+    [InlineData("data.json.xml", "Xml")]
+    [InlineData(".json", "PlainText")]
+    [InlineData(".xml", "PlainText")]
+    [InlineData(".xaml", "PlainText")]
+    [InlineData("data.json ", "PlainText")]
+    [InlineData("data.xml.", "PlainText")]
+    [InlineData("folder.json/", "PlainText")]
+    [InlineData("data.jsonc", "PlainText")]
+    [InlineData("view.axaml", "PlainText")]
+    [InlineData("data.yaml", "PlainText")]
+    [InlineData("data.csv", "PlainText")]
+    [InlineData("project.csproj", "PlainText")]
+    public void StructuredTextExtensionsAreExplicit(string path, string expected)
+    {
+        Assert.Equal(expected, DocumentFormats.Identify(path).ToString());
+    }
+
 }

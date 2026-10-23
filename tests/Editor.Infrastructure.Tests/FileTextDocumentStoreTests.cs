@@ -37,6 +37,9 @@ public sealed class FileTextDocumentStoreTests : IDisposable
     [InlineData(".unknown", DocumentFormat.PlainText)]
     [InlineData(".textile", DocumentFormat.Textile)]
     [InlineData(".WIKI", DocumentFormat.PlainText)]
+    [InlineData(".JSON", DocumentFormat.Json)]
+    [InlineData(".XML", DocumentFormat.Xml)]
+    [InlineData(".XAML", DocumentFormat.Xaml)]
     [InlineData("", DocumentFormat.PlainText)]
     public async Task FormatTransitionsPreserveUtf8Bytes(string extension, DocumentFormat format)
     {

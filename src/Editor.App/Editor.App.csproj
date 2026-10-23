@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="../../docs/licenses/Markdig.txt" Link="licenses/Markdig.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../docs/licenses/AvaloniaEdit.txt" Link="licenses/AvaloniaEdit.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Views/Json.xshd" />
     <EmbeddedResource Include="Views/Markdown.xshd" />
     <EmbeddedResource Include="Views/Textile.xshd" />
     <ProjectReference Include="../Editor.Preview/Editor.Preview.csproj" />

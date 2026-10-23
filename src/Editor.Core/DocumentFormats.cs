@@ -5,7 +5,7 @@ public static class DocumentFormats
 {
     /// <summary>Identifies a format from the final filename extension, ignoring case.</summary>
     /// <param name="path">A filename or path, or null for an untitled document.</param>
-    /// <returns>Markdown for .md and .markdown. Textile for .textile. Plain text for .txt, .wiki, and all other names.</returns>
+    /// <returns>The recognized source format, or plain text for all other names.</returns>
     /// <remarks>
     /// Both slash characters separate path components on every host.
     /// A leading dot alone does not introduce an extension. No path normalization or content validation occurs.
@@ -22,11 +22,14 @@ public static class DocumentFormats
         }
 
         string extension = filename[dot..];
-        return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase)
-            ? DocumentFormat.Markdown
-            : string.Equals(extension, ".textile", StringComparison.OrdinalIgnoreCase)
-                ? DocumentFormat.Textile
-                : DocumentFormat.PlainText;
+        return extension.ToUpperInvariant() switch
+        {
+            ".MD" or ".MARKDOWN" => DocumentFormat.Markdown,
+            ".TEXTILE" => DocumentFormat.Textile,
+            ".JSON" => DocumentFormat.Json,
+            ".XML" => DocumentFormat.Xml,
+            ".XAML" => DocumentFormat.Xaml,
+            _ => DocumentFormat.PlainText,
+        };
     }
 }
