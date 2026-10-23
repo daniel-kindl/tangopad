@@ -61,6 +61,7 @@
   <x:String x:Key="Text.GoToLine.Go">Go</x:String>
   <x:String x:Key="Text.Preview.Show">Show Preview</x:String>
   <x:String x:Key="Text.Preview.Hide">Hide Preview</x:String>
+  <x:String x:Key="Text.Preview.TextileName">Textile preview</x:String>
   <x:String x:Key="Text.Preview.Name">Markdown preview</x:String>
   <x:String x:Key="Text.Preview.Limited">Preview limit reached. Continue editing in the source pane.</x:String>
   <x:String x:Key="Text.Preview.Unavailable">Preview unavailable. Edit the source or hide and show the preview to try again.</x:String>

@@ -620,37 +620,82 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.bytes(plain, markdown_text)
-        textile = files / "page.TEXTILE"
-        textile_text = "\n".join([
-            "h1. Heading",
-            "*strong* and _emphasis_ and @code@",
-            "\"link\":https://example.com",
-            "[[WikiPage]]",
-            "#123",
-            "bq. quote",
-            "* item",
-            "|cell|",
-            "----",
-            "p. paragraph",
-            "ordinary text",
-            "<script>alert(1)</script>",
-        ]).encode()
-        textile.write_bytes(textile_text)
-        ui.picker("ctrl+o", "Open text file")
-        ui.choose(textile, saving=False)
-        ui.editor(textile)
-        ui.record("textile-highlighting")
-        textile_plain = files / "page.txt"
-        ui.picker("ctrl+shift+s", "Save text file")
-        ui.choose(textile_plain, saving=True)
-        ui.editor(textile_plain)
-        ui.bytes(textile_plain, textile_text)
-        ui.record("textile-to-plain-text")
-        ui.key("ctrl+End")
-        ui.type("!")
-        ui.key("ctrl+z")
-        ui.key("ctrl+s")
-        ui.bytes(textile_plain, textile_text)
+        with socket.socket() as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen()
+            asset = ui.evidence / "textile-preview-local.svg"
+            asset.write_text('<svg xmlns="http://www.w3.org/2000/svg"><text>local secret</text></svg>')
+            textile = files / "page.TEXTILE"
+            textile_text = "\n".join([
+                "h1. Textile preview",
+                "",
+                "*strong* and _emphasis_ and +underline+ and -strike- and @code@",
+                "",
+                "|_. Name|_. Value|",
+                "|first|λ café 😀|",
+                "",
+                "bq. quote",
+                "",
+                "* item",
+                "# ordered",
+                "",
+                "----",
+                "",
+                "p. paragraph",
+                "",
+                f'"remote":http://127.0.0.1:{server.getsockname()[1]}/link',
+                f'!http://127.0.0.1:{server.getsockname()[1]}/image(remote image)!',
+                f"!{asset.as_uri()}(local image)!",
+                "",
+                "[[WikiPage]] #123 {{toc}}",
+                "",
+                "<script>alert(1)</script>",
+            ]).encode()
+            textile.write_bytes(textile_text)
+            ui.picker("ctrl+o", "Open text file")
+            ui.choose(textile, saving=False)
+            window = ui.editor(textile)
+            ui.record("textile-highlighting")
+            watch = libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)
+            if watch < 0:
+                raise OSError(ctypes.get_errno(), "Cannot create the Textile preview file-access monitor.")
+            try:
+                if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
+                    raise OSError(ctypes.get_errno(), "Cannot monitor the Textile preview asset.")
+                ui.click(window, 794, 25)
+                time.sleep(0.5)
+                if select.select([server, watch], [], [], 0)[0]:
+                    raise RuntimeError("Textile preview accessed a network or local-file resource.")
+                ui.record("textile-preview-shown-without-resource-access")
+                ui.click(window, 120, 100)
+                ui.key("ctrl+End")
+                ui.type("!")
+                ui.key("ctrl+s")
+                ui.bytes(textile, textile_text + b"!")
+                time.sleep(0.5)
+                ui.record("textile-preview-live-edit-and-save")
+                ui.key("ctrl+z")
+                ui.key("ctrl+s")
+                ui.bytes(textile, textile_text)
+                ui.click(window, 794, 25)
+                ui.record("textile-preview-hidden-with-undo")
+                ui.click(window, 794, 25)
+                time.sleep(0.5)
+                if select.select([server, watch], [], [], 0)[0]:
+                    raise RuntimeError("Textile preview accessed a resource after an edit or toggle.")
+                textile_plain = files / "page.txt"
+                ui.picker("ctrl+shift+s", "Save text file")
+                ui.choose(textile_plain, saving=True)
+                ui.editor(textile_plain)
+                ui.bytes(textile_plain, textile_text)
+                ui.record("textile-to-plain-text")
+                ui.key("ctrl+End")
+                ui.type("!")
+                ui.key("ctrl+z")
+                ui.key("ctrl+s")
+                ui.bytes(textile_plain, textile_text)
+            finally:
+                os.close(watch)
         ui.key("ctrl+n")
         ui.editor()
         ui.type("retain me")

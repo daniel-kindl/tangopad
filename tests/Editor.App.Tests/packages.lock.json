@@ -320,7 +320,9 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "Editor.Application": "[0.1.0, )",
           "Editor.Formats.Markdown": "[0.1.0, )",
-          "Editor.Infrastructure": "[0.1.0, )"
+          "Editor.Formats.Textile": "[0.1.0, )",
+          "Editor.Infrastructure": "[0.1.0, )",
+          "Editor.Preview": "[0.1.0, )"
         }
       },
       "editor.application": {
@@ -335,7 +337,14 @@
       "editor.formats.markdown": {
         "type": "Project",
         "dependencies": {
+          "Editor.Preview": "[0.1.0, )",
           "Markdig": "[1.4.1, )"
+        }
+      },
+      "editor.formats.textile": {
+        "type": "Project",
+        "dependencies": {
+          "Editor.Preview": "[0.1.0, )"
         }
       },
       "editor.infrastructure": {
@@ -343,6 +352,9 @@
         "dependencies": {
           "Editor.Application": "[0.1.0, )"
         }
+      },
+      "editor.preview": {
+        "type": "Project"
       },
       "Avalonia.AvaloniaEdit": {
         "type": "CentralTransitive",

@@ -12,9 +12,11 @@ Preview must not load resources or execute document content.
 
 ## Decision
 
-`Editor.Formats.Markdown` owns parser adaptation and framework-independent preview
-records. It references Markdig only. Core and Application receive no new dependencies.
-App references the adapter and renders its output with Avalonia TextBlock and Run.
+`Editor.Formats.Markdown` owns parser adaptation. Its original preview records now
+live in `Editor.Preview` so the Textile parser can use the same inert data contract.
+See [ADR 0010](0010-safe-textile-preview.md) for that migration.
+Markdown references Markdig and Editor.Preview. Core and Application receive no new dependencies.
+App references the parser and renders Markdown output with Avalonia TextBlock and Run.
 No Markdig or Avalonia types cross into Core or Application.
 
 Select [Markdig 1.4.1](https://www.nuget.org/packages/Markdig/1.4.1).
@@ -43,7 +45,7 @@ code, line breaks, and thematic breaks. Flat blocks retain nesting through inden
 and text markers. This renderer does not provide full CommonMark visual fidelity.
 Tables, task-list controls, diagrams, image display, and HTML styling remain deferred.
 
-`MarkdownPreviewAdapter` owns the view lifecycle and schedules updates after a
+`SourcePreviewAdapter` owns the view lifecycle and schedules updates after a
 200 ms quiet period. A window runs at most one parser task at a time. New requests
 replace pending work. Revision and document identity checks reject stale results.
 Hide and format transitions invalidate pending results. Close cancels delays,
@@ -64,9 +66,10 @@ when a limit prevents a complete preview. These limits bound input and display w
 They are not a hard wall-clock timeout. Parsing occurs on a background thread so
 editing can continue. A parser upgrade requires hostile-input and performance checks.
 
-The window offers Show Preview only when `DocumentSession.Format` is Markdown.
-Preview starts hidden. A successful transition to plain text hides it and clears
-the selection of this view option. Returning to Markdown requires Show Preview.
+The window offers Show Preview when `DocumentSession.Format` is Markdown or Textile.
+Markdown source uses only the Markdown parser. Preview starts hidden.
+A successful format transition hides it and clears the selection of this view option.
+Returning to Markdown requires Show Preview.
 New and Open follow session notifications, including document identity changes.
 Failed and cancelled saves retain the previous format and preview state.
 Preview never writes to the editor buffer or session. Theme styles consume existing

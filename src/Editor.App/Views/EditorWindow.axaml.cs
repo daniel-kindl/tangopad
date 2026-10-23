@@ -11,8 +11,9 @@ using Editor.App.Services;
 using Editor.App.ViewModels;
 using Editor.App.Views.Dialogs;
 using Editor.Application;
-using Editor.Formats.Markdown;
+using Editor.Core;
 using Editor.Infrastructure;
+using Editor.Preview;
 
 namespace Editor.App.Views;
 
@@ -23,7 +24,7 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null, IDocumentFileMonitor? fileMonitor = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<DocumentFormat, string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null, IDocumentFileMonitor? fileMonitor = null)
     {
         InitializeComponent();
         ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles, editorPreferences);
@@ -34,7 +35,7 @@ internal sealed partial class EditorWindow : Window
             _ = Editor.TextArea.Focus();
         }));
         ExternalChanges = new ExternalFileChangeAdapter(ViewModel, fileMonitor ?? new LocalDocumentFileMonitor());
-        Preview = new MarkdownPreviewAdapter(this, previewParser);
+        Preview = new SourcePreviewAdapter(this, previewParser);
         EditorBufferAdapter buffer = new(Editor, ViewModel);
         SourceHighlightingAdapter highlighting = new(Editor, ViewModel);
         ViewModel.Search.Attach(buffer);
@@ -78,7 +79,7 @@ internal sealed partial class EditorWindow : Window
     }
 
     internal EditorViewModel ViewModel { get; }
-    internal MarkdownPreviewAdapter Preview { get; }
+    internal SourcePreviewAdapter Preview { get; }
     internal ExternalFileChangeAdapter ExternalChanges { get; }
 
     private void RegisterDropHandlers(Interactive target)

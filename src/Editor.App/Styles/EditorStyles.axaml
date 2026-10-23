@@ -63,4 +63,18 @@
     <Setter Property="Foreground" Value="{DynamicResource Brush.Markdown.Heading}" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
+  <Style Selector="StackPanel.textile TextBlock.preview-heading">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Textile.Heading}" />
+  </Style>
+  <Style Selector="StackPanel.textile TextBlock.preview-code">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Textile.Code}" />
+  </Style>
+  <Style Selector="Grid.preview-table">
+    <Setter Property="Margin" Value="{StaticResource Inset.Preview.Block}" />
+  </Style>
+  <Style Selector="Border.preview-cell">
+    <Setter Property="Padding" Value="{StaticResource Inset.Preview.Cell}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Preview.Cell}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
 </Styles>

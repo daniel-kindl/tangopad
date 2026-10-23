@@ -66,11 +66,13 @@ package, or namespace dependency changes are required. The UI needs no format la
 and cancellation. `FileTextDocumentStoreTests` checks exact UTF-8 bytes during
 filename transitions and reopens the saved documents.
 
-## Markdown presentation
+## Format presentation
 
-Source highlighting and the optional Markdown preview consume the authoritative
-session format. Neither feature checks file extensions.
+Source highlighting and optional Markdown and Textile previews consume the authoritative
+session format. These features do not check file extensions.
 [ADR 0008](adr/0008-safe-markdown-preview.md) defines Markdown parser ownership, rendering,
 security, and resource limits.
 [Textile highlighting](textile-highlighting.md) defines the `.textile` source colors.
-Textile has no preview in this version.
+[Textile preview](textile-preview.md) defines its offline baseline and inert output.
+A successful format transition hides an open preview. The user can show the preview
+for the new format. Plain text has no preview.

@@ -131,7 +131,7 @@ public sealed class MarkdownHighlightingTests
                     _ => null,
                 };
                 Assert.Equal(expectedDefinition, window.Editor.SyntaxHighlighting?.Name);
-                Assert.Equal(expectedDefinition == "Markdown", window.PreviewToggle.IsVisible);
+                Assert.Equal(expectedDefinition is "Markdown" or "Textile", window.PreviewToggle.IsVisible);
                 Assert.Equal(text, store.SavedText);
                 Assert.Equal(text, window.Editor.Text);
                 Assert.Equal(identity, window.ViewModel.DocumentId);

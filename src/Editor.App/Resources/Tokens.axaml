@@ -19,6 +19,8 @@
   <StaticResource x:Key="Radius.Control" ResourceKey="ControlCornerRadius" />
   <x:Double x:Key="Size.Search.InputMaxHeight">72</x:Double>
   <Thickness x:Key="Inset.Search.Status">8,0</Thickness>
+  <Thickness x:Key="Inset.Preview.Cell">8,4</Thickness>
+  <Thickness x:Key="Border.Preview.Cell">1</Thickness>
   <x:Double x:Key="Size.Preview.Splitter">6</x:Double>
   <Thickness x:Key="Inset.Preview.Block">0,0,0,8</Thickness>
   <x:Double x:Key="Size.Preview.Indent">12</x:Double>
