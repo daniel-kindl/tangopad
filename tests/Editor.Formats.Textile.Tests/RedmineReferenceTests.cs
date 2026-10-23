@@ -120,6 +120,23 @@ public sealed class RedmineReferenceTests
         Assert.InRange(result.Blocks.Cast<PreviewTextBlock>().Sum(block => block.Runs.Sum(run => run.Text.Length)), 1000, 32_768);
     }
 
+    /// <summary>Paragraph collection stops allocating after nested macro input reaches its limit.</summary>
+    /// <param name="macro">The repeated complete or incomplete macro source.</param>
+    [Theory]
+    [InlineData("{{x\n")]
+    [InlineData("{{x}}\n")]
+    [InlineData("{{x\n}}\n")]
+    public void StopsCollectingAfterMacroLimit(string macro)
+    {
+        _ = TextilePreviewParser.Parse("text\n{{include(Page)}}");
+        string source = "text\n" + string.Concat(Enumerable.Repeat(macro, 3000));
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        PreviewDocument result = TextilePreviewParser.Parse(source);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Assert.True(result.IsLimited);
+        Assert.InRange(allocated, 1, 4_000_000);
+    }
+
     private static string Text(PreviewDocument document)
     {
         return string.Join("\n", document.Blocks.Cast<PreviewTextBlock>().Select(block => string.Concat(block.Runs.Select(run => run.Text))));

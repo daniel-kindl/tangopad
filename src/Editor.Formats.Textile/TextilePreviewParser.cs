@@ -67,26 +67,57 @@ public static class TextilePreviewParser
         {
             content = "";
             int start = line.IndexOf("{{", StringComparison.Ordinal);
-            if (start < 0) { return false; }
-            string remaining = string.Join('\n', lines.Skip(position));
-            while (start >= 0 && start < line.Length)
+            while (start >= 0)
             {
-                int end = FindOpaqueEnd(remaining, start, "{{", "}}");
-                if (end < 0) { return false; }
-                if (remaining.AsSpan(0, end).Contains('\n'))
+                if (!FindMacroEnd(start, out int endLine, out int endColumn)) { return false; }
+                if (endLine == position)
                 {
-                    content = remaining[..end];
-                    int lastLine = 0;
-                    for (int index = 0; index < end; index++)
-                    {
-                        if (remaining[index] == '\n') { position++; lastLine = index + 1; }
-                    }
-                    string tail = lines[position][(end - lastLine)..];
-                    if (tail.Length == 0) { position++; }
-                    else { lines[position] = tail; }
-                    return true;
+                    start = FindLiteral(line, "{{", endColumn);
+                    continue;
                 }
-                start = FindLiteral(remaining, "{{", end);
+                StringBuilder text = new(line);
+                for (int row = position + 1; row < endLine; row++)
+                {
+                    _ = text.Append('\n').Append(lines[row]);
+                }
+                _ = text.Append('\n').Append(lines[endLine].AsSpan(0, endColumn));
+                content = text.ToString();
+                string tail = lines[endLine][endColumn..];
+                position = endLine;
+                if (tail.Length == 0) { position++; }
+                else { lines[position] = tail; }
+                return true;
+            }
+            return false;
+        }
+
+        private bool FindMacroEnd(int start, out int endLine, out int endColumn)
+        {
+            endLine = position;
+            endColumn = start;
+            int depth = 1;
+            for (int row = position; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int column = row == position ? start + 2 : 0; column < line.Length; column++)
+                {
+                    if (!SpendWork()) { return false; }
+                    if (line.AsSpan(column).StartsWith("{{", StringComparison.Ordinal))
+                    {
+                        if (++depth > MaximumDepth) { limited = true; return false; }
+                        column++;
+                    }
+                    else if (line.AsSpan(column).StartsWith("}}", StringComparison.Ordinal))
+                    {
+                        if (--depth == 0)
+                        {
+                            endLine = row;
+                            endColumn = column + 2;
+                            return true;
+                        }
+                        column++;
+                    }
+                }
             }
             return false;
         }
@@ -147,7 +178,7 @@ public static class TextilePreviewParser
             }
             else { position++; }
             StringBuilder text = new(line);
-            while (position < lines.Length && !string.IsNullOrWhiteSpace(lines[position]) && (code || !StartsBlock(lines[position])))
+            while (position < lines.Length && !limited && !string.IsNullOrWhiteSpace(lines[position]) && (code || !StartsBlock(lines[position])))
             {
                 string next = !code && TryReadMultilineMacro(lines[position], out string paragraphContent)
                     ? paragraphContent : lines[position++];
