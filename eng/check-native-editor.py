@@ -629,10 +629,13 @@ def exercise(ui, files, app):
             textile_text = "\n".join([
                 "h1. Textile preview",
                 "",
+                "{{toc}}",
+                "",
                 "*strong* and _emphasis_ and +underline+ and -strike- and @code@",
                 "",
                 "|_. Name|_. Value|",
                 "|first|λ café 😀|",
+                "|[[sandbox:Page|Wiki cell]]|{{include(Page|{{plugin(x)}})}}|",
                 "",
                 "bq. quote",
                 "",
@@ -647,7 +650,15 @@ def exercise(ui, files, app):
                 f'!http://127.0.0.1:{server.getsockname()[1]}/image(remote image)!',
                 f"!{asset.as_uri()}(local image)!",
                 "",
-                "[[WikiPage]] #123 {{toc}}",
+                "[[sandbox:WikiPage|Wiki caption]] #123 ##123 #123-6 #123#note-6",
+                'attachment:"file name.zip"',
+                f"{{{{include(http://127.0.0.1:{server.getsockname()[1]}/include)}}}}",
+                f"{{{{thumbnail({asset.as_uri()})}}}}",
+                "{{child_pages}} {{custom_plugin(remote)}}",
+                "{{collapse(Details)",
+                "h2. Hidden heading",
+                "{{include(Remote)}}",
+                "}}",
                 "",
                 "<script>alert(1)</script>",
             ]).encode()
@@ -667,6 +678,7 @@ def exercise(ui, files, app):
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Textile preview accessed a network or local-file resource.")
                 ui.record("textile-preview-shown-without-resource-access")
+                ui.record("redmine-references-and-local-contents-without-resource-access")
                 ui.click(window, 120, 100)
                 ui.key("ctrl+End")
                 ui.type("!")

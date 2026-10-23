@@ -8,7 +8,8 @@ Date: 2026-10-23
 
 [Issue #85](https://github.com/daniel-kindl/tangopad/issues/85) adds an offline Textile
 preview after filename recognition and highlighting. The preview must preserve source,
-undo, dirty state, and persistence. Redmine reference resolution belongs to Issue #86.
+undo, dirty state, and persistence. Issue #86 adds inactive Redmine reference labels
+and local contents lists. Server resolution remains outside this feature.
 
 ## Parser assessment
 
@@ -62,7 +63,11 @@ Keep the 200 ms debounce, one parser task per window, revision and document chec
 close cancellation, and recovery after a failed attempt.
 Reject more than 32,768 UTF-16 code units. Bound nesting to 32, block and table-row
 units to 256, text runs to 2,048, and table cells to 1,024.
-Limits produce the existing visible limit notice.
+Generated contents lists and macro placeholders share a 32,768-code-unit rendered-text
+budget. Repeated contents markers cannot amplify output beyond this limit.
+Build contents entries from parsed local headings only. Macro bodies and code cannot
+contribute headings. Replace server and plugin macros with named text placeholders.
+The parser invokes no macro implementation. Limits produce the existing visible limit notice.
 
 ## Alternatives
 

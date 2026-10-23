@@ -39,6 +39,7 @@ public sealed class TextilePreviewTests
             {
                 await File.WriteAllTextAsync(asset, "LOCAL ASSET MUST NOT APPEAR", TestContext.Current.CancellationToken).ConfigureAwait(true);
                 string source = $"h1. Héading\r\n\r\n*strong* _italic_ +underlined+ -struck- @code@\n\n|_. Name|_. Value|\n|one|two|\n\n\"remote label\":http://127.0.0.1:{port}/link !http://127.0.0.1:{port}/image(remote image)! !{new Uri(asset).AbsoluteUri}(local image)!\n\n<script>alert(1)</script>\n\np{{color:red}}. styled text\n";
+                source += $"\n[[sandbox:Page|Wiki caption]] #123 ##123 #123-6 #123#note-6 attachment:\"file name.zip\"\n\n{{{{include(http://127.0.0.1:{port}/include)}}}}\n\n{{{{thumbnail({new Uri(asset).AbsoluteUri})}}}}\n\np. paragraph before macro\n{{{{child_pages}}}} {{{{collapse(Details)\nh2. Hidden\n}}}}\n\n{{{{child_pages}}}} {{{{plugin(remote)}}}}\n\n{{{{toc}}}}\n";
                 byte[] expected = Encoding.UTF8.GetBytes(source);
                 await File.WriteAllBytesAsync(path, expected, TestContext.Current.CancellationToken).ConfigureAwait(true);
                 EditorWindow window = new(new FileTextDocumentStore(), new Dialogs { Path = path });
@@ -73,6 +74,15 @@ public sealed class TextilePreviewTests
                 Assert.Contains("local image", rendered, StringComparison.Ordinal);
                 Assert.Contains("<script>alert(1)</script>", rendered, StringComparison.Ordinal);
                 Assert.Contains("{color:red}", rendered, StringComparison.Ordinal);
+                Assert.Contains("Wiki caption", rendered, StringComparison.Ordinal);
+                Assert.Contains("#123 ##123 #123-6 #123#note-6 file name.zip", rendered, StringComparison.Ordinal);
+                Assert.Contains("[macro: include]", rendered, StringComparison.Ordinal);
+                Assert.Contains("[macro: thumbnail]", rendered, StringComparison.Ordinal);
+                Assert.Contains("[macro: collapse]", rendered, StringComparison.Ordinal);
+                Assert.Contains("[macro: child_pages]", rendered, StringComparison.Ordinal);
+                Assert.Contains("[macro: plugin]", rendered, StringComparison.Ordinal);
+                Assert.Contains("• Héading", rendered, StringComparison.Ordinal);
+                Assert.DoesNotContain("Hidden", rendered, StringComparison.Ordinal);
                 Assert.DoesNotContain("LOCAL ASSET MUST NOT APPEAR", rendered, StringComparison.Ordinal);
                 Assert.False(listener.Pending());
                 foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })

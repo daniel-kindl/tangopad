@@ -11,6 +11,8 @@ Open a `.md` or `.markdown` file, then select Show Preview. Select Hide Preview 
 restore the full-width editor. Links are inactive, and images show descriptions only.
 Open a `.textile` file for Redmine Textile source highlighting and an optional offline preview.
 Textile preview supports a bounded syntax baseline with native tables and inactive resource labels.
+Wiki captions and attachment names stay local text. Contents lists use local headings.
+Server and plugin macros show named placeholders.
 Show Preview stays available for Markdown files. Each format uses its own parser.
 [Textile highlighting](docs/textile-highlighting.md) lists the recognized source forms.
 [Textile preview](docs/textile-preview.md) lists rendered forms and limits.
