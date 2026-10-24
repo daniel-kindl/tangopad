@@ -179,6 +179,10 @@ The native acceptance script starts the unchanged Release executable on Xvfb.
 It starts a private D-Bus session and the real GTK file-picker portal.
 X11 input drives the editor and dialogs. No dialog responses are mocked.
 The script checks exact output bytes and window titles.
+After a successful Save, `Desktop.saved` requires both the expected bytes and
+the clean window title before the next command. File replacement can finish
+before the UI continuation clears `IsBusy`. A byte check alone can send the
+next Save while its command remains disabled.
 Screenshots show the prompts and error messages.
 It creates all test files in a private temporary directory.
 The script removes that directory after the run.

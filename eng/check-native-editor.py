@@ -3,6 +3,8 @@
 
 import contextlib
 import ctypes
+import hashlib
+import struct
 import json
 import os
 import platform
@@ -18,6 +20,27 @@ import time
 from PIL import ImageGrab
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_state(path):
+    if not path.exists():
+        return None
+    data = path.read_bytes()
+    if data[:8] != b"TANGOST\0" or hashlib.sha256(data[:-32]).digest() != data[-32:]:
+        raise RuntimeError("The binary state header or checksum is invalid.")
+    version, wrap, numbers, font, count = struct.unpack_from("<IBBdI", data, 8)
+    if version != 1 or count > 10:
+        raise RuntimeError("The binary state version or path count is invalid.")
+    paths = []
+    offset = 26
+    for _ in range(count):
+        length, = struct.unpack_from("<I", data, offset)
+        offset += 4
+        paths.append(data[offset:offset + length].decode("utf-8"))
+        offset += length
+    if offset != len(data) - 32:
+        raise RuntimeError("The binary state length is invalid.")
+    return {"wordWrap": bool(wrap), "showLineNumbers": bool(numbers), "fontSize": font, "paths": paths}
 
 
 def wait(description, probe):
@@ -106,6 +129,11 @@ class Desktop:
 
     def bytes(self, path, expected):
         wait(f"exact bytes in {path.name}", lambda: path.exists() and path.read_bytes() == expected)
+
+    def saved(self, path, expected):
+        self.bytes(path, expected)
+        # File replacement can finish before the UI acknowledges the save.
+        self.editor(path)
 
     def click(self, window, x, y):
         self.focus(window)
@@ -238,10 +266,10 @@ def exercise_drops(ui, files, launch):
 def exercise_recent(ui, files):
     fixture = files / "recent.md"
     fixture.write_bytes(b"# Recent file\r\ntext")
-    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "recent-files.json"
+    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
 
     def paths():
-        return json.loads(settings.read_text())["paths"] if settings.exists() else []
+        return (read_state(settings) or {"paths": []})["paths"]
 
     ui.picker("ctrl+o", "Open text file")
     ui.choose(fixture, saving=False)
@@ -308,14 +336,12 @@ def exercise_line_numbers(ui, files):
     ui.editor(fixture)
     ui.type("!")
     ui.key("ctrl+s")
-    ui.bytes(fixture, b"first\r\nsecond\n!third\rlast\n")
+    ui.saved(fixture, b"first\r\nsecond\n!third\rlast\n")
     wait("hidden gutter after navigation", lambda: gutter() == hidden)
     ui.record("line-numbers-hidden-logical-navigation-and-exact-save")
     ui.key("ctrl+z")
     ui.key("ctrl+s")
-    ui.bytes(fixture, original)
-    # Saved bytes can appear before Save enables the document commands again.
-    ui.editor(fixture)
+    ui.saved(fixture, original)
 
 
 def exercise_reload(ui, files):
@@ -505,8 +531,7 @@ def exercise(ui, files, app):
         ui.type("edited")
         ui.editor(first, dirty=True)
         ui.key("ctrl+s")
-        ui.bytes(first, b"typed\nedited")
-        ui.editor(first)
+        ui.saved(first, b"typed\nedited")
         ui.picker("ctrl+shift+s", "Save text file")
         ui.choose(second, saving=True)
         ui.bytes(second, b"typed\nedited")
@@ -594,7 +619,7 @@ def exercise(ui, files, app):
         addition = "!"
         ui.type(addition)
         ui.key("ctrl+s")
-        ui.bytes(markdown, markdown_text + addition.encode())
+        ui.saved(markdown, markdown_text + addition.encode())
         time.sleep(0.5)
         ui.record("markdown-preview-live-edit-and-save")
         ui.key("ctrl+f")
@@ -604,7 +629,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+0")
         ui.key("ctrl+z")
         ui.key("ctrl+s")
-        ui.bytes(markdown, markdown_text)
+        ui.saved(markdown, markdown_text)
         ui.click(window, 794, 25)
         ui.record("markdown-preview-hidden-with-undo-and-find")
         ui.click(window, 794, 25)
@@ -619,7 +644,7 @@ def exercise(ui, files, app):
         ui.type("!")
         ui.key("ctrl+z")
         ui.key("ctrl+s")
-        ui.bytes(plain, markdown_text)
+        ui.saved(plain, markdown_text)
         for extension, source in (
             ("JSON", '{\r\n  "text": "λ café 🐈", "escaped": "a\\\"b",\n  "values": [true, null, -1.25e+2]\r\n}'),
             ("XML", '<?xml version="1.0"?>\r\n<Root title="a &amp; b">\n<!-- comment -->\n<![CDATA[<raw>]]>λ café 🐈</Root>'),
@@ -640,7 +665,7 @@ def exercise(ui, files, app):
             ui.type("!")
             ui.key("ctrl+z")
             ui.key("ctrl+s")
-            ui.bytes(structured, structured_bytes)
+            ui.saved(structured, structured_bytes)
             destination = files / f"structured-{extension.lower()}.txt"
             ui.picker("ctrl+shift+s", "Save text file")
             ui.choose(destination, saving=True)
@@ -710,12 +735,12 @@ def exercise(ui, files, app):
                 ui.key("ctrl+End")
                 ui.type("!")
                 ui.key("ctrl+s")
-                ui.bytes(textile, textile_text + b"!")
+                ui.saved(textile, textile_text + b"!")
                 time.sleep(0.5)
                 ui.record("textile-preview-live-edit-and-save")
                 ui.key("ctrl+z")
                 ui.key("ctrl+s")
-                ui.bytes(textile, textile_text)
+                ui.saved(textile, textile_text)
                 ui.click(window, 794, 25)
                 ui.record("textile-preview-hidden-with-undo")
                 ui.click(window, 794, 25)
@@ -732,7 +757,7 @@ def exercise(ui, files, app):
                 ui.type("!")
                 ui.key("ctrl+z")
                 ui.key("ctrl+s")
-                ui.bytes(textile_plain, textile_text)
+                ui.saved(textile_plain, textile_text)
             finally:
                 os.close(watch)
         ui.key("ctrl+n")
@@ -791,14 +816,13 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.editor(searched, dirty=True)
         ui.key("ctrl+s")
-        ui.bytes(searched, b"banana banana")
-        ui.editor(searched)
+        ui.saved(searched, b"banana banana")
         ui.key("ctrl+f")
         ui.type("absent")
         ui.key("Return")
         ui.key("Escape")
         ui.key("ctrl+s")
-        ui.bytes(searched, b"banana banana")
+        ui.saved(searched, b"banana banana")
         ui.record("find-replace-literal-grouped-undo-and-cancel")
 
         wrapped = files / "wrapped.md"
@@ -819,8 +843,7 @@ def exercise(ui, files, app):
         ui.record("font-size-decreased")
         ui.key("ctrl+0")
         ui.key("ctrl+s")
-        ui.bytes(wrapped, long_text)
-        ui.editor(wrapped)
+        ui.saved(wrapped, long_text)
         time.sleep(0.5)
         ui.record("font-size-reset-preserves-bytes")
         for _ in range(5):
@@ -839,12 +862,11 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.editor(wrapped)
         ui.key("ctrl+s")
-        ui.bytes(wrapped, long_text)
+        ui.saved(wrapped, long_text)
         ui.key("ctrl+y")
         ui.editor(wrapped, dirty=True)
         ui.key("ctrl+s")
-        ui.bytes(wrapped, long_text + b"!")
-        ui.editor(wrapped)
+        ui.saved(wrapped, long_text + b"!")
         ui.click(window, 700, 25)
         ui.key("ctrl+n")
         ui.editor()
@@ -866,10 +888,10 @@ def exercise(ui, files, app):
             ui.type("G")
             ui.key("ctrl+s")
             expected = long_text[:len(prefix)] + b"G" + long_text[len(prefix):] + b"!"
-            ui.bytes(wrapped, expected)
+            ui.saved(wrapped, expected)
             ui.key("ctrl+z")
             ui.key("ctrl+s")
-            ui.bytes(wrapped, long_text + b"!")
+            ui.saved(wrapped, long_text + b"!")
         ui.record("go-to-line-logical-lines-clamp-and-undo")
         ui.key("ctrl+Home")
         ui.key("shift+Right")
@@ -883,10 +905,10 @@ def exercise(ui, files, app):
         ui.editor(wrapped)
         ui.type("G")
         ui.key("ctrl+s")
-        ui.bytes(wrapped, b"G" + long_text[1:] + b"!")
+        ui.saved(wrapped, b"G" + long_text[1:] + b"!")
         ui.key("ctrl+z")
         ui.key("ctrl+s")
-        ui.bytes(wrapped, long_text + b"!")
+        ui.saved(wrapped, long_text + b"!")
         ui.record("go-to-line-cancel-preserves-selection-and-bytes")
         ui.click(window, 700, 25)
         ui.click(window, 120, 150)
@@ -920,8 +942,9 @@ def exercise(ui, files, app):
         blocked.chmod(0o700)
 
 
-def exercise_preferences(ui, files, launch, executable):
-    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "editor-preferences.json"
+def exercise_preferences(ui, files, launch, executable, settings=None, arguments=()):
+    mode = "portable" if settings else "installed"
+    settings = settings or Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
     settings.unlink(missing_ok=True)
     fixture = files / "preferences.txt"
     original = ("first\n" + "wrapped presentation " * 80 + "\nlast\n").encode()
@@ -937,7 +960,7 @@ def exercise_preferences(ui, files, launch, executable):
         shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
         return (shot.crop((680, 10, 940, 40)).tobytes(), shot.crop((0, 100, 800, 250)).tobytes())
 
-    app = launch([str(executable)], "preferences-first")
+    app = launch([str(executable), *arguments], f"preferences-{mode}-first", cwd=files)
     window = open_fixture()
     time.sleep(0.5)
     defaults = pixels()
@@ -948,25 +971,35 @@ def exercise_preferences(ui, files, launch, executable):
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
-    wait("persisted presentation changes", lambda: settings.exists() and json.loads(settings.read_text()) ==
-         {"version": 1, "wordWrap": True, "showLineNumbers": False, "fontSize": 18})
+    wait("persisted presentation changes", lambda: settings.exists() and all(read_state(settings)[key] == value for key, value in
+         {"wordWrap": True, "showLineNumbers": False, "fontSize": 18}.items()))
     # Keep the caret outside the compared text region in both processes.
     ui.key("ctrl+Home")
     time.sleep(0.5)
     changed = pixels()
     if changed[0] == defaults[0] or changed[1] == defaults[1]:
         raise RuntimeError("Preference input did not change the native controls.")
-    ui.record("preferences-before-relaunch")
+    ui.record(f"preferences-{mode}-before-relaunch")
     ui.close(window)
     wait("first preference process exit", lambda: app.poll() is not None)
     if app.returncode != 0:
         raise RuntimeError(f"Editor exited with code {app.returncode}.")
-    app = launch([str(executable)], "preferences-restored")
-    window = open_fixture()
+    # Simulate updater replacement of the application executable while state stays in place.
+    before = settings.read_bytes()
+    replacement = executable.with_name("Editor.App.update")
+    shutil.copy2(executable, replacement)
+    os.replace(replacement, executable)
+    if settings.read_bytes() != before:
+        raise RuntimeError("The simulated update changed persistent state.")
+    app = launch([str(executable), *arguments], f"preferences-{mode}-restored", cwd=files)
+    window = ui.editor()
+    ui.click(window, 185, 25)
+    ui.key("Return")
+    window = ui.editor(fixture)
     ui.key("ctrl+Home")
     wait("restored native preference controls", lambda: pixels() == changed)
     ui.bytes(fixture, original)
-    ui.record("preferences-restored-after-process-relaunch")
+    ui.record(f"preferences-{mode}-restored-after-process-relaunch")
     ui.close(window)
     wait("restored preference process exit", lambda: app.poll() is not None)
     if app.returncode != 0:
@@ -997,12 +1030,10 @@ def exercise_whole_word(ui, files):
     ui.key("space")  # Replace all.
     ui.key("Escape")
     ui.key("ctrl+s")
-    ui.bytes(path, "# cat_cat Cat dog\r\ndog’s 😀dog😀 e\u0301 cat𐐀\n".encode("utf-8"))
-    ui.editor(path)
+    ui.saved(path, "# cat_cat Cat dog\r\ndog’s 😀dog😀 e\u0301 cat𐐀\n".encode("utf-8"))
     ui.key("ctrl+z")
     ui.key("ctrl+s")
-    ui.bytes(path, original.encode("utf-8"))
-    ui.editor(path)
+    ui.saved(path, original.encode("utf-8"))
     ui.key("ctrl+f")
     ui.type("e")
     ui.key("Return")
@@ -1010,7 +1041,7 @@ def exercise_whole_word(ui, files):
     ui.record("whole-word-combining-mark-no-match")
     ui.key("Escape")
     ui.key("ctrl+s")
-    ui.bytes(path, original.encode("utf-8"))
+    ui.saved(path, original.encode("utf-8"))
     ui.record("whole-word-unicode-replace-and-grouped-undo")
 
 
@@ -1040,14 +1071,13 @@ def exercise_regex(ui, files):
     ui.key("Escape")
     ui.key("ctrl+s")
     expected = "# dog12! cat_cat3\r\ndog4! 😀dog5!😀\n".encode("utf-8")
-    ui.bytes(path, expected)
-    ui.editor(path)
+    ui.saved(path, expected)
     ui.key("ctrl+z")
     ui.key("ctrl+s")
-    ui.bytes(path, original.encode("utf-8"))
+    ui.saved(path, original.encode("utf-8"))
     ui.key("ctrl+y")
     ui.key("ctrl+s")
-    ui.bytes(path, expected)
+    ui.saved(path, expected)
     ui.record("regex-capture-replacement-grouped-undo-redo-exact-bytes")
     ui.key("ctrl+f")
     ui.type("(")
@@ -1055,14 +1085,14 @@ def exercise_regex(ui, files):
     ui.record("regex-invalid-pattern-feedback")
     ui.key("Escape")
     ui.key("ctrl+s")
-    ui.bytes(path, expected)
+    ui.saved(path, expected)
     ui.key("ctrl+h")
     ui.type("(?=dog)")
     time.sleep(0.5)
     ui.record("regex-empty-match-feedback")
     ui.key("Escape")
     ui.key("ctrl+s")
-    ui.bytes(path, expected)
+    ui.saved(path, expected)
 
 
 def main():
@@ -1142,7 +1172,17 @@ def main():
             wait("exit after regex checks", lambda: regex_app.poll() is not None)
             if regex_app.returncode != 0:
                 raise RuntimeError(f"Editor exited with code {regex_app.returncode}.")
-            exercise_preferences(ui, files, launch, executable)
+            installed = scratch / "installed"
+            shutil.copytree(executable.parent, installed)
+            exercise_preferences(ui, files, launch, installed / executable.name)
+            installed_state = Path(env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
+            installed_before = installed_state.read_bytes()
+            portable = scratch / "portable"
+            shutil.copytree(executable.parent, portable)
+            (portable / "tangopad.portable").touch()
+            exercise_preferences(ui, files, launch, portable / executable.name, portable / "data" / "state.bin")
+            if installed_state.read_bytes() != installed_before:
+                raise RuntimeError("Portable mode changed installed state.")
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()

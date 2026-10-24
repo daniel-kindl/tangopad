@@ -1,12 +1,10 @@
-using System.Text.Json;
-
 namespace Editor.Infrastructure;
 
 /// <summary>Loads and saves bounded editor preferences without delaying document operations.</summary>
 public sealed class EditorPreferences
 {
     private readonly Lock gate = new();
-    private readonly string? settingsPath;
+    private readonly AppStateStore store;
     private Task pending;
     private EditorPresentation current = new();
     private bool wrapChanged;
@@ -18,9 +16,14 @@ public sealed class EditorPreferences
     /// <summary>Starts loading preferences, or uses memory only when the path is null.</summary>
     /// <param name="settingsPath">The preference file path.</param>
     public EditorPreferences(string? settingsPath = null)
+        : this(new AppStateStore(settingsPath))
     {
-        this.settingsPath = settingsPath;
-        Ready = settingsPath is null ? Task.CompletedTask : Task.Run(LoadAsync);
+    }
+
+    internal EditorPreferences(AppStateStore store)
+    {
+        this.store = store;
+        Ready = Task.Run(LoadAsync);
         pending = Ready;
     }
 
@@ -32,20 +35,6 @@ public sealed class EditorPreferences
 
     /// <summary>Gets whether the last attempted write failed.</summary>
     public bool StorageFailed { get { lock (gate) { return field; } } private set; }
-
-    /// <summary>Creates storage in the same per-user directory as recent files.</summary>
-    /// <returns>Persistent preferences, or memory-only preferences if the location is unavailable.</returns>
-    public static EditorPreferences ForCurrentUser()
-    {
-        try
-        {
-            return new(UserDataLocation.FilePath("editor-preferences.json"));
-        }
-        catch (Exception error) when (IsStorageError(error))
-        {
-            return new();
-        }
-    }
 
     /// <summary>Changes supplied preferences. Explicit changes take precedence over the initial read.</summary>
     /// <param name="wordWrap">The wrap preference, or null to preserve it.</param>
@@ -67,7 +56,7 @@ public sealed class EditorPreferences
 
             current = next;
             revision++;
-            if (settingsPath is not null && (pending.IsCompleted || ReferenceEquals(pending, Ready)))
+            if (pending.IsCompleted || ReferenceEquals(pending, Ready))
             {
                 pending = Task.Run(SavePendingAsync);
             }
@@ -80,36 +69,14 @@ public sealed class EditorPreferences
 
     private async Task LoadAsync()
     {
-        try
+        await store.Ready.ConfigureAwait(false);
+        EditorPresentation loaded = store.Presentation;
+        lock (gate)
         {
-            using FileStream stream = new(settingsPath!, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
-            byte[] bytes = new byte[4097];
-            int length = await stream.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false).ConfigureAwait(false);
-            if (length > 4096) { return; }
-            using JsonDocument document = JsonDocument.Parse(bytes.AsMemory(0, length));
-            JsonElement root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("version", out JsonElement version)
-                || !version.TryGetInt32(out int number) || number != 1) { return; }
-            bool wrap = ReadBool(root, "wordWrap", false);
-            bool numbers = ReadBool(root, "showLineNumbers", true);
-            double font = root.TryGetProperty("fontSize", out JsonElement size) && size.ValueKind == JsonValueKind.Number
-                && size.TryGetDouble(out double value) ? BoundFont(value) : EditorPresentation.DefaultFontSize;
-            lock (gate)
-            {
-                current = new(wrapChanged ? current.WordWrap : wrap, numbersChanged ? current.ShowLineNumbers : numbers,
-                    fontChanged ? current.FontSize : font);
-            }
+            current = new(wrapChanged ? current.WordWrap : loaded.WordWrap,
+                numbersChanged ? current.ShowLineNumbers : loaded.ShowLineNumbers,
+                fontChanged ? current.FontSize : loaded.FontSize);
         }
-        catch (Exception error) when (IsStorageError(error) || error is JsonException or InvalidOperationException)
-        {
-            // Invalid preferences leave defaults and explicit changes in effect.
-        }
-    }
-
-    private static bool ReadBool(JsonElement root, string key, bool fallback)
-    {
-        return root.TryGetProperty(key, out JsonElement value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? value.GetBoolean() : fallback;
     }
 
     private static double BoundFont(double value)
@@ -148,42 +115,7 @@ public sealed class EditorPreferences
 
     private async Task<bool> SaveAsync(EditorPresentation snapshot)
     {
-        string? temporary = null;
-        try
-        {
-            string directory = Path.GetDirectoryName(Path.GetFullPath(settingsPath!))!;
-            _ = Directory.CreateDirectory(directory);
-            temporary = Path.Combine(directory, $".preferences-{Guid.NewGuid():N}.tmp");
-            FileStreamOptions options = new() { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None, Options = FileOptions.Asynchronous };
-            if (!OperatingSystem.IsWindows()) { options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite; }
-            using (FileStream stream = new(temporary, options))
-            {
-                await JsonSerializer.SerializeAsync(stream, new
-                {
-                    version = 1,
-                    wordWrap = snapshot.WordWrap,
-                    showLineNumbers = snapshot.ShowLineNumbers,
-                    fontSize = snapshot.FontSize
-                }).ConfigureAwait(false);
-                await stream.FlushAsync().ConfigureAwait(false);
-            }
-
-            File.Move(temporary, settingsPath!, overwrite: true);
-            return true;
-        }
-        catch (Exception error) when (IsStorageError(error)) { return false; }
-        finally
-        {
-            if (temporary is not null)
-            {
-                try { File.Delete(temporary); }
-                catch (Exception error) when (IsStorageError(error)) { /* Cleanup is best effort. */ }
-            }
-        }
-    }
-
-    private static bool IsStorageError(Exception error)
-    {
-        return error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or System.Security.SecurityException;
+        await store.UpdateAsync(presentation: snapshot).ConfigureAwait(false);
+        return !store.StorageFailed;
     }
 }
