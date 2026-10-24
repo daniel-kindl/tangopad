@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import runpy
 import shutil
 import subprocess
 import tempfile
@@ -82,6 +83,7 @@ def main():
     output.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix="tangopad-package-") as temporary:
         temporary = Path(temporary)
+        tool = runpy.run_path(str(ROOT / "eng/native-vpk.py"))["prepare"](temporary, args.rid, force_rebuild=args.production)
         signing = []
         public_key = ROOT / "eng/release/update-public-key.pem"
         if args.production:
@@ -119,7 +121,6 @@ def main():
         run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", signature, challenge)
         run("openssl", "dgst", "-sha256", "-verify", public_key, "-signature", signature, challenge)
         publish = temporary / "publish"
-        run("dotnet", "tool", "restore")
         run("dotnet", "publish", "src/Editor.App/Editor.App.csproj", "--configuration", "Release",
             "--runtime", args.rid, "--self-contained", "true", "--disable-build-servers",
             "-p:PublishSingleFile=true", f"-p:Version={release_version}",
@@ -127,7 +128,7 @@ def main():
             f"-p:ReleaseLockDirectory={temporary}/locks", "--output", publish)
         check_payload(publish)
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
-        pack_args = ["dotnet", "tool", "run", "vpk", "--", "pack", "--packId", "TangopadDesktop",
+        pack_args = [*tool, "pack", "--packId", "TangopadDesktop",
                      "--packTitle", "Tangopad", "--packVersion", release_version, "--runtime", args.rid,
                      "--channel", args.rid, "--packDir", str(publish), "--mainExe", executable,
                      "--delta", "None", "--releaseNotes", str(ROOT / "eng/release/notes.md"),
@@ -136,6 +137,8 @@ def main():
             pack_args += ["--icon", str(ROOT / "eng/release/tangopad.svg")]
         run(*pack_args, *signing)
         sign_feed(output, args.rid, private_key, public_key)
+        if args.rid == "win-x64":
+            shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")
         shutil.copyfile(public_key, output / f"update-key.{args.rid}.pem")
         (output / f"package.{args.rid}.json").write_text(json.dumps({"version": release_version,
             "runtime": args.rid, "production": args.production, "source_commit": commit, "platform_signing": args.platform_signing}, indent=2) + "\n", encoding="utf-8")

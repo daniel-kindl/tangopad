@@ -27,6 +27,8 @@ The initial check is manual. Automatic checks remain deferred.
 Install the pinned .NET SDK, Python 3, and OpenSSL.
 Linux also requires `squashfs-tools`.
 The packaging script restores the repository's pinned `vpk` tool.
+Windows also requires Rustup and the MSVC toolchain. The script builds a pinned native helper with the recovery patch in `eng/velopack/`.
+The isolated packaging tool uses that helper. It does not modify the user's tool cache.
 Run on the target OS:
 
 ```sh
@@ -117,7 +119,9 @@ The command verifies production markers, versions, feed signatures, package size
 It rejects test output and a target that differs from current remote `main`.
 It creates a draft GitHub Release. It does not activate the release.
 The `Prepare draft release` workflow performs this sequence from `main`.
-Configure its `release` environment and `UPDATE_SIGNING_KEY` secret with the initialized private key before dispatch.
+The `release` environment now contains `UPDATE_SIGNING_KEY` for the committed public key.
+Its deployment policy permits only the `main` branch. The environment configuration was checked on 2026-10-24.
+Repository administrators can change this remote configuration.
 Do not put the private key in a repository variable, source file, issue, or log.
 The workflow exposes the secret only to the packaging step and removes the temporary key after packaging.
 Only the draft job has repository write permission.
@@ -146,8 +150,13 @@ The application refuses apply when another same-named process is detected.
 Startup and apply also share a mutex and a pending-update marker outside replaced content.
 New editors wait while the initiating process or native helper is active.
 A stale marker clears after those processes exit, which permits recovery after a crash.
+The marker records the target version. If the previous version restarts after a failed replacement, the editor displays a recovery message.
+Native apply runs silently. The restarted editor displays the failure instead of leaving a native error dialog open.
 Concurrent-start behavior still needs native Windows and macOS acceptance.
-Native replacement and failure recovery remain Velopack responsibilities.
+Native replacement uses Velopack. Windows packaging includes a source-pinned recovery patch.
+Upstream 1.2.161 deletes the backup after a failed replacement. The patch restores that backup before restarting the previous editor.
+If restoration fails, the helper preserves the backup. Three Rust filesystem tests check recovery and backup retention.
+`eng/velopack/source.json` pins the source archive, toolchain, and target. Each Windows package records the helper hash and patch hash.
 An application startup smoke test does not prove rollback or update safety.
 
 ## Required native evidence
@@ -165,13 +174,26 @@ Run both installed and portable storage modes where the format supports them.
 8. Check protected paths and package-managed environments. Require no application overwrite or silent elevation.
 9. Check concurrent instances and starts during apply. Require no lost unsaved edits.
 
-Windows and macOS package updates, optional platform signing, and native rollback remain unverified.
-The Linux engine test passed in installed and portable modes with byte-identical state and documents.
-The actual packaged Tangopad AppImage opened and closed normally under Xvfb.
-Linux production-format packaging also passed from an isolated clean source snapshot with the persistent update key and no platform certificate.
-Run `python eng/check-linux-update.py` to repeat the signed local-feed and native replacement checks.
-Evidence is in `artifacts/update-engine/`. This probe uses real application-state storage and the native updater.
-It does not drive the Updates panel against a published GitHub Release.
-See [ADR 0011](adr/0011-self-managed-desktop-updates.md) for ownership and alternatives.
+Run the native editor checks on each target host:
 
-On 2026-10-24, `dotnet msbuild eng/verify.proj` passed on Linux with zero build warnings or errors. Eight TRX reports contained 693 passing tests and one skipped Windows sharing test. Hosted Windows and macOS checks remain untested locally.
+```sh
+python eng/check-native-update.py --rid linux-x64
+```
+
+Use the other runtime names on their corresponding hosted runners.
+Windows and macOS installer checks require a fresh GitHub-hosted account.
+The probe refuses existing state and portable files. It uses the separate `TangopadUpdateProbe` package identity and a temporary feed key.
+The production public key and fixed GitHub source remain unchanged.
+`eng/Editor.UpdateProbe/` composes the actual editor, commands, dialogs, storage, and update adapter.
+It supplies a local HTTP transport through an internal constructor. Production packages do not include the probe.
+Both workflows run this check for all four runtimes and upload JSON reports, screenshots, and process logs.
+The draft workflow requires the native checks before it collects production artifacts.
+
+The probe checks signature rejection, partial downloads, checksum rejection, unsaved Cancel, no automatic startup apply,
+native rejection and recovery, Save before restart, the running version, and exact state and document preservation.
+On Windows it also blocks a staged file to force replacement failure after backup, then retries.
+Evidence is in `artifacts/native-update/<runtime>/`.
+These local feeds do not prove the published GitHub release path or downloaded-file OS trust prompts.
+Optional platform signing, notarization, protected installations, and concurrent native starts still require acceptance evidence.
+Issue #45 must remain open until these checks and production release validation pass.
+See [ADR 0011](adr/0011-self-managed-desktop-updates.md) for ownership and alternatives.

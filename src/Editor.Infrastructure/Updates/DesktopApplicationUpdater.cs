@@ -14,6 +14,8 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
     private readonly string? publicKey;
     private readonly string[] restartArguments;
     private readonly IVelopackLocator locator;
+    private readonly HttpClient? transport;
+    private readonly string packageId;
     private UpdateManager? manager;
     private UpdateInfo? pending;
     private bool downloaded;
@@ -21,8 +23,14 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
 
     /// <summary>Creates the updater for the current process and retains explicit data-mode switches.</summary>
     /// <param name="args">The application startup arguments.</param>
-    public DesktopApplicationUpdater(string[] args)
+    public DesktopApplicationUpdater(string[] args) : this(args, null, "TangopadDesktop")
     {
+    }
+
+    internal DesktopApplicationUpdater(string[] args, HttpClient? transport, string packageId)
+    {
+        this.transport = transport;
+        this.packageId = packageId;
         locator = VelopackLocator.Current;
         using Stream? key = typeof(DesktopApplicationUpdater).Assembly.GetManifestResourceStream("Tangopad.UpdatePublicKey");
         if (key is not null)
@@ -34,16 +42,19 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
     }
 
     /// <summary>Waits for an active native update before application state or UI initialization.</summary>
-    public static void WaitForPendingUpdate()
+    public static string? WaitForPendingUpdate()
     {
-        if (GetDistributionDirectory() is { } root) { UpdateHandoff.WaitForCompletion(root, TimeSpan.FromSeconds(30)); }
+        string? expected = GetDistributionDirectory() is { } root ? UpdateHandoff.WaitForCompletion(root, TimeSpan.FromSeconds(60)) : null;
+        return expected is not null && expected != VelopackLocator.Current.CurrentlyInstalledVersion?.ToString()
+            ? "The update did not finish. Tangopad started the previous version. Your application data is preserved. Retry the update."
+            : null;
     }
 
     /// <summary>Gets the stable distribution root outside replaceable application content.</summary>
     public static string? GetDistributionDirectory()
     {
         IVelopackLocator current = VelopackLocator.Current;
-        return current.AppId != "TangopadDesktop" || current.CurrentlyInstalledVersion is null
+        return current.AppId is null || current.CurrentlyInstalledVersion is null
             ? null
             : OperatingSystem.IsWindows() ? current.RootAppDir
             : OperatingSystem.IsLinux() && current is LinuxVelopackLocator linux && linux.AppImagePath is { } appImage ? Path.GetDirectoryName(appImage)
@@ -57,7 +68,7 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
     private static string Channel => $"{(OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "osx" : "linux")}-{(RuntimeInformation.ProcessArchitecture == Architecture.X64 ? "x64" : "arm64")}";
 
     /// <inheritdoc />
-    public bool IsSupported => publicKey is not null && locator.AppId == "TangopadDesktop" && locator.CurrentlyInstalledVersion is not null
+    public bool IsSupported => publicKey is not null && locator.AppId == packageId && locator.CurrentlyInstalledVersion is not null
         && locator.Channel == Channel && RuntimeInformation.ProcessArchitecture is Architecture.X64 or Architecture.Arm64
         && Environment.GetEnvironmentVariable("FLATPAK_ID") is null && Environment.GetEnvironmentVariable("SNAP") is null;
 
@@ -70,7 +81,7 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
             pending = null;
             downloaded = false;
             if (!IsSupported || publicKey is not { } key) { throw new InvalidOperationException("This distribution does not support in-app updates."); }
-            manager = new UpdateManager(new SignedReleaseSource(key, Channel, cancellationToken),
+            manager = new UpdateManager(new SignedReleaseSource(key, Channel, cancellationToken, transport, packageId),
                 new UpdateOptions { ExplicitChannel = Channel, AllowVersionDowngrade = false, MaximumDeltasBeforeFallback = -1 }, locator);
             UpdateInfo? available = await manager.CheckForUpdatesAsync().ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
@@ -119,12 +130,9 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
             string root = GetDistributionDirectory() ?? throw new IOException("The distribution location is unavailable.");
             string probe = Path.Combine(root, $".tangopad-update-{Guid.NewGuid():N}");
             using (FileStream permission = new(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
-            if (OperatingSystem.IsLinux() && locator is LinuxVelopackLocator linux)
-            {
-                using FileStream permission = new(linux.AppImagePath ?? throw new IOException("The AppImage location is unavailable."), FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
-            }
-            using UpdateHandoff handoff = UpdateHandoff.Begin(root);
-            manager.ApplyUpdatesAndRestart(pending.TargetFullRelease, restartArguments);
+            using UpdateHandoff handoff = UpdateHandoff.Begin(root, pending.TargetFullRelease.Version.ToString());
+            manager.WaitExitThenApplyUpdates(pending.TargetFullRelease, silent: true, restart: true, restartArgs: restartArguments);
+            Environment.Exit(0);
         }
         catch (Exception error) when (error is AcquireLockFailedException or ChecksumFailedException or NotInstalledException or System.ComponentModel.Win32Exception)
         {

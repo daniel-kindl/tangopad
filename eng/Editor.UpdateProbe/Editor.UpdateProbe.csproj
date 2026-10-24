@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Tangopad.UpdateProbe</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Editor.App/Editor.App.csproj" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+</Project>

@@ -103,12 +103,32 @@ public sealed class UpdateViewModelTests
         Assert.False(model.IsBusy);
     }
 
+    /// <summary>Invalid feed or package data leaves the editor available for retry.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InvalidUpdateDataRemainsRecoverable(bool duringDownload)
+    {
+        Updater updater = new();
+        if (duringDownload) { updater.DownloadError = new InvalidDataException("invalid package"); }
+        else { updater.Error = new InvalidDataException("invalid metadata"); }
+        UpdateViewModel model = new(updater, Labels, _ => Task.FromResult(false));
+        await model.CheckCommand.ExecuteAsync(null).ConfigureAwait(true);
+        if (duringDownload) { await model.InstallCommand.ExecuteAsync(null).ConfigureAwait(true); }
+        Assert.Equal("failed", model.Status);
+        Assert.Equal(duringDownload ? "invalid package" : "invalid metadata", model.Error);
+        Assert.True(model.CheckCommand.CanExecute(null));
+        Assert.False(model.IsBusy);
+        Assert.False(updater.Applied);
+    }
+
     private sealed class Updater : IApplicationUpdater
     {
         public string InstalledVersion => "0.1.0";
         public bool IsSupported => true;
         internal UpdateRelease? Release { get; set; } = new("0.2.0", "notes", 123);
         internal Exception? Error { get; set; }
+        internal Exception? DownloadError { get; set; }
         internal bool WaitForCancellation { get; init; }
         internal bool Downloaded { get; private set; }
         internal bool Applied { get; private set; }
@@ -118,6 +138,7 @@ public sealed class UpdateViewModelTests
         }
         public async Task DownloadAsync(IProgress<int> progress, CancellationToken cancellationToken)
         {
+            if (DownloadError is { } error) { throw error; }
             progress.Report(50);
             if (WaitForCancellation) { await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(true); }
             Downloaded = true;
