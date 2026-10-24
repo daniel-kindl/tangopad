@@ -25,9 +25,11 @@ Do not overwrite Flatpak, Snap, or OS package-manager installations.
 Do not add an elevation path. A protected distribution must fail before native apply starts.
 
 Application owns `IApplicationUpdater` and `UpdateRelease` in `Updates/`.
-Infrastructure owns Velopack, HTTP, signatures, staging, and package paths in `Updates/`.
+Infrastructure owns update operations through Velopack, HTTP, signatures, staging, and package paths in `Updates/`.
+App calls `VelopackApp.Build().SetAutoApplyOnStartup(false).Run()` directly at the start of `Program.Main`.
+Windows packaging inspects this call in the entry assembly. The composition root therefore references the same pinned Velopack SDK.
 App owns the update ViewModel, shared text resources, and the update panel.
-`eng/architecture.json` permits the one new Infrastructure package.
+`eng/architecture.json` permits Velopack in App and Infrastructure.
 Core retains its existing rules and dependencies.
 
 Authenticate exact feed bytes with an embedded ECDSA P-256 public key and SHA-256.

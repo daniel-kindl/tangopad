@@ -33,10 +33,9 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
         restartArguments = [.. args.Where(arg => arg is "--portable" or "--installed")];
     }
 
-    /// <summary>Handles package lifecycle arguments before application state or UI initialization. Pending updates never apply automatically.</summary>
-    public static void Initialize()
+    /// <summary>Waits for an active native update before application state or UI initialization.</summary>
+    public static void WaitForPendingUpdate()
     {
-        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         if (GetDistributionDirectory() is { } root) { UpdateHandoff.WaitForCompletion(root, TimeSpan.FromSeconds(30)); }
     }
 

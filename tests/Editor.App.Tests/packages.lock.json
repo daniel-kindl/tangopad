@@ -322,7 +322,8 @@
           "Editor.Formats.Markdown": "[0.1.0, )",
           "Editor.Formats.Textile": "[0.1.0, )",
           "Editor.Infrastructure": "[0.1.0, )",
-          "Editor.Preview": "[0.1.0, )"
+          "Editor.Preview": "[0.1.0, )",
+          "Velopack": "[1.2.161, )"
         }
       },
       "editor.application": {

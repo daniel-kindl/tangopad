@@ -1,6 +1,7 @@
 using Avalonia;
 using Editor.Infrastructure;
 using Editor.Infrastructure.Updates;
+using Velopack;
 
 namespace Editor.App;
 
@@ -9,7 +10,8 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        DesktopApplicationUpdater.Initialize();
+        VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
+        DesktopApplicationUpdater.WaitForPendingUpdate();
         string path = UserDataLocation.StatePath(args, DesktopApplicationUpdater.GetDistributionDirectory());
         DesktopApplicationUpdater updater = new(args);
         AppStateStore state = new(path, Path.GetDirectoryName(path));

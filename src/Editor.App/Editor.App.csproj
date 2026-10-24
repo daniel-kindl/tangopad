@@ -20,6 +20,7 @@
     <ProjectReference Include="../Editor.Formats.Markdown/Editor.Formats.Markdown.csproj" />
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
     <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
+    <PackageReference Include="Velopack" />
     <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="CommunityToolkit.Mvvm" />

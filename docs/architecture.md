@@ -70,6 +70,7 @@ See [editor preferences](editor-preferences.md) for startup precedence, storage,
 Application also owns framework-neutral update contracts in `Updates/`.
 Application and Core reference no NuGet packages. Production code never references tests.
 Infrastructure references Application and Velopack. The update adapter owns native package operations.
+App references Velopack for the direct startup hook required by Windows packaging.
 See [ADR 0011](adr/0011-self-managed-desktop-updates.md) for the proposed release and trust policy.
 Editor.Formats.Markdown references Markdig and Editor.Preview.
 Editor.Formats.Textile references Editor.Preview only.
