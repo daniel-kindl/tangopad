@@ -11,7 +11,8 @@
       "Avalonia.Desktop",
       "Avalonia.Themes.Fluent",
       "Avalonia.AvaloniaEdit",
-      "CommunityToolkit.Mvvm"
+      "CommunityToolkit.Mvvm",
+      "Velopack"
     ]
   },
   "src/Editor.Application/Editor.Application.csproj": {
@@ -28,7 +29,9 @@
     "projects": [
       "src/Editor.Application/Editor.Application.csproj"
     ],
-    "packages": []
+    "packages": [
+      "Velopack"
+    ]
   },
   "tests/Editor.Application.Tests/Editor.Application.Tests.csproj": {
     "projects": [

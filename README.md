@@ -142,3 +142,5 @@ agent skills. [Planned issues](docs/backlog.md) define M0 and M1 work.
 [Native startup](docs/native-startup.md) records the native startup check and its platform limits.
 
 Tangopad uses the [MIT license](LICENSE).
+
+See [release distribution and updates](docs/release-distribution.md) for candidate packages, update trust, storage preservation, and production activation requirements.

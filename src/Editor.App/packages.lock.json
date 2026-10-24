@@ -40,6 +40,12 @@
         "resolved": "8.4.2",
         "contentHash": "WadCzGEc2U+3e20avRLng4qNtt4zoOGWrdUISqJWrHe3/FSnrYjuM5Sb4yQb09LhkBXrrI4Zt3dLKgRMbItsrg=="
       },
+      "Velopack": {
+        "type": "Direct",
+        "requested": "[1.2.161, )",
+        "resolved": "1.2.161",
+        "contentHash": "OpHNacIumnkhaaX3ZlQ/TCR4YPOJvud2/PAOoWb6o+mIrLwIVA275I5wAgt4q/1O2VrJeDwR1qFQyqzG4lUArg=="
+      },
       "Avalonia": {
         "type": "Transitive",
         "resolved": "12.1.4",
@@ -228,7 +234,8 @@
       "editor.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Editor.Application": "[0.1.0, )"
+          "Editor.Application": "[0.1.0, )",
+          "Velopack": "[1.2.161, )"
         }
       },
       "editor.preview": {

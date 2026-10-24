@@ -48,10 +48,10 @@
       <Button x:Name="FindButton" Content="{StaticResource Text.Search.Find}" />
       <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
       <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
-                IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+                IsEnabled="{Binding CanEdit}" IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
       <Button x:Name="PreviewToggle" Content="{StaticResource Text.Preview.Show}" IsVisible="False" />
       <CheckBox x:Name="LineNumbersToggle" Content="{StaticResource Text.Editor.LineNumbers}"
-                IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+                IsEnabled="{Binding CanEdit}" IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
     </WrapPanel>
     <WrapPanel x:Name="ExternalChangeBanner" DockPanel.Dock="Top" Orientation="Horizontal"
                 IsVisible="{Binding HasExternalChange}" ItemSpacing="{StaticResource Spacing.Actions}"
@@ -108,27 +108,46 @@
     </StackPanel>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
             Padding="{StaticResource Inset.Toolbar}">
-      <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Actions}">
-        <TextBlock x:Name="CaretStatus" Classes="editor-status">
-          <TextBlock.Text>
-            <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
-              <Binding Path="CaretLine" />
-              <Binding Path="CaretColumn" />
-            </MultiBinding>
-          </TextBlock.Text>
-        </TextBlock>
-        <TextBlock x:Name="CharacterStatus" Classes="editor-status"
-                   Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
-        <TextBlock x:Name="WordStatus" Classes="editor-status"
-                   Text="{Binding WordCount, StringFormat={StaticResource Text.Status.WordCountFormat}}" />
-        <TextBlock x:Name="EncodingStatus" Classes="editor-status"
-                   Text="{StaticResource Text.Status.Encoding}"
-                   AutomationProperties.Name="{StaticResource Text.Status.EncodingName}" />
-        <TextBlock x:Name="LineEndingStatus" Classes="editor-status"
-                   Text="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingFormat}}"
-                   AutomationProperties.Name="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingNameFormat}}"
-                   AutomationProperties.LiveSetting="Polite" />
-      </WrapPanel>
+      <DockPanel>
+        <Button x:Name="UpdatesButton" DockPanel.Dock="Right" VerticalAlignment="Center" Content="{StaticResource Text.Update.Title}" IsVisible="{Binding HasUpdater}">
+          <Button.Flyout>
+            <Flyout>
+              <StackPanel DataContext="{Binding Updates}" x:DataType="vm:UpdateViewModel"
+                          Spacing="{StaticResource Spacing.Actions}" MaxWidth="{StaticResource Size.Dialog.Width}">
+                <TextBlock Text="{Binding InstalledVersion}" />
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Release.Notes}" TextWrapping="Wrap" />
+                <ProgressBar Value="{Binding Progress}" IsVisible="{Binding IsBusy}" />
+                <Button Content="{StaticResource Text.Update.Check}" Command="{Binding CheckCommand}" />
+                <Button Content="{StaticResource Text.Update.Install}" Command="{Binding InstallCommand}" />
+                <Button Content="{StaticResource Text.Command.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Actions}">
+          <TextBlock x:Name="CaretStatus" Classes="editor-status">
+            <TextBlock.Text>
+              <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
+                <Binding Path="CaretLine" />
+                <Binding Path="CaretColumn" />
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+          <TextBlock x:Name="CharacterStatus" Classes="editor-status"
+                     Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
+          <TextBlock x:Name="WordStatus" Classes="editor-status"
+                     Text="{Binding WordCount, StringFormat={StaticResource Text.Status.WordCountFormat}}" />
+          <TextBlock x:Name="EncodingStatus" Classes="editor-status"
+                     Text="{StaticResource Text.Status.Encoding}"
+                     AutomationProperties.Name="{StaticResource Text.Status.EncodingName}" />
+          <TextBlock x:Name="LineEndingStatus" Classes="editor-status"
+                     Text="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingFormat}}"
+                     AutomationProperties.Name="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingNameFormat}}"
+                     AutomationProperties.LiveSetting="Polite" />
+        </WrapPanel>
+      </DockPanel>
     </Border>
     <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
       <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"

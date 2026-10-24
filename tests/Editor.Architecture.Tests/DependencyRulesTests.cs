@@ -170,6 +170,18 @@ public sealed class DependencyRulesTests
         return [.. array.EnumerateArray().Select(item => item.GetProperty("Identity").GetString()!).Order(StringComparer.Ordinal)];
     }
 
+    /// <summary>Runtime publishing gives each project its own temporary NuGet lock file.</summary>
+    [Theory]
+    [InlineData("Editor.App")]
+    [InlineData("Editor.Core")]
+    public async Task PackageLockPathsAreIsolatedByProject(string project)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "Tangopad package locks");
+        string output = await RunDotnetAsync(FindRepositoryRoot(),
+            ["msbuild", $"src/{project}/{project}.csproj", "-nologo", "-getProperty:NuGetLockFilePath", $"-property:ReleaseLockDirectory={directory}"]).ConfigureAwait(true);
+        Assert.Equal(Path.Combine(directory, $"{project}.packages.lock.json"), Path.GetFullPath(output.Trim()));
+    }
+
     private static async Task BuildProjectAsync(string root, string project, string configuration)
     {
         _ = await RunDotnetAsync(

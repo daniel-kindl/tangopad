@@ -37,12 +37,12 @@ flowchart LR
 | Module | Ownership | Current implementation |
 | --- | --- | --- |
 | Editor.App | Presentation and composition | Compiled AXAML, EditorViewModel, semantic resources, desktop dialogs, and composition |
-| Editor.Application | Use cases and contracts needed by those use cases | DocumentSession load and save through ITextDocumentStore, with destination-derived format and an optional file monitor contract |
+| Editor.Application | Use cases and their contracts | DocumentSession load and save, optional file monitoring, and authenticated-update contracts |
 | Editor.Core | Document rules and domain types | TextDocument identity, exact text, clean baseline, and document format identification |
 | Editor.Preview | Inert preview data | Text, table, and run records without actions or resource destinations |
 | Editor.Formats.Markdown | Markdown parsing | Bounded Markdig adapter without UI or resource loading |
 | Editor.Formats.Textile | Textile parsing | Bounded baseline parser without UI, packages, or resource loading |
-| Editor.Infrastructure | Local persistence and monitoring | Strict UTF-8 document storage, bounded recent-path storage, and optional file events with revision checks |
+| Editor.Infrastructure | External-system adapters | Document and state storage, file monitoring, and authenticated native package updates |
 | Editor.Formats.Markdown.Tests | Parser behavior | Baseline syntax, hostile text, and resource limits without Avalonia |
 | Editor.Formats.Textile.Tests | Parser behavior | Textile fixtures, hostile text, and resource limits without Avalonia |
 | Editor.App.Tests | Presentation and control behavior | Commands, cancellation, pending-save edits, and headless AvaloniaEdit integration |
@@ -67,8 +67,11 @@ The ViewModel exposes history commands and snapshots. See [recent files](recent-
 for storage format, placement, concurrency, and privacy decisions.
 EditorPreferences in Infrastructure stores editor presentation preferences separately.
 See [editor preferences](editor-preferences.md) for startup precedence, storage, and privacy.
+Application also owns framework-neutral update contracts in `Updates/`.
 Application and Core reference no NuGet packages. Production code never references tests.
-Infrastructure references Application only and adds no packages.
+Infrastructure references Application and Velopack. The update adapter owns native package operations.
+App references Velopack for the direct startup hook required by Windows packaging.
+See [ADR 0011](adr/0011-self-managed-desktop-updates.md) for the proposed release and trust policy.
 Editor.Formats.Markdown references Markdig and Editor.Preview.
 Editor.Formats.Textile references Editor.Preview only.
 Neither format parser references the other. Editor.Preview has no project or package dependencies.

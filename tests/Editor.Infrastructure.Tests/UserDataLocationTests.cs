@@ -46,6 +46,15 @@ public sealed class UserDataLocationTests
         _ = Assert.Throws<IOException>(() => UserDataLocation.ResolveState("windows", root, "", null, first, false, []));
     }
 
+    /// <summary>A package root keeps portable data outside replaceable content.</summary>
+    [Fact]
+    public void PackageRootPreservesExplicitModeSelection()
+    {
+        string distribution = Path.Combine(Path.GetTempPath(), "TangopadDesktop");
+        Assert.Equal(Path.Combine(distribution, "data", "state.bin"), UserDataLocation.StatePath(["--portable"], distribution));
+        Assert.Equal(UserDataLocation.StatePath(["--installed"]), UserDataLocation.StatePath(["--installed"], distribution));
+    }
+
     /// <summary>Executable and bundle paths place portable state beside the distribution.</summary>
     [Fact]
     public void DistributionLocationIgnoresWorkingDirectory()

@@ -5,11 +5,12 @@ public static class UserDataLocation
 {
     /// <summary>Resolves state for this process. The --installed switch overrides a portable marker.</summary>
     /// <param name="args">Application arguments. Conflicting mode switches are rejected.</param>
+    /// <param name="distributionDirectory">The package distribution root, outside replaceable application content.</param>
     /// <returns>The absolute binary state path.</returns>
-    public static string StatePath(string[] args)
+    public static string StatePath(string[] args, string? distributionDirectory = null)
     {
         string executable = Environment.ProcessPath ?? throw new IOException("The executable location is unavailable.");
-        string distribution = DistributionDirectory(executable);
+        string distribution = distributionDirectory ?? DistributionDirectory(executable);
         string platform = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
         return ResolveState(platform, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify),

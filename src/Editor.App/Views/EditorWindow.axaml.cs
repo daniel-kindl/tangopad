@@ -11,6 +11,7 @@ using Editor.App.Services;
 using Editor.App.ViewModels;
 using Editor.App.Views.Dialogs;
 using Editor.Application;
+using Editor.Application.Updates;
 using Editor.Core;
 using Editor.Infrastructure;
 using Editor.Preview;
@@ -24,10 +25,11 @@ internal sealed partial class EditorWindow : Window
     private bool closingApproved;
     private bool goToLineOpen;
 
-    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<DocumentFormat, string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null, IDocumentFileMonitor? fileMonitor = null)
+    internal EditorWindow(ITextDocumentStore store, IEditorDialogs? dialogs = null, Func<DocumentFormat, string, PreviewDocument>? previewParser = null, RecentFileHistory? recentFiles = null, EditorPreferences? editorPreferences = null, IDocumentFileMonitor? fileMonitor = null, IApplicationUpdater? updater = null)
     {
         InitializeComponent();
         ViewModel = new EditorViewModel(store, dialogs ?? new DesktopEditorDialogs(this), PresentationResources.EditorLabels, recentFiles, editorPreferences);
+        if (updater is not null) { ViewModel.Updates = new UpdateViewModel(updater, PresentationResources.UpdateLabels, ViewModel.RestartForUpdateAsync); }
         DataContext = ViewModel;
         RecentFilesItems.AddHandler(Button.ClickEvent, (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -214,7 +216,7 @@ internal sealed partial class EditorWindow : Window
 
     private void OnFontSizeKeyDown(object? sender, KeyEventArgs args)
     {
-        if (!Editor.IsKeyboardFocusWithin)
+        if (!ViewModel.CanEdit || !Editor.IsKeyboardFocusWithin)
         {
             return;
         }
@@ -278,6 +280,7 @@ internal sealed partial class EditorWindow : Window
         }
 
         args.Cancel = true;
+        ViewModel.Updates?.CancelCommand.Execute(null);
         if (await ViewModel.CanCloseAsync().ConfigureAwait(true))
         {
             closingApproved = true;

@@ -23,6 +23,11 @@ internal static class PresentationResources
             : throw new InvalidOperationException($"The text resource is missing: {key}");
     }
 
+    internal static UpdateLabels UpdateLabels => new(
+        Text("Text.Update.Ready"), Text("Text.Update.Unsupported"), Text("Text.Update.Checking"),
+        Text("Text.Update.Available"), Text("Text.Update.Current"), Text("Text.Update.Downloading"),
+        Text("Text.Update.Applying"), Text("Text.Update.Cancelled"), Text("Text.Update.Failed"));
+
     internal static EditorLabels EditorLabels => new(
         Text("Text.Document.Untitled"), Text("Text.Window.TitleFormat"), Text("Text.Document.DirtyMarker"));
 }

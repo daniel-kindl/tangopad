@@ -564,7 +564,11 @@ public sealed class EditorBindingTests
             Assert.Same(window.ViewModel.DismissExternalChangeCommand, window.FindControl<Button>("DismissExternalChangeButton")!.Command);
             Border status = Assert.IsType<Border>(layout.Children[3]);
             Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
-            WrapPanel statusItems = Assert.IsType<WrapPanel>(status.Child);
+            DockPanel statusLayout = Assert.IsType<DockPanel>(status.Child);
+            Button updates = Assert.IsType<Button>(statusLayout.Children[0]);
+            Assert.Equal(Dock.Right, DockPanel.GetDock(updates));
+            Assert.Equal("Updates", updates.Content);
+            WrapPanel statusItems = Assert.IsType<WrapPanel>(statusLayout.Children[1]);
             Assert.Equal(Orientation.Horizontal, statusItems.Orientation);
             Assert.Equal([window.CaretStatus, window.CharacterStatus, window.WordStatus, window.EncodingStatus, window.LineEndingStatus], statusItems.Children);
             Grid documentLayout = Assert.IsType<Grid>(layout.Children[4]);
