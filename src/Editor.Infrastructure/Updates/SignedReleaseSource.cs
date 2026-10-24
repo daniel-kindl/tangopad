@@ -6,7 +6,7 @@ using Velopack.Sources;
 
 namespace Editor.Infrastructure.Updates;
 
-internal sealed class SignedReleaseSource(string publicKey, string releaseChannel, CancellationToken checkToken, HttpClient? transport = null) : IUpdateSource
+internal sealed class SignedReleaseSource(string publicKey, string releaseChannel, CancellationToken checkToken, HttpClient? transport = null, string expectedPackageId = "TangopadDesktop") : IUpdateSource
 {
     private const string Repository = "https://github.com/daniel-kindl/tangopad/releases/";
     private const int MaximumFeedBytes = 65536;
@@ -17,10 +17,10 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
         string name = $"releases.{releaseChannel}.json";
         byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, checkToken).ConfigureAwait(false);
         byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, checkToken).ConfigureAwait(false);
-        return VerifyFeed(bytes, signature, publicKey, releaseChannel);
+        return VerifyFeed(bytes, signature, publicKey, releaseChannel, expectedPackageId);
     }
 
-    internal static VelopackAssetFeed VerifyFeed(byte[] bytes, byte[] signature, string publicKey, string channel)
+    internal static VelopackAssetFeed VerifyFeed(byte[] bytes, byte[] signature, string publicKey, string channel, string expectedPackageId = "TangopadDesktop")
     {
         if (bytes.Length > MaximumFeedBytes || signature.Length > 256) { throw new InvalidDataException("The update metadata exceeds its size limit."); }
         using ECDsa key = ECDsa.Create();
@@ -32,9 +32,9 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
         VelopackAssetFeed feed = VelopackAssetFeed.FromJson(System.Text.Encoding.UTF8.GetString(bytes));
         if (feed is null || feed.Assets is null || feed.Assets.Length != 1) { throw new InvalidDataException("The update feed must contain one full stable release."); }
         VelopackAsset? asset = feed.Assets[0];
-        return asset is null || asset.PackageId != "TangopadDesktop" || asset.Type != VelopackAssetType.Full || asset.Version is null || asset.Version.IsPrerelease || asset.Version.HasMetadata
+        return asset is null || asset.PackageId != expectedPackageId || asset.Type != VelopackAssetType.Full || asset.Version is null || asset.Version.IsPrerelease || asset.Version.HasMetadata
             || asset.Size is <= 0 or > 2147483648 || asset.SHA256 is null || asset.SHA256.Length != 64 || !asset.SHA256.All(char.IsAsciiHexDigit)
-            || asset.FileName != $"TangopadDesktop-{asset.Version}-{channel}-full.nupkg" || asset.NotesMarkdown?.Length > 16384
+            || asset.FileName != $"{expectedPackageId}-{asset.Version}-{channel}-full.nupkg" || asset.NotesMarkdown?.Length > 16384
             ? throw new InvalidDataException("The update metadata does not match the stable package policy.")
             : feed;
     }
