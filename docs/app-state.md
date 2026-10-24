@@ -116,7 +116,10 @@ Installation and application removal must preserve per-user state by default.
 Deleting a portable distribution must be a separate choice from deleting its
 `data/`. Mode changes do not migrate state automatically.
 
-Updater #45 must replace application files only. It must preserve portable
+Updater #45 must replace application files only.
+The candidate implementation uses the package distribution root for portable state.
+Windows packages keep this root outside `current/`. Linux AppImages use their external directory.
+See [release distribution](release-distribution.md) for activation limits and required package evidence. It must preserve portable
 `data/` and `tangopad.portable`, as well as installed-mode user data.
 An update archive must exclude `state.bin`, legacy user JSON, and user `data/`.
 For macOS, replace the application bundle while preserving its sibling data directory.
@@ -125,7 +128,7 @@ Never replace the enclosing portable distribution directory wholesale.
 Use self-contained single-file publishing where supported by the target runtime.
 Keep native libraries and required license notices in the distribution as needed.
 Use an application bundle on macOS. These storage rules apply to both ordinary
-build output and published distributions. This issue does not implement updater #45.
+build output and published distributions. The updater must preserve the same storage rules.
 
 ## Verification
 

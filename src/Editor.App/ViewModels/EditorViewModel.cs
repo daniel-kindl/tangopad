@@ -18,6 +18,9 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     private const double MaximumFontSize = EditorPresentation.MaximumFontSize;
     private const double FontSizeStep = 1;
 
+    public UpdateViewModel? Updates { get; internal set; }
+    public bool HasUpdater => Updates is not null;
+
     private CancellationTokenSource? operation;
     private readonly RecentFileHistory history = recentFiles ?? new();
 
@@ -314,6 +317,20 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         return RunAsync(ConfirmReplacementAsync, allowEditing: false);
     }
 
+    internal Task<bool> RestartForUpdateAsync(Func<Task> apply)
+    {
+        return RunAsync(async token =>
+        {
+            if (!await ConfirmReplacementAsync(token).ConfigureAwait(true)) { return false; }
+            CanEdit = false;
+            await Task.WhenAll(history.FlushAsync(), preferences.FlushAsync()).ConfigureAwait(true);
+            if (history.StorageFailed || preferences.StorageFailed) { throw new IOException("Application state could not be saved. Retry the update after storage is available."); }
+            token.ThrowIfCancellationRequested();
+            await apply().ConfigureAwait(true);
+            return true;
+        }, allowEditing: false, reportErrors: false);
+    }
+
     private async Task<bool> ConfirmReplacementAsync(CancellationToken token)
     {
         if (!Session.Document.IsDirty)
@@ -382,7 +399,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         return true;
     }
 
-    private async Task<bool> RunAsync(Func<CancellationToken, Task<bool>> action, bool allowEditing)
+    private async Task<bool> RunAsync(Func<CancellationToken, Task<bool>> action, bool allowEditing, bool reportErrors = true)
     {
         if (IsBusy)
         {
@@ -401,7 +418,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         {
             return false;
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or DecoderFallbackException or EncoderFallbackException or NotSupportedException or ArgumentException or AggregateException)
+        catch (Exception error) when (reportErrors && error is IOException or UnauthorizedAccessException or DecoderFallbackException or EncoderFallbackException or NotSupportedException or ArgumentException or AggregateException)
         {
             await dialogs.ShowErrorAsync(error.Message).ConfigureAwait(true);
             return false;

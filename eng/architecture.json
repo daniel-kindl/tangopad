@@ -28,7 +28,9 @@
     "projects": [
       "src/Editor.Application/Editor.Application.csproj"
     ],
-    "packages": []
+    "packages": [
+      "Velopack"
+    ]
   },
   "tests/Editor.Application.Tests/Editor.Application.Tests.csproj": {
     "projects": [

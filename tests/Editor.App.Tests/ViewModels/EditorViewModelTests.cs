@@ -568,6 +568,52 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.True(viewModel.IsDirty);
     }
 
+    /// <summary>Cancellation keeps dirty text and prevents update application.</summary>
+    [Fact]
+    public async Task UpdateRestartHonorsUnsavedCancellation()
+    {
+        EditorViewModel editor = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1}", " *")) { Text = "keep this edit" };
+        bool applied = false;
+        Assert.False(await editor.RestartForUpdateAsync(() => { applied = true; return Task.CompletedTask; }).ConfigureAwait(true));
+        Assert.False(applied);
+        Assert.Equal("keep this edit", editor.Text);
+        Assert.True(editor.IsDirty);
+        Assert.True(editor.CanEdit);
+    }
+
+    /// <summary>Apply failures reach the update panel instead of appearing as a cancelled document operation.</summary>
+    [Fact]
+    public async Task UpdateApplyFailureReachesItsCaller()
+    {
+        EditorViewModel editor = new(new Store(), new Dialogs(), new EditorLabels("Untitled", "{0}{1}", " *"));
+        IOException error = await Assert.ThrowsAsync<IOException>(() => editor.RestartForUpdateAsync(() => Task.FromException(new IOException("apply failed")))).ConfigureAwait(true);
+        Assert.Equal("apply failed", error.Message);
+        Assert.True(editor.CanEdit);
+        Assert.False(editor.IsBusy);
+    }
+
+    /// <summary>The update callback runs after a confirmed save and with document editing disabled.</summary>
+    [Fact]
+    public async Task UpdateRestartSavesBeforeApplying()
+    {
+        Store store = new();
+        store.PendingSave.SetResult();
+        EditorViewModel editor = new(store, new Dialogs { Decision = UnsavedDecision.Save, SavePath = "/saved.txt" },
+            new EditorLabels("Untitled", "{0}{1}", " *"))
+        { Text = "save this edit" };
+        bool applied = false;
+        Assert.True(await editor.RestartForUpdateAsync(() =>
+        {
+            Assert.Equal("save this edit", store.Snapshot);
+            Assert.False(editor.IsDirty);
+            Assert.False(editor.CanEdit);
+            Assert.False(editor.NewCommand.CanExecute(null));
+            applied = true;
+            return Task.CompletedTask;
+        }).ConfigureAwait(true));
+        Assert.True(applied);
+    }
+
     private sealed class Store : ITextDocumentStore
     {
         internal TaskCompletionSource PendingSave { get; } = new();

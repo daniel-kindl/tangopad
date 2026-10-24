@@ -76,4 +76,16 @@
   <x:String x:Key="Text.Command.Overwrite">Overwrite anyway</x:String>
   <x:String x:Key="Text.ExternalChange.Message">This file changed on disk.</x:String>
   <x:String x:Key="Text.ExternalChange.Dismiss">Dismiss</x:String>
+  <x:String x:Key="Text.Update.Title">Updates</x:String>
+  <x:String x:Key="Text.Update.Check">Check for updates</x:String>
+  <x:String x:Key="Text.Update.Install">Update and restart</x:String>
+  <x:String x:Key="Text.Update.Ready">Check for a newer stable version.</x:String>
+  <x:String x:Key="Text.Update.Unsupported">In-app updates are unavailable for this distribution.</x:String>
+  <x:String x:Key="Text.Update.Checking">Checking for updates...</x:String>
+  <x:String x:Key="Text.Update.Available">Version {0} is available. Download: {1:N0} bytes.</x:String>
+  <x:String x:Key="Text.Update.Current">You are up to date.</x:String>
+  <x:String x:Key="Text.Update.Downloading">Downloading and verifying the update...</x:String>
+  <x:String x:Key="Text.Update.Applying">Applying the update and restarting...</x:String>
+  <x:String x:Key="Text.Update.Cancelled">Update cancelled. You can keep editing.</x:String>
+  <x:String x:Key="Text.Update.Failed">The update failed. You can retry.</x:String>
 </ResourceDictionary>
