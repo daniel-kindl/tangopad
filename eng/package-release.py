@@ -140,8 +140,13 @@ def main():
         if args.rid == "win-x64":
             shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")
         shutil.copyfile(public_key, output / f"update-key.{args.rid}.pem")
-        (output / f"package.{args.rid}.json").write_text(json.dumps({"version": release_version,
-            "runtime": args.rid, "production": args.production, "source_commit": commit, "platform_signing": args.platform_signing}, indent=2) + "\n", encoding="utf-8")
+        manifest = output / f"package.{args.rid}.json"
+        digests = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                   for path in sorted(output.iterdir()) if path.is_file()}
+        manifest.write_text(json.dumps({"version": release_version,
+            "runtime": args.rid, "production": args.production, "source_commit": commit,
+            "platform_signing": args.platform_signing, "artifacts": digests}, indent=2) + "\n", encoding="utf-8")
+        run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", str(manifest) + ".sig", manifest)
     print(f"Packages: {output}")
 
 

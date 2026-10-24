@@ -40,6 +40,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+      - name: Check release validation rules
+        run: python eng/check-release-validation.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Package without platform certificates

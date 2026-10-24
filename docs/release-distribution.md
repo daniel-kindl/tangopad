@@ -115,7 +115,12 @@ Use the reviewed current `main` commit as the target:
 python eng/publish-release.py --packages artifacts/production --target <full-main-commit-sha>
 ```
 
-The command verifies production markers, versions, feed signatures, package sizes, and SHA-256 hashes.
+The command verifies the signed artifact inventory, production markers, versions, feed signatures, package sizes, and SHA-256 hashes.
+The inventory authenticates installers and portable archives as well as update packages.
+The command also requires successful native evidence from the target commit in both storage modes.
+Windows evidence must include recovery after backup. The full package must contain the same patched helper used by those checks.
+Use `--validate-only` to check all four package sets without creating a draft.
+Run `python eng/check-release-validation.py` to check rejection of tampered installers, unsigned manifests, stale evidence, missing runtimes, and unpatched helpers.
 It rejects test output and a target that differs from current remote `main`.
 It creates a draft GitHub Release. It does not activate the release.
 The `Prepare draft release` workflow performs this sequence from `main`.

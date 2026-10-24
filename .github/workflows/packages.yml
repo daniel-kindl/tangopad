@@ -9,6 +9,7 @@ on:
       - '.config/dotnet-tools.json'
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
+      - 'eng/check-release-validation.py'
       - 'eng/*vpk.py'
       - 'eng/build-windows-updater.py'
       - 'eng/Editor.UpdateProbe/**'
@@ -53,6 +54,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+      - name: Check release validation rules
+        run: python eng/check-release-validation.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages

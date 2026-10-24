@@ -328,9 +328,10 @@ def main():
             if marker.read_bytes() != b"preserve marker" or sibling.read_bytes() != b"preserve sibling data":
                 raise RuntimeError("The native update changed sibling portable data.")
             results.append({"runtime": rid, "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-                            "os": platform.platform(), "mode": mode, "old_version": "0.1.0", "new_version": newer,
+                            "os": platform.platform(), "mode": mode,
+                            "native_helper": json.loads((ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json").read_bytes()) if rid == "win-x64" else None, "old_version": "0.1.0", "new_version": newer,
                             "signature_rejected": True, "partial_download_rejected": True, "checksum_rejected": True,
-                            "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True, "native_failure_recovered": True})
+                            "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True, "native_failure_recovered": True, "replacement_after_backup_recovered": rid == "win-x64"})
             write_json(evidence / "result.json", results)
         print(json.dumps(results, indent=2))
 
