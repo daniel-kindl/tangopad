@@ -142,10 +142,12 @@ def main():
     rid = args.rid
     if platform.system() != RUNTIMES[rid]:
         raise ValueError("Run this check on its target operating system.")
-    if not rid.startswith("linux-") and os.environ.get("GITHUB_ACTIONS") != "true":
+    if not rid.startswith("linux-") and (os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"):
         raise ValueError("Run installer checks on a fresh GitHub-hosted account to protect existing applications and state.")
     evidence = ROOT / "artifacts/native-update" / rid
-    evidence.mkdir(parents=True, exist_ok=True)
+    if evidence.exists():
+        shutil.rmtree(evidence)
+    evidence.mkdir(parents=True)
     results = []
     with contextlib.ExitStack() as resources:
         work = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="tangopad-native-update-")))

@@ -188,6 +188,8 @@ python eng/check-native-update.py --rid linux-x64
 Use the other runtime names on their corresponding hosted runners.
 Windows and macOS installer checks require a fresh GitHub-hosted account.
 The probe refuses existing state and portable files. It uses the separate `TangopadUpdateProbe` package identity and a temporary feed key.
+Installed-mode probe state uses the corresponding `TangopadUpdateProbe` directory beside the production `Tangopad` directory.
+Both paths use the same OS data location. Portable probe state uses the actual distribution-root `data/` directory.
 The production public key and fixed GitHub source remain unchanged.
 `eng/Editor.UpdateProbe/` composes the actual editor, commands, dialogs, storage, and update adapter.
 It supplies a local HTTP transport through an internal constructor. Production packages do not include the probe.

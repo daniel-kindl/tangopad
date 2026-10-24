@@ -26,6 +26,10 @@ internal static class Program
         string configurationPath = Path.Combine(root, ".tangopad-update-probe.json");
         ProbeConfiguration configuration = ReadConfiguration(configurationPath);
         string statePath = UserDataLocation.StatePath(args, root);
+        if (args.Contains("--installed", StringComparer.Ordinal))
+        {
+            statePath = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(statePath))!, "TangopadUpdateProbe", "state.bin");
+        }
         if (configuration.Action == "initialize" && (File.Exists(statePath)
             || File.Exists(Path.Combine(Path.GetDirectoryName(statePath)!, "editor-preferences.json"))
             || File.Exists(Path.Combine(Path.GetDirectoryName(statePath)!, "recent-files.json"))))
