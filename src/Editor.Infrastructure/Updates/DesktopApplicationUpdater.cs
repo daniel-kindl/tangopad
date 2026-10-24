@@ -130,6 +130,11 @@ public sealed class DesktopApplicationUpdater : IApplicationUpdater
             string root = GetDistributionDirectory() ?? throw new IOException("The distribution location is unavailable.");
             string probe = Path.Combine(root, $".tangopad-update-{Guid.NewGuid():N}");
             using (FileStream permission = new(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
+            if (OperatingSystem.IsMacOS())
+            {
+                string manifest = Path.Combine(locator.RootAppDir ?? throw new IOException("The application bundle is unavailable."), "Contents", "Info.plist");
+                using FileStream permission = new(manifest, FileMode.Open, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+            }
             using UpdateHandoff handoff = UpdateHandoff.Begin(root, pending.TargetFullRelease.Version.ToString());
             manager.WaitExitThenApplyUpdates(pending.TargetFullRelease, silent: true, restart: true, restartArgs: restartArguments);
             Environment.Exit(0);

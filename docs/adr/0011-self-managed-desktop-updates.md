@@ -19,7 +19,10 @@ Retain its copyright and license notice in application distributions.
 The packaging tool has a larger dependency graph. It is a build tool, not an application dependency.
 
 Use self-contained Windows x64 per-user installers and portable archives, Linux x64 AppImages,
-and macOS x64 and arm64 bundles and installers. These are the initial candidate matrix.
+and macOS x64 and arm64 bundles and current-user installers.
+The macOS distribution XML disables system-wide installation. Packages install into `~/Applications` as the current user.
+A native test found that the default root-owned bundle could not update without elevation.
+`eng/package-macos-installer.py` owns this installer policy and uses Apple's packaging tools. These are the initial candidate matrix.
 Native package tests must establish the supported OS versions before publication.
 Do not overwrite Flatpak, Snap, or OS package-manager installations.
 Do not add an elevation path. A protected distribution must fail before native apply starts.

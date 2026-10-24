@@ -12,6 +12,7 @@ on:
       - 'eng/check-release-validation.py'
       - 'eng/*vpk.py'
       - 'eng/build-windows-updater.py'
+      - 'eng/package-macos-installer.py'
       - 'eng/Editor.UpdateProbe/**'
       - 'eng/velopack/**'
       - 'eng/release/**'

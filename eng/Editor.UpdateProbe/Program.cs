@@ -25,6 +25,10 @@ internal static class Program
         string root = DesktopApplicationUpdater.GetDistributionDirectory() ?? throw new IOException("The probe must run from a native package.");
         string configurationPath = Path.Combine(root, ".tangopad-update-probe.json");
         ProbeConfiguration configuration = ReadConfiguration(configurationPath);
+        if (args.Contains("--probe-secondary", StringComparer.Ordinal))
+        {
+            configuration = configuration with { Action = "hold", ResultPath = configuration.ResultPath + ".secondary" };
+        }
         string statePath = UserDataLocation.StatePath(args, root);
         if (args.Contains("--installed", StringComparer.Ordinal))
         {
@@ -74,6 +78,7 @@ internal static class Program
             }
             await Task.WhenAll(window.ViewModel.InitializePreferencesAsync(), window.ViewModel.InitializeHistoryAsync()).ConfigureAwait(true);
             if (!await window.ViewModel.OpenPathAsync(configuration.DocumentPath).ConfigureAwait(true)) { throw new IOException("The probe could not open its document."); }
+            if (configuration.Action == "hold") { window.ViewModel.Text += "second window unsaved edit\r\n"; }
             UpdateViewModel updates = window.ViewModel.Updates ?? throw new InvalidOperationException("The native update commands are missing.");
             if (configuration.Action is "cancel" or "apply" or "recover")
             {
@@ -88,7 +93,7 @@ internal static class Program
                 await updates.InstallCommand.ExecuteAsync(null).ConfigureAwait(true);
                 await answer.ConfigureAwait(true);
             }
-            else if (configuration.Action == "fault")
+            else if (configuration.Action is "fault" or "protected" or "other-instance")
             {
                 await updates.CheckCommand.ExecuteAsync(null).ConfigureAwait(true);
                 if (updates.Release is not null) { await updates.InstallCommand.ExecuteAsync(null).ConfigureAwait(true); }
@@ -103,6 +108,12 @@ internal static class Program
                 bitmap.Save(Path.Combine(configuration.EvidenceDirectory, "window.png"), new PngBitmapEncoderOptions());
             }
             WriteReport(configuration.ResultPath, report);
+            if (configuration.Action == "hold")
+            {
+                using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(75));
+                while (!File.Exists(configuration.ResultPath + ".release")) { await Task.Delay(20, timeout.Token).ConfigureAwait(true); }
+                WriteReport(configuration.ResultPath, report with { Text = window.ViewModel.Text, Dirty = window.ViewModel.IsDirty });
+            }
             if (window.ViewModel.IsDirty)
             {
                 Task answer = AnswerUnsavedAsync(window, "DiscardButton");

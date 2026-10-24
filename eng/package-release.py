@@ -135,7 +135,14 @@ def main():
                      "--outputDir", str(output)]
         if args.rid.startswith("linux-"):
             pack_args += ["--icon", str(ROOT / "eng/release/tangopad.svg")]
+        if args.rid.startswith("osx-"):
+            pack_args += ["--noInst"]
         run(*pack_args, *signing)
+        if args.rid.startswith("osx-"):
+            runpy.run_path(str(ROOT / "eng/package-macos-installer.py"))["build"](
+                output, args.rid, "TangopadDesktop", "Tangopad", release_version,
+                os.environ.get("TANGOPAD_MAC_INSTALL_IDENTITY") if args.platform_signing == "configured" else None,
+                os.environ.get("TANGOPAD_MAC_NOTARY_PROFILE") if args.platform_signing == "configured" else None)
         sign_feed(output, args.rid, private_key, public_key)
         if args.rid == "win-x64":
             shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")

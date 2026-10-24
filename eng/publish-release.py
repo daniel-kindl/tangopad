@@ -39,11 +39,16 @@ def validate_packages(packages, target):
                 raise ValueError("A release artifact does not match its signed SHA-256: " + name)
         evidence = json.loads((directory / "native-evidence/result.json").read_bytes())
         requirements = ("signature_rejected", "partial_download_rejected", "checksum_rejected",
-                        "unsaved_cancel_preserved", "save_before_restart", "state_preserved", "native_failure_recovered")
+                        "unsaved_cancel_preserved", "save_before_restart", "state_preserved", "native_failure_recovered", "other_window_preserved")
         if (len(evidence) != 2 or {result.get("mode") for result in evidence} != {"--installed", "--portable"}
                 or any(result.get("runtime") != runtime or result.get("source_commit") != target
+                       or result.get("source_dirty") is not False
                        or not all(result.get(check) is True for check in requirements) for result in evidence)):
             raise ValueError("Native update evidence is missing, failed, or belongs to another source commit.")
+        if runtime != "win-x64" and any(result.get("mode") == "--portable" and result.get("protected_directory_rejected") is not True for result in evidence):
+            raise ValueError("Unix portable packages require evidence of protected-directory rejection.")
+        if runtime.startswith("osx-") and any(result.get("protected_bundle_rejected") is not True for result in evidence):
+            raise ValueError("macOS packages require evidence of protected-bundle rejection before native apply.")
         feed_path = directory / f"releases.{runtime}.json"
         run("openssl", "dgst", "-sha256", "-verify", public_key, "-signature", str(feed_path) + ".sig", feed_path)
         assets = json.loads(feed_path.read_bytes())["Assets"]

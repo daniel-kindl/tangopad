@@ -10,10 +10,14 @@ Windows and Apple platform certificates are optional. The default release path d
 | --- | --- | --- |
 | Windows x64 | Per-user Setup and portable ZIP | OS data directory, or package-root `data/` outside `current/` |
 | Linux x64 | Self-contained AppImage | OS data directory, or `data/` beside the external AppImage |
-| macOS x64 and arm64 | Application bundle and installer | OS data directory, or `data/` beside the bundle |
+| macOS x64 and arm64 | Application bundle and current-user installer | OS data directory, or `data/` beside the bundle |
 
 Flatpak, Snap, system packages, and protected installations do not support application-controlled replacement.
 Do not install these packages over an OS-managed application.
+The macOS installer permits only the current user's home directory. It installs into `~/Applications`.
+A system-wide root-owned bundle cannot use application-controlled replacement without elevation.
+The installer does not add an elevation path or start the application as root.
+See [Apple's installation-domain reference](https://developer.apple.com/library/archive/documentation/DeveloperTools/Reference/DistributionDefinitionRef/Chapters/Distribution_XML_Ref.html).
 Initial package support does not imply support for every OS version or CPU architecture.
 The candidate workflow builds each package on its native operating system.
 
@@ -198,9 +202,11 @@ The draft workflow requires the native checks before it collects production arti
 
 The probe checks signature rejection, partial downloads, checksum rejection, unsaved Cancel, no automatic startup apply,
 native rejection and recovery, Save before restart, the running version, and exact state and document preservation.
-On Windows it also blocks a staged file to force replacement failure after backup, then retries.
+A second editor retains its exact unsaved text when it prevents apply.
+Unix portable checks also reject a read-only distribution directory before native apply.
+On Windows it also blocks a staged directory to force replacement failure after backup, then retries.
 Evidence is in `artifacts/native-update/<runtime>/`.
 These local feeds do not prove the published GitHub release path or downloaded-file OS trust prompts.
-Optional platform signing, notarization, protected installations, and concurrent native starts still require acceptance evidence.
+Optional platform signing, notarization, protected Windows installations, and starts during native apply still require acceptance evidence.
 Issue #45 must remain open until these checks and production release validation pass.
 See [ADR 0011](adr/0011-self-managed-desktop-updates.md) for ownership and alternatives.

@@ -53,10 +53,10 @@ class ReleaseValidationTests(unittest.TestCase):
                               patch_sha256=hashlib.sha256((self.root / "eng/velopack/windows-recovery.patch").read_bytes()).hexdigest())
                 (directory / "native-helper.win-x64.json").write_text(json.dumps(helper), encoding="utf-8")
             (directory / "native-evidence").mkdir()
-            results = [{"runtime": runtime, "mode": mode, "source_commit": self.commit,
+            results = [{"runtime": runtime, "mode": mode, "source_commit": self.commit, "source_dirty": False,
                         "signature_rejected": True, "partial_download_rejected": True, "checksum_rejected": True,
                         "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True,
-                        "native_failure_recovered": True, "native_helper": helper, "replacement_after_backup_recovered": runtime == "win-x64"}
+                        "native_failure_recovered": True, "other_window_preserved": True, "protected_directory_rejected": runtime != "win-x64", "protected_bundle_rejected": runtime.startswith("osx-"), "native_helper": helper, "replacement_after_backup_recovered": runtime == "win-x64"}
                        for mode in ("--installed", "--portable")]
             (directory / "native-evidence/result.json").write_text(json.dumps(results), encoding="utf-8")
             self.write_manifest(runtime)

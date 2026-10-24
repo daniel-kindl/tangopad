@@ -43,7 +43,7 @@ def build(output):
         toolchain = policy["rust_toolchain"]
         run("rustup", "toolchain", "install", toolchain, "--profile", "minimal")
         environment = dict(os.environ, RUSTFLAGS="-C target-feature=+crt-static")
-        run("cargo", "+" + toolchain, "test", "--locked", "--package", "velopack_bins", "--lib", "--features", "windows",
+        run("cargo", "+" + toolchain, "test", "--release", "--locked", "--package", "velopack_bins", "--lib", "--features", "windows",
             "--target", policy["target"], "tangopad_recovery_tests", cwd=source, env=environment)
         run("cargo", "+" + toolchain, "build", "--locked", "--release", "--package", "velopack_bins", "--bin", "update",
             "--features", "windows", "--target", policy["target"], cwd=source, env=environment)
