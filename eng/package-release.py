@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build self-managed packages. Production packages require pinned update and platform identities."""
+"""Build self-managed packages with authenticated update feeds."""
 import argparse
 import hashlib
 import json
@@ -124,7 +124,7 @@ def main():
             "--runtime", args.rid, "--self-contained", "true", "--disable-build-servers",
             "-p:PublishSingleFile=true", f"-p:Version={release_version}",
             f"-p:UpdatePublicKeyPath={public_key}",
-            f"-p:NuGetLockFilePath={temporary}/$(MSBuildProjectName).packages.lock.json", "--output", publish)
+            f"-p:ReleaseLockDirectory={temporary}/locks", "--output", publish)
         check_payload(publish)
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
         pack_args = ["dotnet", "tool", "run", "vpk", "--", "pack", "--packId", "TangopadDesktop",

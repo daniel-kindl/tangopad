@@ -15,6 +15,7 @@
     <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetLockFilePath Condition="'$(ReleaseLockDirectory)' != ''">$(ReleaseLockDirectory)/$(MSBuildProjectName).packages.lock.json</NuGetLockFilePath>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>

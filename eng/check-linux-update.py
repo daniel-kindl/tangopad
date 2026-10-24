@@ -63,7 +63,7 @@ if (args.Length > 5 && args[5] == "apply") {
         run("openssl", "pkey", "-in", key, "-pubout", "-out", public)
         run("dotnet", "tool", "restore")
         run("dotnet", "publish", project / "Probe.csproj", "-r", "linux-x64", "--self-contained", "true",
-            "-p:PublishSingleFile=true", f"-p:NuGetLockFilePath={work}/$(MSBuildProjectName).lock.json", "-o", work / "publish")
+            "-p:PublishSingleFile=true", f"-p:ReleaseLockDirectory={work}/locks", "-o", work / "publish")
         feed = work / "feed"
         initial = work / "initial.AppImage"
         newer = f"0.2.{int(time.time())}"
