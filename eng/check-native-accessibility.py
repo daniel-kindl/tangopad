@@ -162,7 +162,14 @@ def audit():
                 env.pop(key, None)
             runtime = evidence / "runtime"
             runtime.mkdir(mode=0o700)
-            env.update(XDG_RUNTIME_DIR=str(runtime), LC_ALL="C.UTF-8", NO_AT_BRIDGE="0")
+            env.update(
+                XDG_RUNTIME_DIR=str(runtime),
+                XDG_CONFIG_HOME=str(evidence / "service-config"),
+                XDG_DATA_HOME=str(evidence / "service-data"),
+                XDG_CACHE_HOME=str(evidence / "service-cache"),
+                LC_ALL="C.UTF-8",
+                NO_AT_BRIDGE="0",
+            )
 
             def launch(command, name, **options):
                 log = stack.enter_context((evidence / (name + ".log")).open("w"))
