@@ -1,5 +1,7 @@
 # Review the interface revision
 
+[Accessibility and display acceptance](47-acceptance.md) records the automated follow-up, native audit command, and remaining blockers.
+
 Generate disposable test documents from the repository root:
 
 ```sh

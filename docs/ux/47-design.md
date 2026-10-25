@@ -1,7 +1,8 @@
 # Interface design draft
 
 Issue [#47](https://github.com/daniel-kindl/tangopad/issues/47) is a design milestone.
-This local revision provides a working desktop shell for review.
+The shell merged in [PR #101](https://github.com/daniel-kindl/tangopad/pull/101).
+[Accessibility and display acceptance](47-acceptance.md) tracks the remaining checks.
 The design remains open to revision. It does not complete cross-platform acceptance.
 
 ## Current-state audit

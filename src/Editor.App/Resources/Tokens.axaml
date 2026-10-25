@@ -34,6 +34,9 @@
   <Thickness x:Key="Inset.TabLabel">8,0</Thickness>
   <Thickness x:Key="Inset.TabStrip">8,4,8,0</Thickness>
   <Thickness x:Key="Border.Bar">0,0,0,1</Thickness>
+  <Thickness x:Key="Border.Toggle.Checked">1</Thickness>
+  <Thickness x:Key="Border.Toggle.Focus">2</Thickness>
+  <Thickness x:Key="Inset.Toggle.Focus">5</Thickness>
   <Thickness x:Key="Border.Tab">0,0,0,2</Thickness>
   <Thickness x:Key="Border.Status">0,1,0,0</Thickness>
   <x:Double x:Key="Size.Command.Height">32</x:Double>
