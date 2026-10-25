@@ -26,6 +26,46 @@ dotnet_style_qualification_for_property = false:warning
 dotnet_style_qualification_for_method = false:warning
 dotnet_style_qualification_for_event = false:warning
 
+# Explicit severities keep the selected rules active at build time.
+dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.IDE0008.severity = warning
+dotnet_diagnostic.IDE0011.severity = warning
+dotnet_diagnostic.IDE0022.severity = warning
+dotnet_diagnostic.IDE0040.severity = warning
+dotnet_diagnostic.IDE0044.severity = warning
+dotnet_diagnostic.IDE0055.severity = warning
+dotnet_diagnostic.IDE0060.severity = warning
+dotnet_diagnostic.IDE0065.severity = warning
+dotnet_diagnostic.IDE0090.severity = warning
+dotnet_diagnostic.IDE0161.severity = warning
+dotnet_diagnostic.IDE1006.severity = warning
+
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_expression_bodied_methods = false:warning
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+csharp_style_prefer_collection_expression = when_types_exactly_match:warning
+dotnet_code_quality_unused_parameters = all
+
+# Types and non-field members follow the existing PascalCase convention.
+dotnet_naming_rule.types_and_members.severity = warning
+dotnet_naming_rule.types_and_members.symbols = types_and_members
+dotnet_naming_rule.types_and_members.style = pascal_case
+dotnet_naming_symbols.types_and_members.applicable_kinds = class, struct, enum, delegate, property, event, method
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+dotnet_naming_rule.interfaces.severity = warning
+dotnet_naming_rule.interfaces.symbols = interfaces
+dotnet_naming_rule.interfaces.style = interface_name
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.interface_name.required_prefix = I
+dotnet_naming_style.interface_name.capitalization = pascal_case
+
+dotnet_naming_rule.parameters.severity = warning
+dotnet_naming_rule.parameters.symbols = parameters
+dotnet_naming_rule.parameters.style = camel_case
+dotnet_naming_symbols.parameters.applicable_kinds = parameter
+dotnet_naming_style.camel_case.capitalization = camel_case
+
 [*.{csproj,props,targets,proj}]
 indent_size = 2
 

@@ -1,6 +1,7 @@
 ## Change
 
 Describe the problem, resulting behavior, and linked issue.
+State directory placement and any namespace or public API changes.
 
 ## Verification
 

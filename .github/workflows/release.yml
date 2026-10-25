@@ -1,0 +1,95 @@
+name: Prepare draft release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-release
+  cancel-in-progress: false
+
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ matrix.os }}
+    environment: release
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            rid: win-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: macos-15
+            rid: osx-arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Install Linux tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+      - name: Check release validation rules
+        run: python eng/check-release-validation.py
+      - name: Verify repository
+        run: dotnet msbuild eng/verify.proj
+      - name: Package without platform certificates
+        env:
+          TANGOPAD_UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: python eng/package-release.py --rid ${{ matrix.rid }} --production
+      - name: Check native editor updates and recovery
+        run: python eng/check-native-update.py --rid ${{ matrix.rid }}
+      - name: Collect native evidence
+        shell: python
+        run: |
+          import pathlib
+          import shutil
+          runtime = "${{ matrix.rid }}"
+          output = next(pathlib.Path("artifacts/release", runtime).glob("*/package.*.json")).parent
+          shutil.copytree(pathlib.Path("artifacts/native-update", runtime), output / "native-evidence")
+      - name: Upload native update evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-update-${{ matrix.rid }}
+          path: artifacts/native-update/${{ matrix.rid }}/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload production packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.rid }}
+          path: artifacts/release/${{ matrix.rid }}/
+          if-no-files-found: error
+          retention-days: 7
+  draft:
+    needs: package
+    runs-on: ubuntu-24.04
+    environment: release
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: release-*
+          path: artifacts/production
+      - name: Create verified draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: python eng/publish-release.py --packages artifacts/production --target "$RELEASE_COMMIT"

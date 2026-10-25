@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Editor.Preview/Editor.Preview.csproj" />
+  </ItemGroup>
+</Project>

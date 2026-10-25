@@ -1,10 +1,24 @@
 <Solution>
+  <Folder Name="/eng/">
+    <Project Path="eng/Editor.UpdateProbe/Editor.UpdateProbe.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Editor.App/Editor.App.csproj" />
     <Project Path="src/Editor.Application/Editor.Application.csproj" />
+    <Project Path="src/Editor.Preview/Editor.Preview.csproj" />
+    <Project Path="src/Editor.Formats.Textile/Editor.Formats.Textile.csproj" />
+    <Project Path="src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj" />
     <Project Path="src/Editor.Core/Editor.Core.csproj" />
+    <Project Path="src/Editor.Infrastructure/Editor.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Editor.App.Tests/Editor.App.Tests.csproj" />
+    <Project Path="tests/Editor.Application.Tests/Editor.Application.Tests.csproj" />
     <Project Path="tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj" />
+    <Project Path="tests/Editor.Formats.Textile.Tests/Editor.Formats.Textile.Tests.csproj" />
+    <Project Path="tests/Editor.Formats.Markdown.Tests/Editor.Formats.Markdown.Tests.csproj" />
+    <Project Path="tests/Editor.Core.Tests/Editor.Core.Tests.csproj" />
+    <Project Path="tests/Editor.Infrastructure.Tests/Editor.Infrastructure.Tests.csproj" />
+    <Project Path="tests/Editor.Desktop.SmokeTests/Editor.Desktop.SmokeTests.csproj" />
   </Folder>
 </Solution>

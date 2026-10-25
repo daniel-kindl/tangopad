@@ -1,0 +1,56 @@
+<SyntaxDefinition name="Textile" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <Color name="Heading" fontWeight="bold" />
+  <Color name="Strong" fontWeight="bold" />
+  <Color name="Emphasis" fontStyle="italic" />
+  <Color name="Underline" underline="true" />
+  <Color name="Strike" strikethrough="true" />
+  <Color name="Code" />
+  <Color name="Link" underline="true" />
+  <Color name="Quote" />
+  <Color name="List" />
+  <Color name="Table" />
+  <Color name="Rule" />
+  <Color name="Paragraph" />
+  <Color name="Macro" />
+  <RuleSet>
+    <Span multiline="true">
+      <Begin>&lt;notextile&gt;</Begin>
+      <End>&lt;/notextile&gt;</End>
+    </Span>
+    <Span>
+      <Begin>==</Begin>
+      <End>==</End>
+    </Span>
+    <Span color="Code" multiline="true">
+      <Begin>&lt;pre(?:\s[^&gt;]*)?&gt;</Begin>
+      <End>&lt;/pre&gt;</End>
+    </Span>
+    <Span color="Code" multiline="true">
+      <Begin>^(?:bc|pre)\.\.?(?:[ \t].*)?$</Begin>
+      <End>^[ \t]*$</End>
+    </Span>
+    <Span color="Code">
+      <Begin>&lt;code(?:\s[^&gt;]*)?&gt;</Begin>
+      <End>&lt;/code&gt;</End>
+    </Span>
+    <Span color="Code">
+      <Begin>(?&lt;!\w)@(?!@)</Begin>
+      <End>@</End>
+    </Span>
+    <Rule color="Heading">^h[1-6](?:&lt;&gt;|[()&lt;&gt;=])?\. [^\r\n]*</Rule>
+    <Rule color="Quote">^bq(?:&lt;&gt;|[()&lt;&gt;=])?\.{1,2}[ \t].*</Rule>
+    <Rule color="List">^[*\#]+[ \t]+</Rule>
+    <Rule color="Table">^\|[^\r\n]*</Rule>
+    <Rule color="Rule">^----[ \t]*$</Rule>
+    <Rule color="Paragraph">^p(?:&lt;&gt;|[()&lt;&gt;=])?\. </Rule>
+    <Rule color="Link">\[\[[^\]\r\n]+\]\]</Rule>
+    <Rule color="Link">"[^"\r\n]+":[^\s\r\n]+</Rule>
+    <Rule color="Link">!(?:[&lt;&gt;=])?[^!\s\r\n][^!\r\n]*!</Rule>
+    <Rule color="Macro">\{\{[^{}\r\n]+\}\}</Rule>
+    <Rule color="Link">(?&lt;![\w\#])\#{1,2}\d+(?:\#note-\d+|-\d+)?\b</Rule>
+    <Rule color="Strong">(?&lt;![*\w])\*(?!\*)(?=\S).+?(?&lt;!\s)\*(?!\*)</Rule>
+    <Rule color="Emphasis">(?&lt;![\w_])_(?!_)(?=\S).+?(?&lt;!\s)_(?![\w_])</Rule>
+    <Rule color="Underline">(?&lt;![+\w])\+(?!\+)(?=\S).+?(?&lt;!\s)\+(?!\+)</Rule>
+    <Rule color="Strike">(?&lt;![\w-])-(?=\S)[^-\r\n]+(?&lt;!\s)-(?![\w-])</Rule>
+  </RuleSet>
+</SyntaxDefinition>

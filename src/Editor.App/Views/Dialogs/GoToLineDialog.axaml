@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Editor.App.Views.Dialogs.GoToLineDialog"
+        Classes="dialog"
+        Title="{StaticResource Text.GoToLine.Title}">
+  <StackPanel Classes="dialog-body">
+    <TextBlock Text="{StaticResource Text.GoToLine.Prompt}" TextWrapping="Wrap" />
+    <TextBox x:Name="LineInput" AutomationProperties.Name="{StaticResource Text.GoToLine.LineNumber}" />
+    <TextBlock x:Name="ValidationMessage" Classes="error-message" IsVisible="False"
+               Text="{StaticResource Text.GoToLine.Invalid}" TextWrapping="Wrap" />
+    <StackPanel Classes="dialog-actions">
+      <Button x:Name="GoButton" Content="{StaticResource Text.GoToLine.Go}" IsDefault="True" />
+      <Button x:Name="CancelButton" Content="{StaticResource Text.Command.Cancel}" IsCancel="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

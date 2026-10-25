@@ -1,0 +1,14 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Editor.App.Views.Dialogs.UnsavedChangesDialog"
+        Classes="dialog"
+        Title="{StaticResource Text.Dialog.Unsaved.Title}">
+  <StackPanel Classes="dialog-body">
+    <TextBlock Text="{StaticResource Text.Dialog.Unsaved.Prompt}" TextWrapping="Wrap" />
+    <StackPanel Classes="dialog-actions">
+      <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" />
+      <Button x:Name="DiscardButton" Content="{StaticResource Text.Command.Discard}" />
+      <Button x:Name="CancelButton" Content="{StaticResource Text.Command.Cancel}" IsCancel="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

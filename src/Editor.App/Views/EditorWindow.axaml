@@ -1,0 +1,173 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="using:AvaloniaEdit"
+        xmlns:resources="using:Editor.App.Resources"
+        xmlns:vm="using:Editor.App.ViewModels"
+        x:Class="Editor.App.Views.EditorWindow"
+        x:DataType="vm:EditorViewModel"
+        Width="{StaticResource Size.Window.Width}"
+        Height="{StaticResource Size.Window.Height}"
+        MinWidth="{StaticResource Size.Window.MinWidth}"
+        MinHeight="{StaticResource Size.Window.MinHeight}"
+        Title="{Binding Title}">
+  <DockPanel>
+    <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource Brush.Surface}">
+      <StackPanel x:Name="Actions" Orientation="Horizontal"
+                  Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}"
+                  IsEnabled="{Binding !IsBusy}">
+        <Button x:Name="NewButton" Content="{StaticResource Text.Command.New}" Command="{Binding NewCommand}" />
+        <Button x:Name="OpenButton" Content="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}" />
+        <Button x:Name="RecentFilesButton" Content="{StaticResource Text.Recent.Title}">
+          <Button.Flyout>
+            <Flyout>
+              <StackPanel Spacing="{StaticResource Spacing.Actions}">
+                <TextBlock Text="{StaticResource Text.Recent.Privacy}" />
+                <TextBlock Text="{StaticResource Text.Recent.StorageFailed}" IsVisible="{Binding HistoryStorageFailed}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <ItemsControl x:Name="RecentFilesItems" ItemsSource="{Binding RecentFiles}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecentFileEntry">
+                      <Button Content="{Binding Label}" ToolTip.Tip="{Binding Path}" HorizontalAlignment="Stretch"
+                              Command="{Binding $parent[ItemsControl].((vm:EditorViewModel)DataContext).OpenRecentCommand}"
+                              CommandParameter="{Binding Path}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button x:Name="ClearRecentFilesButton" Content="{StaticResource Text.Recent.Clear}"
+                        Command="{Binding ClearRecentFilesCommand}" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" />
+        <Button x:Name="SaveAsButton" Content="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" />
+        <Button x:Name="ReloadButton" Content="{StaticResource Text.Command.Reload}" Command="{Binding ReloadCommand}" />
+      </StackPanel>
+      <Button x:Name="CancelOperation" Content="{StaticResource Text.Command.CancelOperation}"
+              IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
+      <Button x:Name="FindButton" Content="{StaticResource Text.Search.Find}" />
+      <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
+      <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
+                IsEnabled="{Binding CanEdit}" IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+      <Button x:Name="PreviewToggle" Content="{StaticResource Text.Preview.Show}" IsVisible="False" />
+      <CheckBox x:Name="LineNumbersToggle" Content="{StaticResource Text.Editor.LineNumbers}"
+                IsEnabled="{Binding CanEdit}" IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
+    </WrapPanel>
+    <WrapPanel x:Name="ExternalChangeBanner" DockPanel.Dock="Top" Orientation="Horizontal"
+                IsVisible="{Binding HasExternalChange}" ItemSpacing="{StaticResource Spacing.Actions}"
+                Margin="{StaticResource Inset.Toolbar}">
+      <TextBlock x:Name="ExternalChangeText" Text="{StaticResource Text.ExternalChange.Message}"
+                 AutomationProperties.LiveSetting="Polite" VerticalAlignment="Center" />
+      <Button x:Name="ReloadExternalChangeButton" Content="{StaticResource Text.Command.Reload}"
+              Command="{Binding ReloadCommand}" />
+      <Button x:Name="DismissExternalChangeButton" Content="{StaticResource Text.ExternalChange.Dismiss}"
+              Command="{Binding DismissExternalChangeCommand}" />
+    </WrapPanel>
+    <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
+                Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
+      <Grid ColumnDefinitions="Auto,*">
+        <Label Content="{StaticResource Text.Search.Find}" Target="{Binding #QueryInput}" />
+        <TextBox x:Name="QueryInput" Grid.Column="1" Text="{Binding Search.Query, Mode=TwoWay}"
+                 AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
+                 AutomationProperties.Name="{StaticResource Text.Search.Find}" />
+      </Grid>
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Search.IsReplaceVisible}">
+        <Label Content="{StaticResource Text.Search.Replace}" Target="{Binding #ReplacementInput}" />
+        <TextBox x:Name="ReplacementInput" Grid.Column="1" Text="{Binding Search.Replacement, Mode=TwoWay}"
+                 AcceptsReturn="True" MaxHeight="{StaticResource Size.Search.InputMaxHeight}"
+                 AutomationProperties.Name="{StaticResource Text.Search.Replace}" />
+        <TextBlock x:Name="RegexReplacementHint" Grid.Row="1" Grid.Column="1"
+                   Text="{StaticResource Text.Search.RegexReplacement}" IsVisible="{Binding Search.UseRegex}" />
+      </Grid>
+      <WrapPanel>
+        <CheckBox x:Name="MatchCaseInput" Content="{StaticResource Text.Search.MatchCase}" IsChecked="{Binding Search.MatchCase, Mode=TwoWay}" />
+        <CheckBox x:Name="MatchWholeWordInput" Content="{StaticResource Text.Search.MatchWholeWord}" IsChecked="{Binding Search.MatchWholeWord, Mode=TwoWay}" />
+        <CheckBox x:Name="UseRegexInput" Content="{StaticResource Text.Search.UseRegex}" IsChecked="{Binding Search.UseRegex, Mode=TwoWay}" />
+        <Button x:Name="PreviousMatchButton" Content="{StaticResource Text.Search.Previous}" Command="{Binding Search.PreviousCommand}" />
+        <Button x:Name="NextMatchButton" Content="{StaticResource Text.Search.Next}" Command="{Binding Search.NextCommand}" />
+        <Button x:Name="ReplaceCurrentButton" Content="{StaticResource Text.Search.ReplaceCurrent}" Command="{Binding Search.ReplaceCurrentCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />
+        <Button x:Name="ReplaceAllButton" Content="{StaticResource Text.Search.ReplaceAll}" Command="{Binding Search.ReplaceAllCommand}" IsVisible="{Binding Search.IsReplaceVisible}" />
+        <Button x:Name="CloseSearchButton" Content="{StaticResource Text.Search.Close}" Command="{Binding Search.CloseCommand}" />
+      </WrapPanel>
+      <WrapPanel AutomationProperties.LiveSetting="Polite">
+        <TextBlock Text="{StaticResource Text.Search.Empty}" IsVisible="{Binding !Search.HasQuery}" />
+        <TextBlock x:Name="SearchingText" Text="{StaticResource Text.Search.Searching}" IsVisible="{Binding Search.IsSearching}" />
+        <TextBlock x:Name="InvalidPatternText" Text="{StaticResource Text.Search.InvalidPattern}" IsVisible="{Binding Search.InvalidPattern}" />
+        <TextBlock x:Name="SearchTimedOutText" Text="{StaticResource Text.Search.TimedOut}" IsVisible="{Binding Search.SearchTimedOut}" />
+        <TextBlock x:Name="EmptyRegexMatchText" Text="{StaticResource Text.Search.EmptyMatch}" IsVisible="{Binding Search.EmptyRegexMatch}" />
+        <TextBlock x:Name="SearchLimitText" Text="{StaticResource Text.Search.LimitReached}" IsVisible="{Binding Search.SearchLimitReached}" />
+        <TextBlock x:Name="InvalidReplacementText" Text="{StaticResource Text.Search.InvalidReplacement}" IsVisible="{Binding Search.InvalidReplacement}" />
+        <TextBlock x:Name="NoMatchesText" Text="{StaticResource Text.Search.NoMatches}" IsVisible="{Binding Search.NoMatches}" />
+        <TextBlock IsVisible="{Binding Search.HasQuery}" Margin="{StaticResource Inset.Search.Status}">
+          <Run Text="{StaticResource Text.Search.MatchCount}" /><Run Text="{Binding Search.MatchCount}" />
+        </TextBlock>
+        <TextBlock IsVisible="{Binding Search.IsReplaceVisible}">
+          <Run Text="{StaticResource Text.Search.ReplacementCount}" /><Run Text="{Binding Search.ReplacementCount}" />
+        </TextBlock>
+      </WrapPanel>
+    </StackPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
+            Padding="{StaticResource Inset.Toolbar}">
+      <DockPanel>
+        <Button x:Name="UpdatesButton" DockPanel.Dock="Right" VerticalAlignment="Center" Content="{StaticResource Text.Update.Title}" IsVisible="{Binding HasUpdater}">
+          <Button.Flyout>
+            <Flyout>
+              <StackPanel DataContext="{Binding Updates}" x:DataType="vm:UpdateViewModel"
+                          Spacing="{StaticResource Spacing.Actions}" MaxWidth="{StaticResource Size.Dialog.Width}">
+                <TextBlock Text="{Binding InstalledVersion}" />
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Release.Notes}" TextWrapping="Wrap" />
+                <ProgressBar Value="{Binding Progress}" IsVisible="{Binding IsBusy}" />
+                <Button Content="{StaticResource Text.Update.Check}" Command="{Binding CheckCommand}" />
+                <Button Content="{StaticResource Text.Update.Install}" Command="{Binding InstallCommand}" />
+                <Button Content="{StaticResource Text.Command.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Actions}">
+          <TextBlock x:Name="CaretStatus" Classes="editor-status">
+            <TextBlock.Text>
+              <MultiBinding StringFormat="{StaticResource Text.Status.CaretFormat}">
+                <Binding Path="CaretLine" />
+                <Binding Path="CaretColumn" />
+              </MultiBinding>
+            </TextBlock.Text>
+          </TextBlock>
+          <TextBlock x:Name="CharacterStatus" Classes="editor-status"
+                     Text="{Binding CharacterCount, StringFormat={StaticResource Text.Status.CharacterCountFormat}}" />
+          <TextBlock x:Name="WordStatus" Classes="editor-status"
+                     Text="{Binding WordCount, StringFormat={StaticResource Text.Status.WordCountFormat}}" />
+          <TextBlock x:Name="EncodingStatus" Classes="editor-status"
+                     Text="{StaticResource Text.Status.Encoding}"
+                     AutomationProperties.Name="{StaticResource Text.Status.EncodingName}" />
+          <TextBlock x:Name="LineEndingStatus" Classes="editor-status"
+                     Text="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingFormat}}"
+                     AutomationProperties.Name="{Binding LineEndings, Converter={x:Static resources:PresentationResources.LineEndingLabel}, StringFormat={StaticResource Text.Status.LineEndingNameFormat}}"
+                     AutomationProperties.LiveSetting="Polite" />
+        </WrapPanel>
+      </DockPanel>
+    </Border>
+    <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
+      <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
+                     ShowLineNumbers="{Binding ShowLineNumbers}"
+                     WordWrap="{Binding WordWrap}"
+                     FontSize="{Binding FontSize}"
+                     HorizontalScrollBarVisibility="Auto"
+                     VerticalScrollBarVisibility="Auto" />
+      <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" IsVisible="False"
+                    Width="{StaticResource Size.Preview.Splitter}" ResizeDirection="Columns" />
+      <ScrollViewer x:Name="PreviewScroll" Grid.Column="2" IsVisible="False"
+                    HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                    AutomationProperties.Name="{StaticResource Text.Preview.Name}">
+        <StackPanel x:Name="PreviewBlocks" Classes="preview-body" />
+      </ScrollViewer>
+      <Border x:Name="DropHint" Grid.ColumnSpan="3" VerticalAlignment="Top" HorizontalAlignment="Center"
+              IsVisible="False" IsHitTestVisible="False" Background="{DynamicResource Brush.Surface}"
+              Padding="{StaticResource Inset.Toolbar}">
+        <TextBlock Text="{StaticResource Text.Drop.Open}" AutomationProperties.LiveSetting="Polite" />
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

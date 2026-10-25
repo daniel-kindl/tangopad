@@ -1,18 +1,38 @@
 <Project DefaultTargets="Verify">
   <PropertyGroup>
     <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepositoryRoot>
+    <TestResultsDirectory>$(RepositoryRoot)/artifacts/test-results</TestResultsDirectory>
   </PropertyGroup>
-  <Target Name="Verify" DependsOnTargets="Restore;Format;Compile;Test" />
+  <ItemGroup>
+    <TestProject Include="$(RepositoryRoot)/tests/*/*.csproj" />
+  </ItemGroup>
+  <Target Name="Verify" DependsOnTargets="Restore;Format;Compile;Test;VerifyTestReports" />
   <Target Name="Restore">
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet restore Tangopad.slnx --locked-mode --force --no-http-cache" />
   </Target>
   <Target Name="Format" DependsOnTargets="Restore">
     <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet format Tangopad.slnx --verify-no-changes --no-restore --severity info" />
   </Target>
-  <Target Name="Compile" DependsOnTargets="Format">
-    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore" />
+  <Target Name="Compile" DependsOnTargets="Format;BuildDebug;Build" />
+  <Target Name="BuildDebug">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Debug --no-restore --disable-build-servers -warnaserror" />
+  </Target>
+  <Target Name="Build">
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet build Tangopad.slnx --configuration Release --no-restore --disable-build-servers -warnaserror" />
   </Target>
   <Target Name="Test" DependsOnTargets="Compile">
-    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet test --solution Tangopad.slnx --configuration Release --no-build --no-restore --report-xunit-trx --results-directory &quot;$(RepositoryRoot)/artifacts/test-results&quot;" />
+    <RemoveDir Directories="$(TestResultsDirectory)" />
+    <Exec WorkingDirectory="$(RepositoryRoot)" Command="dotnet test --project &quot;%(TestProject.Identity)&quot; --configuration Release --no-build --no-restore --report-xunit-trx --report-xunit-trx-filename &quot;%(TestProject.Filename).trx&quot; --results-directory &quot;$(TestResultsDirectory)&quot;" />
+  </Target>
+  <Target Name="VerifyTestReports">
+    <Error Condition="!Exists('$(TestResultsDirectory)/%(TestProject.Filename).trx')"
+           Text="Missing test report: $(TestResultsDirectory)/%(TestProject.Filename).trx" />
+    <XmlPeek XmlInputPath="$(TestResultsDirectory)/%(TestProject.Filename).trx"
+             Namespaces="&lt;Namespace Prefix='t' Uri='http://microsoft.com/schemas/VisualStudio/TeamTest/2010' /&gt;"
+             Query="/t:TestRun[count(t:Results/t:UnitTestResult) &gt; 0 and count(t:TestDefinitions/t:UnitTest/t:TestMethod[contains(translate(@codeBase, '\', '/'), '/%(TestProject.Filename).dll')]) = count(t:Results/t:UnitTestResult)]/@id">
+      <Output TaskParameter="Result" ItemName="ValidTestReport" />
+    </XmlPeek>
+    <Error Condition="'@(ValidTestReport->Count())' != '@(TestProject->Count())'"
+           Text="A test report has no results or contains results from a different assembly." />
   </Target>
 </Project>

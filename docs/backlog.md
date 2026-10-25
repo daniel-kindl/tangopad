@@ -9,8 +9,11 @@ tracks the bootstrap in the M0 milestone. The further tasks below remain drafts.
 | --- | --- |
 | `chore(repo): activate integration workflow and branch protection` | Create `dev` from the accepted bootstrap. Require review and all three CI checks on `main` and `dev`. Confirm fork pull requests need no secrets. |
 | `test(desktop): verify native startup on supported systems` | Record a blank-window launch and clean close on Windows, Linux, and macOS. Document native prerequisites and the selected OS baseline. Automate repeatable checks where practical. |
-| `test(build): automate managed output reproducibility checks` | Turn the bootstrap two-path comparison into a repeatable check. Include different NuGet cache paths and supported hosts. Compare managed DLL and PDB hashes. Record native asset exclusions. |
 | `chore(quality): enforce contribution metadata` | Select a minimal check for Conventional Commit squash titles. Verify valid and invalid examples. Keep the workflow permission read-only. |
+
+[Issue #11](https://github.com/daniel-kindl/tangopad/issues/11) tracks the
+contribution metadata draft in the table above. Use that issue for the current
+acceptance criteria.
 
 ## M1: Deliver the first plain-text document slice
 
@@ -24,6 +27,18 @@ M1 authorizes future features through separate issues. None are implemented by b
 | `feat(editor): connect AvaloniaEdit to a text document` | Recheck AvaloniaEdit compatibility. Isolate the control in App. Verify typing and change state without framework types in Core or Application. |
 | `feat(formats): identify plain text and Markdown` | Define one authoritative format registry for `.txt`, `.md`, and `.markdown`. Test casing and unknown-extension policy. Keep parsing and rendering out of this issue. |
 
+[Issue #5](https://github.com/daniel-kindl/tangopad/issues/5) tracks the native
+startup draft in the table above. Use that issue for the current acceptance criteria.
+
+[Issue #35](https://github.com/daniel-kindl/tangopad/issues/35) tracks format
+identification. [Document formats](document-formats.md) records the policy.
+Follow identification with a separate syntax-highlighting issue, then a separate
+Markdig preview issue.
+
 Schedule Markdown parsing and rendering after the first document slice proves the
 contracts. Define separate acceptance criteria for parser adaptation and visual output.
-Recheck Markdig before adding it. Defer tabs, exports, plugins, and additional formats.
+Recheck Markdig before adding it. Defer tabs, exports, and plugins.
+[Issue #82](https://github.com/daniel-kindl/tangopad/issues/82) adds Redmine Textile after this slice.
+[Issue #84](https://github.com/daniel-kindl/tangopad/issues/84) covers filename identity and source highlighting.
+[Issue #85](https://github.com/daniel-kindl/tangopad/issues/85) and
+[issue #86](https://github.com/daniel-kindl/tangopad/issues/86) cover the later preview slices.

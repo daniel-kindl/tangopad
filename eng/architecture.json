@@ -1,11 +1,18 @@
 {
   "src/Editor.App/Editor.App.csproj": {
     "projects": [
-      "src/Editor.Application/Editor.Application.csproj"
+      "src/Editor.Application/Editor.Application.csproj",
+      "src/Editor.Infrastructure/Editor.Infrastructure.csproj",
+      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj",
+      "src/Editor.Preview/Editor.Preview.csproj",
+      "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj"
     ],
     "packages": [
       "Avalonia.Desktop",
-      "Avalonia.Themes.Fluent"
+      "Avalonia.Themes.Fluent",
+      "Avalonia.AvaloniaEdit",
+      "CommunityToolkit.Mvvm",
+      "Velopack"
     ]
   },
   "src/Editor.Application/Editor.Application.csproj": {
@@ -18,10 +25,102 @@
     "projects": [],
     "packages": []
   },
+  "src/Editor.Infrastructure/Editor.Infrastructure.csproj": {
+    "projects": [
+      "src/Editor.Application/Editor.Application.csproj"
+    ],
+    "packages": [
+      "Velopack"
+    ]
+  },
+  "tests/Editor.Application.Tests/Editor.Application.Tests.csproj": {
+    "projects": [
+      "src/Editor.Application/Editor.Application.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
   "tests/Editor.Architecture.Tests/Editor.Architecture.Tests.csproj": {
     "projects": [],
     "packages": [
       "xunit.v3"
+    ]
+  },
+  "tests/Editor.Core.Tests/Editor.Core.Tests.csproj": {
+    "projects": [
+      "src/Editor.Core/Editor.Core.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "tests/Editor.Infrastructure.Tests/Editor.Infrastructure.Tests.csproj": {
+    "projects": [
+      "src/Editor.Infrastructure/Editor.Infrastructure.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "tests/Editor.Desktop.SmokeTests/Editor.Desktop.SmokeTests.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "tests/Editor.App.Tests/Editor.App.Tests.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "Avalonia.Headless",
+      "xunit.v3"
+    ]
+  },
+  "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj": {
+    "projects": [
+      "src/Editor.Preview/Editor.Preview.csproj"
+    ],
+    "packages": [
+      "Markdig"
+    ]
+  },
+  "tests/Editor.Formats.Markdown.Tests/Editor.Formats.Markdown.Tests.csproj": {
+    "projects": [
+      "src/Editor.Formats.Markdown/Editor.Formats.Markdown.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "src/Editor.Preview/Editor.Preview.csproj": {
+    "projects": [],
+    "packages": []
+  },
+  "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj": {
+    "projects": [
+      "src/Editor.Preview/Editor.Preview.csproj"
+    ],
+    "packages": []
+  },
+  "tests/Editor.Formats.Textile.Tests/Editor.Formats.Textile.Tests.csproj": {
+    "projects": [
+      "src/Editor.Formats.Textile/Editor.Formats.Textile.csproj"
+    ],
+    "packages": [
+      "xunit.v3"
+    ]
+  },
+  "eng/Editor.UpdateProbe/Editor.UpdateProbe.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "Avalonia.Desktop",
+      "Velopack"
     ]
   }
 }

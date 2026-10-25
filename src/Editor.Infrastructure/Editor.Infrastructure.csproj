@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <UpdatePublicKeyPath Condition="'$(UpdatePublicKeyPath)' == ''">$(MSBuildThisFileDirectory)../../eng/release/update-public-key.pem</UpdatePublicKeyPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Velopack" />
+    <EmbeddedResource Include="$(UpdatePublicKeyPath)" LogicalName="Tangopad.UpdatePublicKey" Condition="Exists('$(UpdatePublicKeyPath)')" />
+  </ItemGroup>
+</Project>

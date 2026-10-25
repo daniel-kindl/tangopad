@@ -1,0 +1,97 @@
+--- a/src/bins/src/commands/apply_windows_impl.rs
++++ b/src/bins/src/commands/apply_windows_impl.rs
+@@ -273,8 +273,91 @@
+     })();
+ 
+     reporter.close();
+-    remove_temp_dir_timed(&temp_path_new);
+-    remove_temp_dir_timed(&temp_path_old);
+-    action?;
++    finish_apply(action, &current_dir, &temp_path_old, &temp_path_new)?;
+     Ok(new_locator)
+ }
++
++fn finish_apply(
++    action: Result<()>,
++    current: &std::path::Path,
++    previous: &std::path::Path,
++    staged: &std::path::Path,
++) -> Result<()> {
++    match action {
++        Ok(()) => {
++            remove_temp_dir_timed(&staged.to_path_buf());
++            remove_temp_dir_timed(&previous.to_path_buf());
++            Ok(())
++        }
++        Err(error) => {
++            if previous.exists() {
++                if current.exists() {
++                    return Err(error.context(format!(
++                        "The update failed. The previous application remains at {:?}; the occupied destination was preserved.", previous
++                    )));
++                }
++                fs::rename(previous, current).with_context(|| format!(
++                    "The update failed and automatic recovery could not restore {:?}. The previous application remains at {:?}.", current, previous
++                ))?;
++                info!("Restored the previous application at {:?} after failed replacement.", current);
++            }
++            remove_temp_dir_timed(&staged.to_path_buf());
++            Err(error)
++        }
++    }
++}
++
++#[cfg(test)]
++mod tangopad_recovery_tests {
++    use super::*;
++
++    #[test]
++    fn failed_apply_restores_the_previous_directory() {
++        let root = tempfile::tempdir().unwrap();
++        let current = root.path().join("current");
++        let previous = root.path().join("previous");
++        let staged = root.path().join("staged");
++        fs::create_dir(&previous).unwrap();
++        fs::create_dir(&staged).unwrap();
++        fs::write(previous.join("application"), b"last working version").unwrap();
++        fs::write(staged.join("application"), b"new version").unwrap();
++        let result = finish_apply(Err(anyhow::anyhow!("replacement failed")), &current, &previous, &staged);
++        assert!(result.is_err());
++        assert_eq!(fs::read(current.join("application")).unwrap(), b"last working version");
++        assert!(!previous.exists());
++        assert!(!staged.exists());
++    }
++
++    #[test]
++    fn occupied_destination_preserves_backup() {
++        let root = tempfile::tempdir().unwrap();
++        let current = root.path().join("current");
++        let previous = root.path().join("previous");
++        let staged = root.path().join("staged");
++        fs::create_dir(&current).unwrap();
++        fs::create_dir(&previous).unwrap();
++        fs::create_dir(&staged).unwrap();
++        fs::write(current.join("application"), b"occupied destination").unwrap();
++        fs::write(previous.join("application"), b"last working version").unwrap();
++        let result = finish_apply(Err(anyhow::anyhow!("replacement failed")), &current, &previous, &staged);
++        assert!(result.is_err());
++        assert_eq!(fs::read(previous.join("application")).unwrap(), b"last working version");
++        assert_eq!(fs::read(current.join("application")).unwrap(), b"occupied destination");
++        assert!(staged.exists());
++    }
++
++    #[test]
++    fn successful_apply_removes_backup() {
++        let root = tempfile::tempdir().unwrap();
++        let current = root.path().join("current");
++        let previous = root.path().join("previous");
++        let staged = root.path().join("staged");
++        fs::create_dir(&current).unwrap();
++        fs::create_dir(&previous).unwrap();
++        fs::write(current.join("application"), b"new version").unwrap();
++        fs::write(previous.join("application"), b"last working version").unwrap();
++        finish_apply(Ok(()), &current, &previous, &staged).unwrap();
++        assert_eq!(fs::read(current.join("application")).unwrap(), b"new version");
++        assert!(!previous.exists());
++    }
++}

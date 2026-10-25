@@ -1,0 +1,80 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:edit="using:AvaloniaEdit"
+        xmlns:editing="using:AvaloniaEdit.Editing">
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource Brush.Background}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="FontFamily" Value="{StaticResource Font.Body}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+  </Style>
+  <Style Selector="Window.dialog">
+    <Setter Property="Width" Value="{StaticResource Size.Dialog.Width}" />
+    <Setter Property="SizeToContent" Value="Height" />
+    <Setter Property="CanResize" Value="False" />
+    <Setter Property="WindowStartupLocation" Value="CenterOwner" />
+  </Style>
+  <Style Selector="StackPanel.dialog-body">
+    <Setter Property="Margin" Value="{StaticResource Inset.Dialog}" />
+    <Setter Property="Spacing" Value="{StaticResource Spacing.Dialog}" />
+  </Style>
+  <Style Selector="StackPanel.dialog-actions">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Spacing" Value="{StaticResource Spacing.Actions}" />
+  </Style>
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}" />
+  </Style>
+  <Style Selector="Button:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Focus}" />
+  </Style>
+  <Style Selector="Button:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}" />
+  </Style>
+  <Style Selector="edit|TextEditor">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
+    <Setter Property="LineNumbersForeground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+  </Style>
+  <Style Selector="editing|TextArea">
+    <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Selection}" />
+  </Style>
+  <Style Selector="TextBlock.editor-status">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+  <Style Selector="TextBlock.error-message">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
+  </Style>
+  <Style Selector="StackPanel.preview-body">
+    <Setter Property="Margin" Value="{StaticResource Inset.Toolbar}" />
+  </Style>
+  <Style Selector="TextBlock.preview-block">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="Margin" Value="{StaticResource Inset.Preview.Block}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.preview-code">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Markdown.Code}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+  </Style>
+  <Style Selector="TextBlock.preview-heading">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Markdown.Heading}" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="StackPanel.textile TextBlock.preview-heading">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Textile.Heading}" />
+  </Style>
+  <Style Selector="StackPanel.textile TextBlock.preview-code">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Textile.Code}" />
+  </Style>
+  <Style Selector="Grid.preview-table">
+    <Setter Property="Margin" Value="{StaticResource Inset.Preview.Block}" />
+  </Style>
+  <Style Selector="Border.preview-cell">
+    <Setter Property="Padding" Value="{StaticResource Inset.Preview.Cell}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Preview.Cell}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Text.Muted}" />
+  </Style>
+</Styles>

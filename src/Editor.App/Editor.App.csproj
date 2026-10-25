@@ -2,10 +2,28 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Debug InitializeComponent calls AttachDevTools. This project does not reference Avalonia.Diagnostics. -->
+    <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../docs/licenses/Velopack.txt" Link="licenses/Velopack.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../docs/licenses/Markdig.txt" Link="licenses/Markdig.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../../docs/licenses/AvaloniaEdit.txt" Link="licenses/AvaloniaEdit.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Views/Json.xshd" />
+    <EmbeddedResource Include="Views/Yaml.xshd" />
+    <EmbeddedResource Include="Views/Csv.xshd" />
+    <EmbeddedResource Include="Views/Tsv.xshd" />
+    <EmbeddedResource Include="Views/Markdown.xshd" />
+    <EmbeddedResource Include="Views/Textile.xshd" />
+    <ProjectReference Include="../Editor.Preview/Editor.Preview.csproj" />
+    <ProjectReference Include="../Editor.Formats.Textile/Editor.Formats.Textile.csproj" />
+    <ProjectReference Include="../Editor.Formats.Markdown/Editor.Formats.Markdown.csproj" />
     <ProjectReference Include="../Editor.Application/Editor.Application.csproj" />
+    <ProjectReference Include="../Editor.Infrastructure/Editor.Infrastructure.csproj" />
+    <PackageReference Include="Velopack" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" />
     <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
 </Project>
