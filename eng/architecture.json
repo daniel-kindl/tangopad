@@ -113,5 +113,14 @@
     "packages": [
       "xunit.v3"
     ]
+  },
+  "eng/Editor.UpdateProbe/Editor.UpdateProbe.csproj": {
+    "projects": [
+      "src/Editor.App/Editor.App.csproj"
+    ],
+    "packages": [
+      "Avalonia.Desktop",
+      "Velopack"
+    ]
   }
 }

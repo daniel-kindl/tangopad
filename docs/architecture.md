@@ -32,6 +32,7 @@ flowchart LR
     TextileTests[Editor.Formats.Textile.Tests] --> Textile
     AppTests[Editor.App.Tests] --> App
     SmokeTests[Editor.Desktop.SmokeTests] --> App
+    UpdateProbe[eng/Editor.UpdateProbe] --> App
 ```
 
 | Module | Ownership | Current implementation |
@@ -50,6 +51,7 @@ flowchart LR
 | Editor.Application.Tests | Application behavior | Exact load and save, destinations, errors, cancellation, and pending-save edits |
 | Editor.Core.Tests | Document behavior | Identity, edits, acknowledgement, reversion, Unicode, and null input |
 | Editor.Architecture.Tests | Repository dependency constraints | Solution inventory and evaluated dependency tests |
+| Editor.UpdateProbe | Engineering-only native update checks | Real editor commands, local authenticated feeds, native replacement, and recovery |
 | Editor.Desktop.SmokeTests | Native editor startup | Starts the built Editor.App executable, closes its native window, and checks exit code 0 |
 
 `EditorViewModel` owns observable state and commands through CommunityToolkit.Mvvm.

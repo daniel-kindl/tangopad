@@ -15,7 +15,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     environment: release
-    timeout-minutes: 25
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -40,12 +40,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+      - name: Check release validation rules
+        run: python eng/check-release-validation.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Package without platform certificates
         env:
           TANGOPAD_UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: python eng/package-release.py --rid ${{ matrix.rid }} --production
+      - name: Check native editor updates and recovery
+        run: python eng/check-native-update.py --rid ${{ matrix.rid }} --recovery-attempts 5
+      - name: Collect native evidence
+        shell: python
+        run: |
+          import pathlib
+          import shutil
+          runtime = "${{ matrix.rid }}"
+          output = next(pathlib.Path("artifacts/release", runtime).glob("*/package.*.json")).parent
+          shutil.copytree(pathlib.Path("artifacts/native-update", runtime), output / "native-evidence")
+      - name: Upload native update evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-update-${{ matrix.rid }}
+          path: artifacts/native-update/${{ matrix.rid }}/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload production packages
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -64,7 +84,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
           path: artifacts/production
