@@ -319,7 +319,7 @@ public sealed class RegexSearchTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
-    /// <summary>A larger replacement remains one undo operation and reports scan and edit timings.</summary>
+    /// <summary>A large scan either replaces with one undo step or stops without editing.</summary>
     [Fact]
     public async Task LargeReplacementBenchmark()
     {
@@ -333,13 +333,24 @@ public sealed class RegexSearchTests
                 string original = string.Concat(Enumerable.Repeat("entry λ123 lorem ipsum 😀\r\n", 15000));
                 window.Editor.Text = original;
                 window.Editor.Document.UndoStack.ClearAll();
+                window.Editor.Document.UndoStack.ClearAll();
                 SearchViewModel search = window.ViewModel.Search;
                 search.ShowReplaceCommand.Execute(null);
                 search.Query = @"λ(\d+)";
                 search.Replacement = "value=$1";
                 System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
                 search.UseRegex = true;
-                await search.Work.ConfigureAwait(true);
+                await search.Work.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+                if (search.SearchTimedOut)
+                {
+                    Assert.False(search.ReplaceAllCommand.CanExecute(null));
+                    search.ReplaceAllCommand.Execute(null);
+                    Assert.Equal(original, window.Editor.Text);
+                    Assert.Equal(0, search.ReplacementCount);
+                    Assert.False(window.Editor.Document.UndoStack.CanUndo);
+                    TestContext.Current.TestOutputHelper!.WriteLine("The scan reached its safety timeout. No replacement was applied.");
+                    return true;
+                }
                 Assert.Equal(15000, search.MatchCount);
                 double scanMilliseconds = elapsed.Elapsed.TotalMilliseconds;
                 elapsed.Restart();

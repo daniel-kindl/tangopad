@@ -56,7 +56,7 @@ class ReleaseValidationTests(unittest.TestCase):
             results = [{"runtime": runtime, "mode": mode, "source_commit": self.commit, "source_dirty": False,
                         "signature_rejected": True, "partial_download_rejected": True, "checksum_rejected": True,
                         "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True,
-                        "native_failure_recovered": True, "other_window_preserved": True, "protected_directory_rejected": runtime != "win-x64", "protected_bundle_rejected": runtime.startswith("osx-"), "native_helper": helper, "replacement_after_backup_recovered": runtime == "win-x64"}
+                        "native_failure_recovered": True, "native_recovery_attempts": 5, "other_window_preserved": True, "protected_directory_rejected": runtime != "win-x64", "protected_bundle_rejected": runtime.startswith("osx-"), "native_helper": helper, "replacement_after_backup_recovered": runtime == "win-x64"}
                        for mode in ("--installed", "--portable")]
             (directory / "native-evidence/result.json").write_text(json.dumps(results), encoding="utf-8")
             self.write_manifest(runtime)
@@ -117,6 +117,14 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_missing_runtime_is_rejected(self):
         shutil.rmtree(self.packages / "osx-arm64")
         with self.assertRaisesRegex(ValueError, "required for osx-arm64"):
+            self.validate(self.packages, self.commit)
+
+    def test_insufficient_recovery_attempts_are_rejected(self):
+        path = self.packages / "osx-arm64/native-evidence/result.json"
+        results = json.loads(path.read_bytes())
+        results[0]["native_recovery_attempts"] = 1
+        path.write_text(json.dumps(results), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "at least five native recovery attempts"):
             self.validate(self.packages, self.commit)
 
 
