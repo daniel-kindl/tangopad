@@ -63,14 +63,17 @@
     <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
   </Style>
   <Style Selector="CheckBox.icon-toggle:checked /template/ Border#IconBackground">
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Toggle.Checked}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
     <Setter Property="Background" Value="{DynamicResource Brush.Selected}" />
   </Style>
   <Style Selector="CheckBox.icon-toggle:pointerover /template/ Border#IconBackground">
     <Setter Property="Background" Value="{DynamicResource Brush.Hover}" />
   </Style>
   <Style Selector="CheckBox.icon-toggle:focus-visible /template/ Border#IconBackground">
-    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Focus}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Toggle.Focus}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Toggle.Focus}" />
   </Style>
   <Style Selector="Viewbox.editor-icon">
     <Setter Property="Width" Value="{StaticResource Size.Icon}" />
