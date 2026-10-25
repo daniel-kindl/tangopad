@@ -15,7 +15,7 @@ internal sealed class UpdateHandoff : IDisposable
         this.marker = marker;
     }
 
-    internal static UpdateHandoff Begin(string root)
+    internal static UpdateHandoff Begin(string root, string targetVersion)
     {
         using Mutex gate = CreateGate(root);
         Enter(gate);
@@ -37,13 +37,14 @@ internal sealed class UpdateHandoff : IDisposable
             {
                 writer.WriteLine(current.Id.ToString(CultureInfo.InvariantCulture));
                 writer.WriteLine(current.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture));
+                writer.WriteLine(targetVersion);
             }
             return new UpdateHandoff(marker);
         }
         finally { gate.ReleaseMutex(); }
     }
 
-    internal static void WaitForCompletion(string root, TimeSpan timeout)
+    internal static string? WaitForCompletion(string root, TimeSpan timeout)
     {
         Stopwatch elapsed = Stopwatch.StartNew();
         while (true)
@@ -54,15 +55,15 @@ internal sealed class UpdateHandoff : IDisposable
             try
             {
                 string marker = Path.Combine(root, ".tangopad-update-pending");
-                if (!File.Exists(marker)) { return; }
+                if (!File.Exists(marker)) { return null; }
                 string[] owner = File.ReadAllLines(marker);
-                if (owner.Length != 2 || !int.TryParse(owner[0], NumberStyles.None, CultureInfo.InvariantCulture, out int pid)
+                if (owner.Length is not (2 or 3) || !int.TryParse(owner[0], NumberStyles.None, CultureInfo.InvariantCulture, out int pid)
                     || !long.TryParse(owner[1], NumberStyles.None, CultureInfo.InvariantCulture, out long started))
                 {
                     throw new IOException("The update recovery marker is invalid. Preserve application data and remove .tangopad-update-pending after all update processes stop.");
                 }
                 pending = IsOwnerRunning(pid, started) || IsHelperRunning();
-                if (!pending) { File.Delete(marker); return; }
+                if (!pending) { File.Delete(marker); return owner.Length == 3 ? owner[2] : null; }
             }
             finally { gate.ReleaseMutex(); }
             if (elapsed.Elapsed >= timeout) { throw new IOException("An update is still in progress. Start Tangopad again after the update finishes."); }

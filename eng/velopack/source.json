@@ -1,0 +1,7 @@
+{
+  "commit": "92d6a1c91716729d449034df5c50307dcce39493",
+  "archive_sha256": "ade46dc3fdd45ded7d743ed32a8a0c3e211b05e9cf6b05cd3070e9d33eb1fe32",
+  "version": "1.2.161",
+  "rust_toolchain": "1.95.0",
+  "target": "x86_64-pc-windows-msvc"
+}

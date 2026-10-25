@@ -79,7 +79,7 @@ internal sealed partial class UpdateViewModel(IApplicationUpdater updater, Updat
         Error = string.Empty;
         try { await action(source.Token).ConfigureAwait(true); }
         catch (OperationCanceledException) { Status = labels.Cancelled; }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or HttpRequestException or CryptographicException or InvalidOperationException or System.Text.Json.JsonException or ArgumentException)
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or HttpRequestException or CryptographicException or InvalidOperationException or System.Text.Json.JsonException or ArgumentException)
         {
             Status = labels.Failed;
             Error = error.Message;

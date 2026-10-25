@@ -19,7 +19,10 @@ Retain its copyright and license notice in application distributions.
 The packaging tool has a larger dependency graph. It is a build tool, not an application dependency.
 
 Use self-contained Windows x64 per-user installers and portable archives, Linux x64 AppImages,
-and macOS x64 and arm64 bundles and installers. These are the initial candidate matrix.
+and macOS x64 and arm64 bundles and current-user installers.
+The macOS distribution XML disables system-wide installation. Packages install into `~/Applications` as the current user.
+A native test found that the default root-owned bundle could not update without elevation.
+`eng/package-macos-installer.py` owns this installer policy and uses Apple's packaging tools. These are the initial candidate matrix.
 Native package tests must establish the supported OS versions before publication.
 Do not overwrite Flatpak, Snap, or OS package-manager installations.
 Do not add an elevation path. A protected distribution must fail before native apply starts.
@@ -57,6 +60,21 @@ Use the AppImage's external directory on Linux and the bundle's external directo
 Use `TangopadDesktop` as the package ID so a Windows uninstall cannot delete the installed-mode `Tangopad` state directory.
 Exclude all state files and portable markers from package inputs.
 
+The engineering project `eng/Editor.UpdateProbe/` references App and composes the actual editor with a local HTTP transport.
+App and Infrastructure grant internal access to this engineering assembly. Production construction still fixes the package identity and GitHub origin.
+The probe uses a separate package ID, temporary key, real native packages, and both storage modes.
+It does not ship in application packages.
+
+Windows uses the pinned upstream source with `eng/velopack/windows-recovery.patch`.
+The unpatched helper deletes its last working backup after forward replacement fails.
+The patch restores that backup on failure and retains it if restoration cannot finish.
+The build verifies the source archive, runs three Rust filesystem tests, and records source, patch, and binary hashes.
+Packaging replaces the helper only in an isolated copy of the pinned CLI.
+Linux and macOS retain the upstream helpers.
+
+The pending marker records the intended version. A restart into the previous version displays an update recovery message.
+Native apply runs silently so the application can report a recoverable native failure after restart.
+
 ## Alternatives
 
 A custom replacement helper would require new native process, locking, rollback, and signing code on every platform.
@@ -75,7 +93,7 @@ The publication workflow creates a draft for review.
 The repository has no configured release secrets or variables at this change's start.
 A free update-signing key was generated locally after the owner requested a path without platform certificates.
 Only its public half is in the repository. Its private half remains in the user's local data directory.
-The draft-release workflow needs that private key in its `UPDATE_SIGNING_KEY` secret.
+The `release` environment now contains that private key as `UPDATE_SIGNING_KEY` and permits only `main` deployments.
 Builds without a public key show that in-app updates are unavailable.
 
 ## Sources

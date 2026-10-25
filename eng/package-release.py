@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import runpy
 import shutil
 import subprocess
 import tempfile
@@ -82,6 +83,7 @@ def main():
     output.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix="tangopad-package-") as temporary:
         temporary = Path(temporary)
+        tool = runpy.run_path(str(ROOT / "eng/native-vpk.py"))["prepare"](temporary, args.rid, force_rebuild=args.production)
         signing = []
         public_key = ROOT / "eng/release/update-public-key.pem"
         if args.production:
@@ -119,7 +121,6 @@ def main():
         run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", signature, challenge)
         run("openssl", "dgst", "-sha256", "-verify", public_key, "-signature", signature, challenge)
         publish = temporary / "publish"
-        run("dotnet", "tool", "restore")
         run("dotnet", "publish", "src/Editor.App/Editor.App.csproj", "--configuration", "Release",
             "--runtime", args.rid, "--self-contained", "true", "--disable-build-servers",
             "-p:PublishSingleFile=true", f"-p:Version={release_version}",
@@ -127,18 +128,32 @@ def main():
             f"-p:ReleaseLockDirectory={temporary}/locks", "--output", publish)
         check_payload(publish)
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
-        pack_args = ["dotnet", "tool", "run", "vpk", "--", "pack", "--packId", "TangopadDesktop",
+        pack_args = [*tool, "pack", "--packId", "TangopadDesktop",
                      "--packTitle", "Tangopad", "--packVersion", release_version, "--runtime", args.rid,
                      "--channel", args.rid, "--packDir", str(publish), "--mainExe", executable,
                      "--delta", "None", "--releaseNotes", str(ROOT / "eng/release/notes.md"),
                      "--outputDir", str(output)]
         if args.rid.startswith("linux-"):
             pack_args += ["--icon", str(ROOT / "eng/release/tangopad.svg")]
+        if args.rid.startswith("osx-"):
+            pack_args += ["--noInst"]
         run(*pack_args, *signing)
+        if args.rid.startswith("osx-"):
+            runpy.run_path(str(ROOT / "eng/package-macos-installer.py"))["build"](
+                output, args.rid, "TangopadDesktop", "Tangopad", release_version,
+                os.environ.get("TANGOPAD_MAC_INSTALL_IDENTITY") if args.platform_signing == "configured" else None,
+                os.environ.get("TANGOPAD_MAC_NOTARY_PROFILE") if args.platform_signing == "configured" else None)
         sign_feed(output, args.rid, private_key, public_key)
+        if args.rid == "win-x64":
+            shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")
         shutil.copyfile(public_key, output / f"update-key.{args.rid}.pem")
-        (output / f"package.{args.rid}.json").write_text(json.dumps({"version": release_version,
-            "runtime": args.rid, "production": args.production, "source_commit": commit, "platform_signing": args.platform_signing}, indent=2) + "\n", encoding="utf-8")
+        manifest = output / f"package.{args.rid}.json"
+        digests = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                   for path in sorted(output.iterdir()) if path.is_file()}
+        manifest.write_text(json.dumps({"version": release_version,
+            "runtime": args.rid, "production": args.production, "source_commit": commit,
+            "platform_signing": args.platform_signing, "artifacts": digests}, indent=2) + "\n", encoding="utf-8")
+        run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", str(manifest) + ".sig", manifest)
     print(f"Packages: {output}")
 
 
