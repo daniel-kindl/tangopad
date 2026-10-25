@@ -6,7 +6,7 @@ on:
       recovery_attempts:
         description: Number of native recovery attempts per storage mode, from 1 to 10.
         type: number
-        default: 1
+        default: 5
   pull_request:
     branches: [dev, main]
     paths:
@@ -68,7 +68,7 @@ jobs:
         run: python eng/package-release.py --rid ${{ matrix.rid }}
       - name: Check native editor updates and recovery
         env:
-          TANGOPAD_RECOVERY_ATTEMPTS: ${{ inputs.recovery_attempts || 1 }}
+          TANGOPAD_RECOVERY_ATTEMPTS: ${{ inputs.recovery_attempts || 5 }}
         run: python eng/check-native-update.py --rid ${{ matrix.rid }}
       - name: Upload native update evidence
         if: always()

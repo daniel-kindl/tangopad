@@ -209,7 +209,7 @@ Unix portable checks also reject a read-only distribution directory before nativ
 On Windows it also blocks a staged directory to force replacement failure after backup, then retries.
 Evidence is in `artifacts/native-update/<runtime>/`.
 Use `--recovery-attempts 5` to repeat native failure recovery five times in each storage mode.
-The candidate workflow exposes the same `recovery_attempts` input for manual runs.
+The candidate workflow exposes the same `recovery_attempts` input for manual runs and defaults to five attempts.
 The probe records startup checkpoints. Failed runs retain process state, pending markers, and available macOS launch and crash logs.
 The production workflow requires at least five successful native recovery attempts in each storage mode.
 The production validator rejects evidence with fewer attempts.
