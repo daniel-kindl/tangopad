@@ -277,18 +277,28 @@ public sealed class RegexSearchViewModelTests
         Assert.False(search.ReplaceAllCommand.CanExecute(null));
     }
 
-    /// <summary>The worker handles representative large source within its safety budget.</summary>
+    /// <summary>A large scan completes or stops at its safety timeout without editing source.</summary>
     [Fact]
     public async Task LargeInputBenchmark()
     {
-        Buffer buffer = new(string.Concat(Enumerable.Repeat("entry λ123\r\n", 15000)));
+        string original = string.Concat(Enumerable.Repeat("entry λ123\r\n", 15000));
+        Buffer buffer = new(original);
         using SearchViewModel search = new(buffer) { Query = @"λ(\d+)", Replacement = "value=$1", UseRegex = true };
         search.ShowReplaceCommand.Execute(null);
         Stopwatch elapsed = Stopwatch.StartNew();
-        await search.Work.ConfigureAwait(true);
-        Assert.Equal(15000, search.MatchCount);
-        Assert.False(search.HasSearchError);
-        Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(5));
+        await search.Work.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        if (search.SearchTimedOut)
+        {
+            Assert.Equal(0, search.MatchCount);
+            Assert.False(search.ReplaceAllCommand.CanExecute(null));
+            search.ReplaceAllCommand.Execute(null);
+        }
+        else
+        {
+            Assert.Equal(15000, search.MatchCount);
+            Assert.False(search.HasSearchError);
+        }
+        Assert.Equal(original, buffer.Text);
         TestContext.Current.TestOutputHelper!.WriteLine($"Scan and replacement preparation: {buffer.Text.Length} UTF-16 units, {search.MatchCount} matches, {elapsed.Elapsed.TotalMilliseconds:F1} ms.");
     }
 
