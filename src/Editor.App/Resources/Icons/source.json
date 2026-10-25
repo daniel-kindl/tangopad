@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/lucide-icons/lucide",
+  "commit": "7faf87628a1ad6175975bc595344337ce14a7db4",
+  "icons": {
+    "New": "file-plus",
+    "Open": "folder-open",
+    "Recent": "rotate-ccw",
+    "Save": "save",
+    "SaveAs": "save-pen",
+    "Reload": "rotate-cw",
+    "Undo": "undo-2",
+    "Redo": "redo-2",
+    "Find": "search",
+    "Replace": "replace",
+    "Wrap": "text-wrap",
+    "Numbers": "list-ordered",
+    "File": "file-text",
+    "Preview": "panel-right",
+    "Info": "info"
+  }
+}

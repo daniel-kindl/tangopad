@@ -141,7 +141,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public partial bool CanEdit { get; private set; } = true;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Title), nameof(IsDirty))]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(IsDirty), nameof(DisplayName))]
     public partial string Text { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -163,6 +163,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
     public DocumentFormat Format => Session.Format;
     public Guid DocumentId => Session.Document.Id;
     public bool IsDirty => Session.Document.IsDirty;
+    public string DisplayName => Session.Destination is { } path ? Path.GetFileName(path) : labels.UntitledName;
     public string Title => string.Format(CultureInfo.CurrentCulture, labels.WindowTitleFormat,
         Session.Destination ?? labels.UntitledName, IsDirty ? labels.DirtyMarker : string.Empty);
 
@@ -429,6 +430,7 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
             IsBusy = false;
             CanEdit = true;
             OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(DisplayName));
             OnPropertyChanged(nameof(IsDirty));
         }
     }

@@ -6,6 +6,7 @@
     <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../../docs/licenses/Lucide.txt" Link="licenses/Lucide.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../docs/licenses/Velopack.txt" Link="licenses/Velopack.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../docs/licenses/Markdig.txt" Link="licenses/Markdig.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../docs/licenses/AvaloniaEdit.txt" Link="licenses/AvaloniaEdit.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

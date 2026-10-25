@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Editor.App.ViewModels"
+        x:Class="Editor.App.Views.Dialogs.UpdatesDialog"
+        x:DataType="vm:UpdateViewModel" Classes="dialog"
+        Title="{StaticResource Text.Update.Title}">
+  <StackPanel Classes="dialog-body">
+    <TextBlock Text="{StaticResource Text.App.Product}" Classes="about-title" />
+    <TextBlock x:Name="InstalledVersion" Text="{Binding InstalledVersion, StringFormat={StaticResource Text.About.VersionFormat}}" Classes="muted" />
+    <TextBlock x:Name="StatusText" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+    <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Classes="error-message" />
+    <TextBlock Text="{Binding Release.Notes}" TextWrapping="Wrap" />
+    <ProgressBar Value="{Binding Progress}" IsVisible="{Binding IsBusy}" />
+    <WrapPanel HorizontalAlignment="Right" ItemSpacing="{StaticResource Spacing.Actions}" LineSpacing="{StaticResource Spacing.Actions}">
+      <Button Content="{StaticResource Text.Update.Check}" Command="{Binding CheckCommand}" />
+      <Button Content="{StaticResource Text.Update.Install}" Command="{Binding InstallCommand}" />
+      <Button Content="{StaticResource Text.Command.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+      <Button x:Name="CloseButton" Content="{StaticResource Text.About.Close}" IsCancel="True" />
+    </WrapPanel>
+  </StackPanel>
+</Window>

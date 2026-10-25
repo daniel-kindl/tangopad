@@ -428,9 +428,9 @@ public sealed class EditorBindingTests
             Color lightBackground = Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color;
             Color lightStatus = Assert.IsType<ISolidColorBrush>(window.CaretStatus.Foreground, exactMatch: false).Color;
             Color lightError = Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color;
-            Assert.Equal(Colors.Black, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
+            Assert.Equal(Color.Parse("#242936"), Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
             _ = Assert.IsType<IBrush>(window.Editor.TextArea.SelectionBrush, exactMatch: false);
-            string[] roles = ["Background", "Surface", "Text.Primary", "Text.Muted", "Text.Disabled", "Accent", "Border", "Focus", "Error", "Selection"];
+            string[] roles = ["Background", "Surface", "Canvas", "Accent.Text", "Accent.Hover", "Text.Primary", "Text.Muted", "Text.Disabled", "Accent", "Border", "Focus", "Error", "Selection"];
             foreach (string role in roles)
             {
                 Assert.True(application.TryGetResource($"Brush.{role}", ThemeVariant.Light, out object? light));
@@ -444,7 +444,7 @@ public sealed class EditorBindingTests
             Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
             Assert.Equal("No matches", window.NoMatchesText.Text);
             Assert.Equal(window.Foreground, window.NoMatchesText.Foreground);
-            Assert.Equal(Colors.White, Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
+            Assert.Equal(Color.Parse("#E2E6EF"), Assert.IsType<ISolidColorBrush>(window.Foreground, exactMatch: false).Color);
             Assert.NotEqual(lightBackground, Assert.IsType<ISolidColorBrush>(window.Background, exactMatch: false).Color);
             Assert.NotEqual(lightStatus, Assert.IsType<ISolidColorBrush>(window.CaretStatus.Foreground, exactMatch: false).Color);
             Assert.NotEqual(lightError, Assert.IsType<ISolidColorBrush>(error.MessageText.Foreground, exactMatch: false).Color);
@@ -530,7 +530,7 @@ public sealed class EditorBindingTests
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
-    /// <summary>The editor window loads one fixed tree, named controls, and production styles.</summary>
+    /// <summary>The editor window loads named commands, document controls, and production styles.</summary>
     [Fact]
     public async Task EditorWindowLoadsNamedControlsAndThemeResources()
     {
@@ -539,40 +539,20 @@ public sealed class EditorBindingTests
         {
             EditorWindow window = new(new FileTextDocumentStore());
             window.Show();
-            Assert.Equal(960, window.Width);
-            Assert.Equal(680, window.Height);
+            Assert.Equal(1040, window.Width);
+            Assert.Equal(760, window.Height);
             Assert.Equal(400, window.MinWidth);
             Assert.Equal(250, window.MinHeight);
             Assert.Equal("Untitled - Tangopad", window.Title);
 
-            DockPanel layout = Assert.IsType<DockPanel>(window.Content);
-            Assert.Equal(5, layout.Children.Count);
-            WrapPanel toolbar = Assert.IsType<WrapPanel>(layout.Children[0]);
-            Assert.Equal(Dock.Top, DockPanel.GetDock(toolbar));
-            Assert.Equal(Orientation.Horizontal, toolbar.Orientation);
-            StackPanel actions = Assert.IsType<StackPanel>(toolbar.Children[0]);
-            Assert.Equal(Orientation.Horizontal, actions.Orientation);
-            Assert.Equal(8, actions.Spacing);
-            Assert.Equal(new Thickness(8), actions.Margin);
-            Button cancel = Assert.IsType<Button>(toolbar.Children[1]);
-            Assert.Equal("Cancel operation", cancel.Content);
-            Assert.False(cancel.IsVisible);
-            WrapPanel notification = Assert.IsType<WrapPanel>(layout.Children[1]);
-            Assert.False(notification.IsVisible);
-            Assert.Equal(Dock.Top, DockPanel.GetDock(notification));
-            Assert.Same(window.ViewModel.ReloadCommand, window.FindControl<Button>("ReloadExternalChangeButton")!.Command);
-            Assert.Same(window.ViewModel.DismissExternalChangeCommand, window.FindControl<Button>("DismissExternalChangeButton")!.Command);
-            Border status = Assert.IsType<Border>(layout.Children[3]);
-            Assert.Equal(Dock.Bottom, DockPanel.GetDock(status));
-            DockPanel statusLayout = Assert.IsType<DockPanel>(status.Child);
-            Button updates = Assert.IsType<Button>(statusLayout.Children[0]);
-            Assert.Equal(Dock.Right, DockPanel.GetDock(updates));
-            Assert.Equal("Updates", updates.Content);
-            WrapPanel statusItems = Assert.IsType<WrapPanel>(statusLayout.Children[1]);
-            Assert.Equal(Orientation.Horizontal, statusItems.Orientation);
-            Assert.Equal([window.CaretStatus, window.CharacterStatus, window.WordStatus, window.EncodingStatus, window.LineEndingStatus], statusItems.Children);
-            Grid documentLayout = Assert.IsType<Grid>(layout.Children[4]);
-            TextEditor editor = Assert.IsType<TextEditor>(documentLayout.Children[0]);
+            Assert.Equal("Cancel operation", window.CancelOperation.Content);
+            Assert.False(window.CancelOperation.IsVisible);
+            Assert.False(window.ExternalChangeBanner.IsVisible);
+            Assert.Same(window.ViewModel.ReloadCommand, window.ReloadExternalChangeButton.Command);
+            Assert.Same(window.ViewModel.DismissExternalChangeCommand, window.DismissExternalChangeButton.Command);
+            Assert.Equal("Check for Updates…", window.UpdatesMenu.Header);
+            Assert.False(window.UpdatesMenu.IsVisible);
+            TextEditor editor = window.Editor;
             Assert.Equal(0, Grid.GetColumn(editor));
             Assert.False(window.PreviewScroll.IsVisible);
             Assert.Equal(FontFamily.Parse("monospace"), editor.FontFamily);
@@ -581,15 +561,9 @@ public sealed class EditorBindingTests
             Assert.Equal(ScrollBarVisibility.Auto, editor.HorizontalScrollBarVisibility);
             Assert.Equal(ScrollBarVisibility.Auto, editor.VerticalScrollBarVisibility);
             Assert.Same(editor, window.FindControl<TextEditor>("Editor"));
-            Assert.Same(actions, window.FindControl<StackPanel>("Actions"));
-            Assert.Same(cancel, window.FindControl<Button>("CancelOperation"));
-            string[] labels = [.. actions.Children.Cast<Button>().Select(button => Assert.IsType<string>(button.Content))];
+            string[] labels = [.. new[] { window.NewButton, window.OpenButton, window.RecentFilesButton, window.SaveButton, window.SaveAsButton, window.ReloadButton }
+                .Select(button => Assert.IsType<string>(button.Content))];
             Assert.Equal(["New", "Open", "Recent Files", "Save", "Save As", "Reload from Disk"], labels);
-            Assert.Same(actions.Children[0], window.FindControl<Button>("NewButton"));
-            Assert.Same(actions.Children[1], window.FindControl<Button>("OpenButton"));
-            Assert.Same(actions.Children[2], window.FindControl<Button>("RecentFilesButton"));
-            Assert.Same(actions.Children[3], window.FindControl<Button>("SaveButton"));
-            Assert.Same(actions.Children[4], window.FindControl<Button>("SaveAsButton"));
 
             KeyModifiers command = OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
             KeyGesture[] gestures = [.. window.KeyBindings.Select(binding => Assert.IsType<KeyGesture>(binding.Gesture))];
@@ -601,8 +575,8 @@ public sealed class EditorBindingTests
             Assert.Equal(command, gestures[1].KeyModifiers);
             Assert.Equal(command, gestures[2].KeyModifiers);
             Assert.Equal(command | KeyModifiers.Shift, gestures[3].KeyModifiers);
-            Assert.Equal(gestures[0].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[0])));
-            Assert.Equal(gestures[3].ToString(), ToolTip.GetTip(Assert.IsType<Button>(actions.Children[4])));
+            Assert.Equal($"New ({gestures[0]})", ToolTip.GetTip(window.NewButton));
+            Assert.Equal($"Save As ({gestures[3]})", ToolTip.GetTip(window.SaveAsButton));
 
             Assert.Equal(3, Avalonia.Application.Current!.Styles.Count);
             _ = Assert.IsType<FluentTheme>(Avalonia.Application.Current.Styles[0]);
@@ -1246,7 +1220,7 @@ public sealed class EditorBindingTests
                 binding => ReferenceEquals(binding.Command, reload.Command)).Gesture);
             Assert.Equal(OperatingSystem.IsMacOS() ? Key.R : Key.F5, gesture.Key);
             Assert.Equal(OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.None, gesture.KeyModifiers);
-            Assert.Equal(gesture.ToString(), ToolTip.GetTip(reload));
+            Assert.Equal($"Reload from Disk ({gesture})", ToolTip.GetTip(reload));
             window.Close();
             return true;
         }, TestContext.Current.CancellationToken).ConfigureAwait(true);

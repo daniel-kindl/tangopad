@@ -1,5 +1,7 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:String x:Key="Text.App.Name">tangopad</x:String>
+  <x:String x:Key="Text.Editor.Name">Document editor</x:String>
   <x:String x:Key="Text.Document.Untitled">Untitled</x:String>
   <x:String x:Key="Text.Document.DirtyMarker" xml:space="preserve"> *</x:String>
   <x:String x:Key="Text.Window.TitleFormat">{0}{1} - Tangopad</x:String>
@@ -88,4 +90,37 @@
   <x:String x:Key="Text.Update.Applying">Applying the update and restarting...</x:String>
   <x:String x:Key="Text.Update.Cancelled">Update cancelled. You can keep editing.</x:String>
   <x:String x:Key="Text.Update.Failed">The update failed. You can retry.</x:String>
+  <x:String x:Key="Text.Menu.File">_File</x:String>
+  <x:String x:Key="Text.Menu.Edit">_Edit</x:String>
+  <x:String x:Key="Text.Menu.Search">_Search</x:String>
+  <x:String x:Key="Text.Menu.View">_View</x:String>
+  <x:String x:Key="Text.Menu.Help">_Help</x:String>
+  <x:String x:Key="Text.Menu.Close">Exit</x:String>
+  <x:String x:Key="Text.Menu.Appearance">Appearance</x:String>
+  <x:String x:Key="Text.Command.Undo">Undo</x:String>
+  <x:String x:Key="Text.Command.Redo">Redo</x:String>
+  <x:String x:Key="Text.Command.Cut">Cut</x:String>
+  <x:String x:Key="Text.Command.Copy">Copy</x:String>
+  <x:String x:Key="Text.Command.Paste">Paste</x:String>
+  <x:String x:Key="Text.Command.SelectAll">Select All</x:String>
+  <x:String x:Key="Text.Command.ZoomIn">Zoom In</x:String>
+  <x:String x:Key="Text.Command.ZoomOut">Zoom Out</x:String>
+  <x:String x:Key="Text.Command.ZoomReset">Reset Zoom</x:String>
+  <x:String x:Key="Text.Theme.System">Follow System</x:String>
+  <x:String x:Key="Text.Theme.Light">Light</x:String>
+  <x:String x:Key="Text.Theme.Dark">Dark</x:String>
+  <x:String x:Key="Text.About.Title">About Tangopad</x:String>
+  <x:String x:Key="Text.About.Description">A lightweight editor for text and markup.</x:String>
+  <x:String x:Key="Text.About.Privacy">Your files stay on your device. No account required.</x:String>
+  <x:String x:Key="Text.About.License">Free and open source under the MIT license.</x:String>
+  <x:String x:Key="Text.About.Icons">Icons by Lucide, licensed under ISC and MIT.</x:String>
+  <x:String x:Key="Text.About.Project">Project on GitHub</x:String>
+  <x:String x:Key="Text.About.Close">Close</x:String>
+  <x:String x:Key="Text.About.VersionFormat">Version {0}</x:String>
+  <x:String x:Key="Text.App.Product">Tangopad</x:String>
+  <x:String x:Key="Text.Document.Unsaved">Unsaved changes</x:String>
+  <x:String x:Key="Text.Editor.Source">SOURCE</x:String>
+  <x:String x:Key="Text.Preview.Heading">PREVIEW</x:String>
+  <x:String x:Key="Text.Update.Menu">Check for Updates…</x:String>
+  <x:String x:Key="Text.Recent.Empty">No recent files</x:String>
 </ResourceDictionary>
