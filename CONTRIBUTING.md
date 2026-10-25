@@ -98,6 +98,9 @@ Review and commit the lock files with the version change. Update
 `eng/architecture.json` only when the direct dependency graph changes.
 Run full verification. Do not use `--force-evaluate` to bypass an unexpected locked-restore failure.
 
+[Dependency maintenance](docs/dependency-maintenance.md) describes the weekly
+Dependabot group, security updates, coverage limits, and review procedure.
+
 ## Write code and tests
 
 [Coding standards](docs/coding-standards.md) defines the verified diagnostic set,
