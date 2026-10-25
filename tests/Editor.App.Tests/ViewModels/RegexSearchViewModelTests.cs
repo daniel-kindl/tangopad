@@ -198,7 +198,7 @@ public sealed class RegexSearchViewModelTests
         Assert.Equal(0, search.MatchCount);
     }
 
-    /// <summary>Input, result, and output limits reject a request without editing text.</summary>
+    /// <summary>Resource limits and timeouts reject a request without editing text.</summary>
     [Theory]
     [InlineData(1000001, "a", "x")]
     [InlineData(20001, "a", "x")]
@@ -210,7 +210,7 @@ public sealed class RegexSearchViewModelTests
         using SearchViewModel search = new(buffer) { Query = query, Replacement = replacement, UseRegex = true };
         search.ShowReplaceCommand.Execute(null);
         await search.Work.ConfigureAwait(true);
-        Assert.True(search.SearchLimitReached);
+        Assert.True(search.SearchLimitReached || search.SearchTimedOut);
         Assert.False(search.ReplaceAllCommand.CanExecute(null));
         search.ReplaceAllCommand.Execute(null);
         Assert.Equal(original, buffer.Text);

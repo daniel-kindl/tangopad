@@ -101,6 +101,8 @@ class Desktop:
         # GTK Save starts in the Name field. Open uses the location field.
         if not saving:
             self.key("ctrl+l")
+            # GTK creates the location entry after the shortcut event.
+            time.sleep(0.2)
         self.key("ctrl+a")
         self.type(str(path))
         # GTK posts filename completion after the text input event.
