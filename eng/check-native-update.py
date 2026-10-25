@@ -89,6 +89,28 @@ def wait_for_exit(pid):
     raise RuntimeError("The restarted editor did not exit after its report.")
 
 
+def capture_failure(work, root, evidence):
+    for report in work.glob("*-result.json*"):
+        shutil.copyfile(report, evidence / report.name)
+    pending = root / ".tangopad-update-pending"
+    if pending.exists():
+        shutil.copyfile(pending, evidence / "pending-update.txt")
+    commands = [("processes.log", ["tasklist", "/FO", "CSV"] if os.name == "nt" else ["ps", "-axo", "pid,ppid,stat,comm"])]
+    if platform.system() == "Darwin":
+        commands.append(("macos-launch.log", ["/usr/bin/log", "show", "--last", "3m", "--style", "compact", "--predicate",
+                         'process == "Tangopad.UpdateProbe" OR process == "open" OR eventMessage CONTAINS "Tangopad"']))
+        crashes = Path.home() / "Library/Logs/DiagnosticReports"
+        for crash in sorted(crashes.glob("*UpdateProbe*"))[-5:]:
+            if crash.is_file():
+                shutil.copyfile(crash, evidence / crash.name)
+    for name, command in commands:
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+            (evidence / name).write_text((result.stdout + result.stderr)[-500000:], encoding="utf-8")
+        except (OSError, subprocess.TimeoutExpired) as error:
+            (evidence / name).write_text(str(error), encoding="utf-8")
+
+
 @contextlib.contextmanager
 def block_windows_replacement(packages, current):
     """Hold a staged directory without delete sharing until native recovery completes."""
@@ -138,7 +160,10 @@ def block_windows_replacement(packages, current):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rid", choices=RUNTIMES, required=True)
+    parser.add_argument("--recovery-attempts", type=int, default=os.environ.get("TANGOPAD_RECOVERY_ATTEMPTS", "1"))
     args = parser.parse_args()
+    if not 1 <= args.recovery_attempts <= 10:
+        parser.error("The recovery attempt count must be between 1 and 10.")
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
     rid = args.rid
@@ -278,6 +303,7 @@ def main():
                         wait_for_exit(result["ProcessId"])
                     except (RuntimeError, subprocess.TimeoutExpired):
                         log.flush()
+                        capture_failure(work, root, step_evidence)
                         print((step_evidence / "process.log").read_text(encoding="utf-8", errors="replace")[-16000:], flush=True)
                         raise
                     finally:
@@ -368,12 +394,13 @@ def main():
             asset.update(Size=package.stat().st_size, SHA256=hashlib.sha256(package.read_bytes()).hexdigest().upper())
             write_json(feed_file, metadata)
             run("openssl", "dgst", "-sha256", "-sign", key, "-out", signature_file, feed_file)
-            cached.unlink(missing_ok=True)
-            recovered = launch("recover", label="native-recovery")
-            if not recovered["RecoveryError"] or recovered["Dirty"]:
-                raise RuntimeError("The native update did not report recovery to the previous editor.")
-            if state_path.read_bytes() != state or document.read_bytes() != ORIGINAL:
-                raise RuntimeError("A failed native update changed application state or the document.")
+            for attempt in range(args.recovery_attempts):
+                cached.unlink(missing_ok=True)
+                recovered = launch("recover", label="native-recovery" if attempt == 0 else f"native-recovery-{attempt + 1}")
+                if not recovered["RecoveryError"] or recovered["Dirty"]:
+                    raise RuntimeError("The native update did not report recovery to the previous editor.")
+                if state_path.read_bytes() != state or document.read_bytes() != ORIGINAL:
+                    raise RuntimeError("A failed native update changed application state or the document.")
             package.write_bytes(package_bytes)
             asset.update(Size=len(package_bytes), SHA256=hashlib.sha256(package_bytes).hexdigest().upper())
             write_json(feed_file, metadata)
@@ -397,7 +424,7 @@ def main():
                             "os": platform.platform(), "mode": mode,
                             "native_helper": json.loads((ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json").read_bytes()) if rid == "win-x64" else None, "old_version": "0.1.0", "new_version": newer,
                             "signature_rejected": True, "partial_download_rejected": True, "checksum_rejected": True,
-                            "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True, "native_failure_recovered": True, "replacement_after_backup_recovered": rid == "win-x64", "other_window_preserved": True,
+                            "unsaved_cancel_preserved": True, "save_before_restart": True, "state_preserved": True, "native_failure_recovered": True, "native_recovery_attempts": args.recovery_attempts, "replacement_after_backup_recovered": rid == "win-x64", "other_window_preserved": True,
                             "protected_directory_rejected": mode == "--portable" and not rid.startswith("win-"),
                             "protected_bundle_rejected": rid.startswith("osx-")})
             write_json(evidence / "result.json", results)

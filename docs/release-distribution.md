@@ -206,6 +206,9 @@ A second editor retains its exact unsaved text when it prevents apply.
 Unix portable checks also reject a read-only distribution directory before native apply.
 On Windows it also blocks a staged directory to force replacement failure after backup, then retries.
 Evidence is in `artifacts/native-update/<runtime>/`.
+Use `--recovery-attempts 5` to repeat native failure recovery five times in each storage mode.
+The candidate workflow exposes the same `recovery_attempts` input for manual runs.
+The probe records startup checkpoints. Failed runs retain process state, pending markers, and available macOS launch and crash logs.
 These local feeds do not prove the published GitHub release path or downloaded-file OS trust prompts.
 Optional platform signing, notarization, protected Windows installations, and starts during native apply still require acceptance evidence.
 Issue #45 must remain open until these checks and production release validation pass.
