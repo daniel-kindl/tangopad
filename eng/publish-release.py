@@ -45,6 +45,8 @@ def validate_packages(packages, target):
                        or result.get("source_dirty") is not False
                        or not all(result.get(check) is True for check in requirements) for result in evidence)):
             raise ValueError("Native update evidence is missing, failed, or belongs to another source commit.")
+        if any(not isinstance(result.get("native_recovery_attempts"), int) or result["native_recovery_attempts"] < 5 for result in evidence):
+            raise ValueError("Production validation requires at least five native recovery attempts in each storage mode.")
         if runtime != "win-x64" and any(result.get("mode") == "--portable" and result.get("protected_directory_rejected") is not True for result in evidence):
             raise ValueError("Unix portable packages require evidence of protected-directory rejection.")
         if runtime.startswith("osx-") and any(result.get("protected_bundle_rejected") is not True for result in evidence):

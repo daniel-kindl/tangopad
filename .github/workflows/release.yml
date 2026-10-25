@@ -49,7 +49,7 @@ jobs:
           TANGOPAD_UPDATE_PRIVATE_KEY_PEM: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: python eng/package-release.py --rid ${{ matrix.rid }} --production
       - name: Check native editor updates and recovery
-        run: python eng/check-native-update.py --rid ${{ matrix.rid }}
+        run: python eng/check-native-update.py --rid ${{ matrix.rid }} --recovery-attempts 5
       - name: Collect native evidence
         shell: python
         run: |

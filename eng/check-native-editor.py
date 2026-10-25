@@ -114,7 +114,12 @@ class Desktop:
             # A second click cannot accept the centered overwrite dialog.
             time.sleep(0.2)
             if self.find(title) == window:
-                self.click(window, int(geometry["WIDTH"]) - 50, int(geometry["HEIGHT"]) - 24)
+                try:
+                    self.click(window, int(geometry["WIDTH"]) - 50, int(geometry["HEIGHT"]) - 24)
+                except RuntimeError as error:
+                    # GTK can close the picker between the lookup and the optional click.
+                    if "BadWindow" not in str(error) or self.find(title) == window:
+                        raise
 
     def overwrite(self):
         def child():

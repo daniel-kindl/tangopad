@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Editor.Infrastructure.Updates;
 using Xunit;
 
@@ -6,6 +7,25 @@ namespace Editor.Infrastructure.Tests.Updates;
 /// <summary>Checks startup exclusion and recovery around native update handoff.</summary>
 public sealed class UpdateHandoffTests
 {
+    /// <summary>A missing Unix owner permits recovery. Other native query errors remain visible.</summary>
+    [Theory]
+    [InlineData(3)]
+    [InlineData(1)]
+    [InlineData(5)]
+    [InlineData(13)]
+    public void OwnerQueryErrorsPreserveTheStartupGate(int nativeError)
+    {
+        Win32Exception error = new(nativeError);
+        if (nativeError == 3 && !OperatingSystem.IsWindows())
+        {
+            Assert.False(UpdateHandoff.IsOwnerRunning(() => throw error));
+        }
+        else
+        {
+            Assert.Same(error, Assert.Throws<Win32Exception>(() => UpdateHandoff.IsOwnerRunning(() => throw error)));
+        }
+    }
+
     /// <summary>An active handoff blocks a new editor before it can contain unsaved edits.</summary>
     [Fact]
     public void ActiveHandoffPreventsStartup()

@@ -159,6 +159,8 @@ The application refuses apply when another same-named process is detected.
 Startup and apply also share a mutex and a pending-update marker outside replaced content.
 New editors wait while the initiating process or native helper is active.
 A stale marker clears after those processes exit, which permits recovery after a crash.
+On Unix, an owner that exits during the process identity query can produce `ESRCH`.
+The startup gate treats that result as an exited owner. Permission errors and other native query failures still stop startup.
 The marker records the target version. If the previous version restarts after a failed replacement, the editor displays a recovery message.
 Native apply runs silently. The restarted editor displays the failure instead of leaving a native error dialog open.
 Concurrent-start behavior still needs native Windows and macOS acceptance.
@@ -209,6 +211,8 @@ Evidence is in `artifacts/native-update/<runtime>/`.
 Use `--recovery-attempts 5` to repeat native failure recovery five times in each storage mode.
 The candidate workflow exposes the same `recovery_attempts` input for manual runs.
 The probe records startup checkpoints. Failed runs retain process state, pending markers, and available macOS launch and crash logs.
+The production workflow requires at least five successful native recovery attempts in each storage mode.
+The production validator rejects evidence with fewer attempts.
 These local feeds do not prove the published GitHub release path or downloaded-file OS trust prompts.
 Optional platform signing, notarization, protected Windows installations, and starts during native apply still require acceptance evidence.
 Issue #45 must remain open until these checks and production release validation pass.
