@@ -6,6 +6,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="/Resources/Text.axaml" />
+        <ResourceInclude Source="/Resources/Icons.axaml" />
         <ResourceInclude Source="/Resources/Tokens.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>

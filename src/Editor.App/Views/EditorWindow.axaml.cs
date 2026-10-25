@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Utils;
 using CommunityToolkit.Mvvm.Input;
@@ -48,19 +49,85 @@ internal sealed partial class EditorWindow : Window
                 _ = Editor.TextArea.Focus();
             }
         };
-        AddShortcut(NewButton, "N", ViewModel.NewCommand);
-        AddShortcut(OpenButton, "O", ViewModel.OpenCommand);
-        AddShortcut(SaveButton, "S", ViewModel.SaveCommand);
-        AddShortcut(SaveAsButton, "Shift+S", ViewModel.SaveAsCommand);
+        AddShortcut(NewButton, "N", ViewModel.NewCommand, NewMenu);
+        AddShortcut(OpenButton, "O", ViewModel.OpenCommand, OpenMenu);
+        AddShortcut(SaveButton, "S", ViewModel.SaveCommand, SaveMenu);
+        AddShortcut(SaveAsButton, "Shift+S", ViewModel.SaveAsCommand, SaveAsMenu);
         KeyGesture reload = KeyGesture.Parse(OperatingSystem.IsMacOS() ? "Meta+R" : "F5");
-        ToolTip.SetTip(ReloadButton, reload.ToString());
+        ToolTip.SetTip(ReloadButton, $"{ReloadButton.Content} ({reload})");
+        ReloadMenu.InputGesture = reload;
         KeyBindings.Add(new KeyBinding { Gesture = reload, Command = ViewModel.ReloadCommand });
         RelayCommand find = new(() => OpenSearch(false));
         RelayCommand replace = new(() => OpenSearch(true));
         FindButton.Command = find;
         ReplaceButton.Command = replace;
-        AddShortcut(FindButton, "F", find);
-        AddShortcut(ReplaceButton, "H", replace);
+        AddShortcut(FindButton, "F", find, FindMenu);
+        AddShortcut(ReplaceButton, "H", replace, ReplaceMenu);
+        string modifier = OperatingSystem.IsMacOS() ? "Meta" : "Control";
+        foreach ((MenuItem menu, string key) in new (MenuItem, string)[]
+        {
+            (UndoMenu, "Z"), (RedoMenu, OperatingSystem.IsMacOS() ? "Shift+Z" : "Y"),
+            (CutMenu, "X"), (CopyMenu, "C"), (PasteMenu, "V"), (SelectAllMenu, "A"),
+            (ZoomInMenu, "OemPlus"), (ZoomOutMenu, "OemMinus"), (ZoomResetMenu, "D0"),
+        })
+        {
+            menu.InputGesture = KeyGesture.Parse($"{modifier}+{key}");
+        }
+        FindMenu.Command = find;
+        ReplaceMenu.Command = replace;
+        GoToLineMenu.Command = new AsyncRelayCommand(ShowGoToLineAsync);
+        GoToLineMenu.InputGesture = KeyGesture.Parse($"{(OperatingSystem.IsMacOS() ? "Meta" : "Control")}+G");
+        _ = RecentMenu.Items.Add(new MenuItem { Header = PresentationResources.Text("Text.Recent.Empty"), IsEnabled = false });
+        RecentMenu.SubmenuOpened += (_, _) =>
+        {
+            RecentMenu.Items.Clear();
+            foreach (RecentFileEntry entry in ViewModel.RecentFiles)
+            {
+                MenuItem item = new() { Header = entry.Label, Command = ViewModel.OpenRecentCommand, CommandParameter = entry.Path };
+                ToolTip.SetTip(item, entry.Path);
+                _ = RecentMenu.Items.Add(item);
+            }
+            if (ViewModel.RecentFiles.Count == 0)
+            {
+                _ = RecentMenu.Items.Add(new MenuItem { Header = PresentationResources.Text("Text.Recent.Empty"), IsEnabled = false });
+            }
+            _ = RecentMenu.Items.Add(new Separator());
+            _ = RecentMenu.Items.Add(new MenuItem { Header = PresentationResources.Text("Text.Recent.Clear"), Command = ViewModel.ClearRecentFilesCommand });
+        };
+        UpdatesMenu.Command = new AsyncRelayCommand(async () =>
+        {
+            if (ViewModel.Updates is not { } updates) { return; }
+            UpdatesDialog dialog = new(updates) { RequestedThemeVariant = RequestedThemeVariant };
+            Task showing = dialog.ShowDialog(this);
+            if (updates.CheckCommand.CanExecute(null)) { await updates.CheckCommand.ExecuteAsync(null).ConfigureAwait(true); }
+            await showing.ConfigureAwait(true);
+            _ = Editor.TextArea.Focus();
+        });
+        CloseMenu.Command = new RelayCommand(Close);
+        AboutMenu.Command = new AsyncRelayCommand(async () =>
+        {
+            await new AboutDialog { RequestedThemeVariant = RequestedThemeVariant }.ShowDialog(this).ConfigureAwait(true);
+            _ = Editor.TextArea.Focus();
+        });
+        SystemThemeMenu.Command = new RelayCommand(() => RequestedThemeVariant = ThemeVariant.Default);
+        LightThemeMenu.Command = new RelayCommand(() => RequestedThemeVariant = ThemeVariant.Light);
+        DarkThemeMenu.Command = new RelayCommand(() => RequestedThemeVariant = ThemeVariant.Dark);
+        ZoomInMenu.Command = ViewModel.IncreaseFontSizeCommand;
+        ZoomOutMenu.Command = ViewModel.DecreaseFontSizeCommand;
+        ZoomResetMenu.Command = ViewModel.ResetFontSizeCommand;
+        RelayCommand undo = new(() => { _ = Editor.Undo(); _ = Editor.TextArea.Focus(); }, () => ViewModel.CanEdit && Editor.Document.UndoStack.CanUndo);
+        RelayCommand redo = new(() => { _ = Editor.Redo(); _ = Editor.TextArea.Focus(); }, () => ViewModel.CanEdit && Editor.Document.UndoStack.CanRedo);
+        UndoButton.Command = UndoMenu.Command = undo;
+        RedoButton.Command = RedoMenu.Command = redo;
+        Editor.Document.UndoStack.PropertyChanged += (_, _) => { undo.NotifyCanExecuteChanged(); redo.NotifyCanExecuteChanged(); };
+        ViewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(EditorViewModel.CanEdit)) { undo.NotifyCanExecuteChanged(); redo.NotifyCanExecuteChanged(); }
+        };
+        CutMenu.Command = new RelayCommand(() => { Editor.Cut(); _ = Editor.TextArea.Focus(); }, () => ViewModel.CanEdit);
+        CopyMenu.Command = new RelayCommand(() => { Editor.Copy(); _ = Editor.TextArea.Focus(); });
+        PasteMenu.Command = new RelayCommand(() => { Editor.Paste(); _ = Editor.TextArea.Focus(); }, () => ViewModel.CanEdit);
+        SelectAllMenu.Command = new RelayCommand(() => { Editor.SelectAll(); _ = Editor.TextArea.Focus(); });
         AddHandler(KeyDownEvent, OnSearchKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnFontSizeKeyDown, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnGoToLineKeyDown, RoutingStrategies.Tunnel);
@@ -246,6 +313,12 @@ internal sealed partial class EditorWindow : Window
         }
 
         args.Handled = true;
+        await ShowGoToLineAsync().ConfigureAwait(true);
+    }
+
+    private async Task ShowGoToLineAsync()
+    {
+        if (goToLineOpen || !ViewModel.CanEdit) { return; }
         goToLineOpen = true;
         try
         {
@@ -265,10 +338,11 @@ internal sealed partial class EditorWindow : Window
         }
     }
 
-    private void AddShortcut(Button button, string key, ICommand command)
+    private void AddShortcut(Button button, string key, ICommand command, MenuItem? menu = null)
     {
         KeyGesture gesture = KeyGesture.Parse($"{(OperatingSystem.IsMacOS() ? "Meta" : "Control")}+{key}");
-        ToolTip.SetTip(button, gesture.ToString());
+        ToolTip.SetTip(button, $"{button.Content} ({gesture})");
+        menu?.InputGesture = gesture;
         KeyBindings.Add(new KeyBinding { Gesture = gesture, Command = command });
     }
 

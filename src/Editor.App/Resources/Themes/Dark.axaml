@@ -1,12 +1,12 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <StaticResource x:Key="Brush.Background" ResourceKey="SystemRegionBrush" />
-  <StaticResource x:Key="Brush.Surface" ResourceKey="SystemRegionBrush" />
-  <StaticResource x:Key="Brush.Text.Primary" ResourceKey="SystemControlForegroundBaseHighBrush" />
-  <StaticResource x:Key="Brush.Text.Muted" ResourceKey="SystemControlForegroundBaseMediumBrush" />
+  <SolidColorBrush x:Key="Brush.Background" Color="#171A21" />
+  <SolidColorBrush x:Key="Brush.Surface" Color="#20242D" />
+  <SolidColorBrush x:Key="Brush.Text.Primary" Color="#E2E6EF" />
+  <SolidColorBrush x:Key="Brush.Text.Muted" Color="#A5ADBE" />
   <StaticResource x:Key="Brush.Text.Disabled" ResourceKey="SystemControlDisabledBaseMediumLowBrush" />
-  <StaticResource x:Key="Brush.Accent" ResourceKey="SystemControlForegroundAccentBrush" />
-  <StaticResource x:Key="Brush.Border" ResourceKey="SystemControlForegroundBaseLowBrush" />
+  <SolidColorBrush x:Key="Brush.Accent" Color="#9BAFFE" />
+  <SolidColorBrush x:Key="Brush.Border" Color="#333A48" />
   <StaticResource x:Key="Brush.Focus" ResourceKey="SystemControlRevealFocusVisualBrush" />
   <StaticResource x:Key="Brush.Error" ResourceKey="SystemControlErrorTextForegroundBrush" />
   <StaticResource x:Key="Brush.Selection" ResourceKey="TextAreaSelectionBrush" />
@@ -58,4 +58,16 @@
   <SolidColorBrush x:Key="Brush.Csv.Separator" Color="#9CDCFE" />
   <SolidColorBrush x:Key="Brush.Tsv.QuotedField" Color="#DCAFE9" />
   <SolidColorBrush x:Key="Brush.Tsv.Separator" Color="#9CDCFE" />
+  <SolidColorBrush x:Key="Brush.Canvas" Color="#1C2028" />
+  <SolidColorBrush x:Key="Brush.Accent.Text" Color="#1C2445" />
+  <SolidColorBrush x:Key="Brush.Accent.Hover" Color="#B3C2FF" />
+  <StaticResource x:Key="CheckBoxForegroundChecked" ResourceKey="Brush.Text.Primary" />
+  <StaticResource x:Key="CheckBoxForegroundCheckedPointerOver" ResourceKey="Brush.Text.Primary" />
+  <StaticResource x:Key="CheckBoxForegroundCheckedPressed" ResourceKey="Brush.Text.Primary" />
+  <StaticResource x:Key="CheckBoxForegroundUnchecked" ResourceKey="Brush.Text.Primary" />
+  <StaticResource x:Key="CheckBoxForegroundUncheckedPointerOver" ResourceKey="Brush.Text.Primary" />
+  <StaticResource x:Key="CheckBoxForegroundUncheckedPressed" ResourceKey="Brush.Text.Primary" />
+  <SolidColorBrush x:Key="Brush.Icon" Color="#B7C0D3" />
+  <SolidColorBrush x:Key="Brush.Hover" Color="#303846" />
+  <SolidColorBrush x:Key="Brush.Selected" Color="#354362" />
 </ResourceDictionary>

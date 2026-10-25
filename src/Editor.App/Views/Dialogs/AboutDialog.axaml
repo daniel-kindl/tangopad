@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Editor.App.Views.Dialogs.AboutDialog"
+        Classes="dialog" Title="{StaticResource Text.About.Title}">
+  <StackPanel Classes="dialog-body">
+    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing.Dialog}">
+      <Border Width="{StaticResource Size.About.Logo}" Height="{StaticResource Size.About.Logo}"
+              CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Selected}">
+        <Viewbox Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}">
+          <Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}">
+            <Path Classes="icon-stroke" Data="{StaticResource Icon.File}" />
+          </Canvas>
+        </Viewbox>
+      </Border>
+      <StackPanel VerticalAlignment="Center">
+        <TextBlock Classes="about-title" Text="{StaticResource Text.App.Product}" />
+        <TextBlock x:Name="VersionText" Classes="muted" />
+      </StackPanel>
+    </StackPanel>
+    <TextBlock Text="{StaticResource Text.About.Description}" TextWrapping="Wrap" />
+    <TextBlock Classes="muted" Text="{StaticResource Text.About.Privacy}" />
+    <StackPanel Spacing="{StaticResource Spacing.Actions}">
+      <TextBlock Classes="muted" Text="{StaticResource Text.About.License}" />
+      <TextBlock Classes="muted" Text="{StaticResource Text.About.Icons}" />
+    </StackPanel>
+    <StackPanel Classes="dialog-actions">
+      <Button x:Name="ProjectButton" Content="{StaticResource Text.About.Project}" />
+      <Button x:Name="CloseButton" Content="{StaticResource Text.About.Close}" IsCancel="True" IsDefault="True" />
+    </StackPanel>
+  </StackPanel>
+</Window>

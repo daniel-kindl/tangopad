@@ -11,13 +11,73 @@
         MinHeight="{StaticResource Size.Window.MinHeight}"
         Title="{Binding Title}">
   <DockPanel>
-    <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource Brush.Surface}">
-      <StackPanel x:Name="Actions" Orientation="Horizontal"
-                  Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}"
-                  IsEnabled="{Binding !IsBusy}">
-        <Button x:Name="NewButton" Content="{StaticResource Text.Command.New}" Command="{Binding NewCommand}" />
-        <Button x:Name="OpenButton" Content="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}" />
-        <Button x:Name="RecentFilesButton" Content="{StaticResource Text.Recent.Title}">
+    <Border DockPanel.Dock="Top" Classes="menu-bar">
+      <Menu x:Name="MainMenu">
+        <MenuItem Header="{StaticResource Text.Menu.File}">
+          <MenuItem x:Name="NewMenu" Header="{StaticResource Text.Command.New}" Command="{Binding NewCommand}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.New}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="OpenMenu" Header="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Open}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="RecentMenu" Header="{StaticResource Text.Recent.Title}" IsEnabled="{Binding !IsBusy}"><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Recent}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <Separator />
+          <MenuItem x:Name="SaveMenu" Header="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Save}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="SaveAsMenu" Header="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.SaveAs}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="ReloadMenu" Header="{StaticResource Text.Command.Reload}" Command="{Binding ReloadCommand}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Reload}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <Separator />
+          <MenuItem x:Name="CloseMenu" Header="{StaticResource Text.Menu.Close}" />
+        </MenuItem>
+        <MenuItem Header="{StaticResource Text.Menu.Edit}">
+          <MenuItem x:Name="UndoMenu" Header="{StaticResource Text.Command.Undo}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Undo}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="RedoMenu" Header="{StaticResource Text.Command.Redo}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Redo}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <Separator />
+          <MenuItem x:Name="CutMenu" IsEnabled="{Binding CanEdit}" Header="{StaticResource Text.Command.Cut}" />
+          <MenuItem x:Name="CopyMenu" Header="{StaticResource Text.Command.Copy}" />
+          <MenuItem x:Name="PasteMenu" IsEnabled="{Binding CanEdit}" Header="{StaticResource Text.Command.Paste}" />
+          <Separator />
+          <MenuItem x:Name="SelectAllMenu" Header="{StaticResource Text.Command.SelectAll}" />
+        </MenuItem>
+        <MenuItem Header="{StaticResource Text.Menu.Search}">
+          <MenuItem x:Name="FindMenu" Header="{StaticResource Text.Search.Find}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Find}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <MenuItem x:Name="ReplaceMenu" Header="{StaticResource Text.Search.Replace}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Replace}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+          <Separator />
+          <MenuItem x:Name="GoToLineMenu" Header="{StaticResource Text.GoToLine.Title}" />
+        </MenuItem>
+        <MenuItem x:Name="ViewMenu" Header="{StaticResource Text.Menu.View}">
+          <MenuItem x:Name="WordWrapMenu" IsEnabled="{Binding CanEdit}" Header="{StaticResource Text.Editor.WordWrap}" ToggleType="CheckBox" IsChecked="{Binding WordWrap, Mode=TwoWay}"/>
+          <MenuItem x:Name="LineNumbersMenu" IsEnabled="{Binding CanEdit}" Header="{StaticResource Text.Editor.LineNumbers}" ToggleType="CheckBox" IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}"/>
+          <Separator />
+          <MenuItem x:Name="ZoomInMenu" Header="{StaticResource Text.Command.ZoomIn}" />
+          <MenuItem x:Name="ZoomOutMenu" Header="{StaticResource Text.Command.ZoomOut}" />
+          <MenuItem x:Name="ZoomResetMenu" Header="{StaticResource Text.Command.ZoomReset}" />
+          <Separator />
+          <MenuItem Header="{StaticResource Text.Menu.Appearance}">
+            <MenuItem x:Name="SystemThemeMenu" Header="{StaticResource Text.Theme.System}" ToggleType="Radio" GroupName="theme" IsChecked="True"/>
+            <MenuItem x:Name="LightThemeMenu" Header="{StaticResource Text.Theme.Light}" ToggleType="Radio" GroupName="theme"/>
+            <MenuItem x:Name="DarkThemeMenu" Header="{StaticResource Text.Theme.Dark}" ToggleType="Radio" GroupName="theme"/>
+          </MenuItem>
+        </MenuItem>
+        <MenuItem Header="{StaticResource Text.Menu.Help}">
+          <MenuItem x:Name="UpdatesMenu" Header="{StaticResource Text.Update.Menu}" IsVisible="{Binding HasUpdater}" />
+          <Separator IsVisible="{Binding HasUpdater}" />
+          <MenuItem x:Name="AboutMenu" Header="{StaticResource Text.About.Title}" ><MenuItem.Icon><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Info}" /></Canvas></Viewbox></MenuItem.Icon></MenuItem>
+        </MenuItem>
+      </Menu>
+    </Border>
+    <Border DockPanel.Dock="Top" Classes="command-bar">
+      <WrapPanel x:Name="Actions" Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Tools}"
+                 LineSpacing="{StaticResource Spacing.Toolbar.Rows}">
+        <Button x:Name="NewButton" Classes="icon-button" Content="{StaticResource Text.Command.New}" AutomationProperties.Name="{StaticResource Text.Command.New}" ToolTip.Tip="{StaticResource Text.Command.New}" Command="{Binding NewCommand}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.New}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="OpenButton" Classes="icon-button" Content="{StaticResource Text.Command.Open}" AutomationProperties.Name="{StaticResource Text.Command.Open}" ToolTip.Tip="{StaticResource Text.Command.Open}" Command="{Binding OpenCommand}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Open}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="SaveButton" Classes="icon-button" Content="{StaticResource Text.Command.Save}" AutomationProperties.Name="{StaticResource Text.Command.Save}" ToolTip.Tip="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Save}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="SaveAsButton" Classes="icon-button" Content="{StaticResource Text.Command.SaveAs}" AutomationProperties.Name="{StaticResource Text.Command.SaveAs}" ToolTip.Tip="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.SaveAs}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="RecentFilesButton" IsEnabled="{Binding !IsBusy}" Classes="icon-button" Content="{StaticResource Text.Recent.Title}" AutomationProperties.Name="{StaticResource Text.Recent.Title}" ToolTip.Tip="{StaticResource Text.Recent.Title}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Recent}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
           <Button.Flyout>
             <Flyout>
               <StackPanel Spacing="{StaticResource Spacing.Actions}">
@@ -39,20 +99,51 @@
             </Flyout>
           </Button.Flyout>
         </Button>
-        <Button x:Name="SaveButton" Content="{StaticResource Text.Command.Save}" Command="{Binding SaveCommand}" />
-        <Button x:Name="SaveAsButton" Content="{StaticResource Text.Command.SaveAs}" Command="{Binding SaveAsCommand}" />
-        <Button x:Name="ReloadButton" Content="{StaticResource Text.Command.Reload}" Command="{Binding ReloadCommand}" />
-      </StackPanel>
-      <Button x:Name="CancelOperation" Content="{StaticResource Text.Command.CancelOperation}"
-              IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
-      <Button x:Name="FindButton" Content="{StaticResource Text.Search.Find}" />
-      <Button x:Name="ReplaceButton" Content="{StaticResource Text.Search.Replace}" />
-      <CheckBox x:Name="WordWrapToggle" Content="{StaticResource Text.Editor.WordWrap}"
-                IsEnabled="{Binding CanEdit}" IsChecked="{Binding WordWrap, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
-      <Button x:Name="PreviewToggle" Content="{StaticResource Text.Preview.Show}" IsVisible="False" />
-      <CheckBox x:Name="LineNumbersToggle" Content="{StaticResource Text.Editor.LineNumbers}"
-                IsEnabled="{Binding CanEdit}" IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}" Margin="{StaticResource Inset.Toolbar}" />
-    </WrapPanel>
+        <Button x:Name="ReloadButton" Classes="icon-button" Content="{StaticResource Text.Command.Reload}" AutomationProperties.Name="{StaticResource Text.Command.Reload}" ToolTip.Tip="{StaticResource Text.Command.Reload}" Command="{Binding ReloadCommand}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Reload}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Border Classes="toolbar-divider" />
+        <Button x:Name="UndoButton" Classes="icon-button" Content="{StaticResource Text.Command.Undo}" AutomationProperties.Name="{StaticResource Text.Command.Undo}" ToolTip.Tip="{StaticResource Text.Command.Undo}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Undo}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="RedoButton" Classes="icon-button" Content="{StaticResource Text.Command.Redo}" AutomationProperties.Name="{StaticResource Text.Command.Redo}" ToolTip.Tip="{StaticResource Text.Command.Redo}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Redo}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Border Classes="toolbar-divider" />
+        <Button x:Name="FindButton" Classes="icon-button" Content="{StaticResource Text.Search.Find}" AutomationProperties.Name="{StaticResource Text.Search.Find}" ToolTip.Tip="{StaticResource Text.Search.Find}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Find}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="ReplaceButton" Classes="icon-button" Content="{StaticResource Text.Search.Replace}" AutomationProperties.Name="{StaticResource Text.Search.Replace}" ToolTip.Tip="{StaticResource Text.Search.Replace}">
+          <Button.ContentTemplate><DataTemplate><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Replace}" /></Canvas></Viewbox></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Border Classes="toolbar-divider" />
+        <CheckBox x:Name="WordWrapToggle" Classes="icon-toggle" Content="{StaticResource Text.Editor.WordWrap}" ToolTip.Tip="{StaticResource Text.Editor.WordWrap}"
+                  AutomationProperties.Name="{StaticResource Text.Editor.WordWrap}" IsEnabled="{Binding CanEdit}" IsChecked="{Binding WordWrap, Mode=TwoWay}">
+          <CheckBox.Template><ControlTemplate><Border x:Name="IconBackground" Classes="toggle-icon-background"><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Wrap}" /></Canvas></Viewbox></Border></ControlTemplate></CheckBox.Template>
+        </CheckBox>
+        <CheckBox x:Name="LineNumbersToggle" Classes="icon-toggle" Content="{StaticResource Text.Editor.LineNumbers}" ToolTip.Tip="{StaticResource Text.Editor.LineNumbers}"
+                  AutomationProperties.Name="{StaticResource Text.Editor.LineNumbers}" IsEnabled="{Binding CanEdit}" IsChecked="{Binding ShowLineNumbers, Mode=TwoWay}">
+          <CheckBox.Template><ControlTemplate><Border x:Name="IconBackground" Classes="toggle-icon-background"><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Numbers}" /></Canvas></Viewbox></Border></ControlTemplate></CheckBox.Template>
+        </CheckBox>
+      </WrapPanel>
+    </Border>
+    <Border DockPanel.Dock="Top" Classes="document-strip">
+      <DockPanel LastChildFill="True">
+        <Button x:Name="PreviewToggle" DockPanel.Dock="Right" Classes="preview-action" Content="{StaticResource Text.Preview.Show}" IsVisible="False">
+          <Button.ContentTemplate><DataTemplate x:DataType="x:String"><StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing.Actions}"><Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.Preview}" /></Canvas></Viewbox><TextBlock Text="{Binding .}" VerticalAlignment="Center" /></StackPanel></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Button x:Name="CancelOperation" DockPanel.Dock="Right" Content="{StaticResource Text.Command.CancelOperation}"
+                IsVisible="{Binding IsBusy}" Command="{Binding CancelCommand}" />
+        <Border Classes="document-tab" HorizontalAlignment="Left">
+          <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+            <Viewbox Classes="editor-icon"><Canvas Width="{StaticResource Size.Icon.Grid}" Height="{StaticResource Size.Icon.Grid}"><Path Classes="icon-stroke" Data="{StaticResource Icon.File}" /></Canvas></Viewbox>
+            <TextBlock x:Name="DocumentName" Grid.Column="1" Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"
+                       Margin="{StaticResource Inset.TabLabel}" MaxWidth="{StaticResource Size.Tab.MaxWidth}" VerticalAlignment="Center" />
+            <Ellipse Grid.Column="2" Classes="dirty-indicator" IsVisible="{Binding IsDirty}" ToolTip.Tip="{StaticResource Text.Document.Unsaved}" />
+          </Grid>
+        </Border>
+      </DockPanel>
+    </Border>
     <WrapPanel x:Name="ExternalChangeBanner" DockPanel.Dock="Top" Orientation="Horizontal"
                 IsVisible="{Binding HasExternalChange}" ItemSpacing="{StaticResource Spacing.Actions}"
                 Margin="{StaticResource Inset.Toolbar}">
@@ -64,7 +155,7 @@
               Command="{Binding DismissExternalChangeCommand}" />
     </WrapPanel>
     <StackPanel x:Name="SearchPanel" DockPanel.Dock="Top" IsVisible="{Binding Search.IsOpen}"
-                Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Toolbar}">
+                Classes="search-panel" Spacing="{StaticResource Spacing.Actions}" Margin="{StaticResource Inset.Search.Panel}">
       <Grid ColumnDefinitions="Auto,*">
         <Label Content="{StaticResource Text.Search.Find}" Target="{Binding #QueryInput}" />
         <TextBox x:Name="QueryInput" Grid.Column="1" Text="{Binding Search.Query, Mode=TwoWay}"
@@ -106,26 +197,8 @@
         </TextBlock>
       </WrapPanel>
     </StackPanel>
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Brush.Surface}"
-            Padding="{StaticResource Inset.Toolbar}">
+    <Border DockPanel.Dock="Bottom" Classes="status-bar">
       <DockPanel>
-        <Button x:Name="UpdatesButton" DockPanel.Dock="Right" VerticalAlignment="Center" Content="{StaticResource Text.Update.Title}" IsVisible="{Binding HasUpdater}">
-          <Button.Flyout>
-            <Flyout>
-              <StackPanel DataContext="{Binding Updates}" x:DataType="vm:UpdateViewModel"
-                          Spacing="{StaticResource Spacing.Actions}" MaxWidth="{StaticResource Size.Dialog.Width}">
-                <TextBlock Text="{Binding InstalledVersion}" />
-                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-                <TextBlock Text="{Binding Error}" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding Release.Notes}" TextWrapping="Wrap" />
-                <ProgressBar Value="{Binding Progress}" IsVisible="{Binding IsBusy}" />
-                <Button Content="{StaticResource Text.Update.Check}" Command="{Binding CheckCommand}" />
-                <Button Content="{StaticResource Text.Update.Install}" Command="{Binding InstallCommand}" />
-                <Button Content="{StaticResource Text.Command.Cancel}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
-              </StackPanel>
-            </Flyout>
-          </Button.Flyout>
-        </Button>
         <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Spacing.Actions}">
           <TextBlock x:Name="CaretStatus" Classes="editor-status">
             <TextBlock.Text>
@@ -149,21 +222,25 @@
         </WrapPanel>
       </DockPanel>
     </Border>
-    <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0">
-      <edit:TextEditor x:Name="Editor" IsReadOnly="{Binding !CanEdit}"
+    <Grid x:Name="DocumentLayout" ColumnDefinitions="*,Auto,0" RowDefinitions="Auto,*" Margin="{StaticResource Inset.Document}"
+          Background="{DynamicResource Brush.Canvas}">
+      <Border Classes="pane-heading" IsVisible="{Binding #PreviewScroll.IsVisible}"><TextBlock Text="{StaticResource Text.Editor.Source}" /></Border>
+      <Border Grid.Column="2" Classes="pane-heading" IsVisible="{Binding #PreviewScroll.IsVisible}"><TextBlock Text="{StaticResource Text.Preview.Heading}" /></Border>
+      <edit:TextEditor x:Name="Editor" Grid.Row="1" IsReadOnly="{Binding !CanEdit}"
+                     AutomationProperties.Name="{StaticResource Text.Editor.Name}"
                      ShowLineNumbers="{Binding ShowLineNumbers}"
                      WordWrap="{Binding WordWrap}"
                      FontSize="{Binding FontSize}"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto" />
-      <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" IsVisible="False"
+      <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Grid.RowSpan="2" IsVisible="False"
                     Width="{StaticResource Size.Preview.Splitter}" ResizeDirection="Columns" />
-      <ScrollViewer x:Name="PreviewScroll" Grid.Column="2" IsVisible="False"
+      <ScrollViewer x:Name="PreviewScroll" Grid.Column="2" Grid.Row="1" IsVisible="False"
                     HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
                     AutomationProperties.Name="{StaticResource Text.Preview.Name}">
         <StackPanel x:Name="PreviewBlocks" Classes="preview-body" />
       </ScrollViewer>
-      <Border x:Name="DropHint" Grid.ColumnSpan="3" VerticalAlignment="Top" HorizontalAlignment="Center"
+      <Border x:Name="DropHint" Grid.ColumnSpan="3" Grid.RowSpan="2" VerticalAlignment="Top" HorizontalAlignment="Center"
               IsVisible="False" IsHitTestVisible="False" Background="{DynamicResource Brush.Surface}"
               Padding="{StaticResource Inset.Toolbar}">
         <TextBlock Text="{StaticResource Text.Drop.Open}" AutomationProperties.LiveSetting="Polite" />

@@ -91,6 +91,11 @@ class Desktop:
         self.focus(window)
         return window
 
+    def command(self, window, name):
+        # Positions use the default 1040-pixel shell and the native test font.
+        points = {"recent": (156, 52), "wrap": (390, 52), "preview": (950, 94)}
+        self.click(window, *points[name])
+
     def picker(self, shortcut, title):
         self.key(shortcut)
         window = self.window(title)
@@ -195,6 +200,26 @@ class Desktop:
             x11.XCloseDisplay(display)
 
 
+def exercise_menus(ui):
+    window = ui.editor()
+    ui.key("alt+h")
+    ui.key("End")
+    ui.key("Return")
+    about = ui.window("About Tangopad")
+    ui.focus(about)
+    ui.record("help-about-dialog")
+    ui.key("Escape")
+    ui.editor()
+    ui.key("alt+h")
+    ui.key("Home")
+    ui.key("Return")
+    updates = ui.window("Updates")
+    ui.focus(updates)
+    ui.record("help-update-dialog")
+    ui.key("Escape")
+    ui.editor()
+
+
 def exercise_drops(ui, files, launch):
     original = files / "drop λ space.MD"
     original.write_bytes(b"# Dropped\r\ntext")
@@ -284,15 +309,25 @@ def exercise_recent(ui, files):
     wait("recent path persisted in the fresh profile", lambda: paths() and paths()[0] == str(fixture))
     ui.key("ctrl+n")
     window = ui.editor()
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     # Flyout focus starts on the first recent entry.
     ui.key("Return")
     window = ui.editor(fixture)
     ui.record("recent-file-reopen")
+    ui.key("ctrl+n")
+    ui.editor()
+    ui.key("alt+f")
+    ui.key("Down")
+    ui.key("Down")
+    ui.key("Right")
+    time.sleep(0.2)
+    ui.key("Return")
+    window = ui.editor(fixture)
+    ui.record("recent-file-menu-reopen")
     ui.key("ctrl+End")
     ui.type("!")
     window = ui.editor(fixture, dirty=True)
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     # Move from the first entry to Clear through the popup's focus cycle.
     ui.key("shift+Tab")
     ui.key("Return")
@@ -319,11 +354,11 @@ def exercise_line_numbers(ui, files):
 
     def gutter():
         # The second line has no caret or selection during these checks.
-        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((0, 76, 20, 88)).tobytes()
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((20, 151, 35, 166)).tobytes()
 
     numbered = gutter()
     # Tab from Word Wrap selects Line numbers in both host font layouts.
-    ui.click(window, 700, 25)
+    ui.command(window, "wrap")
     ui.key("space")
     ui.key("Tab")
     ui.key("space")
@@ -418,7 +453,7 @@ def exercise_external_notification(ui, files):
     x, y = int(geometry["X"]), int(geometry["Y"])
 
     def banner_pixels():
-        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((x, y + 45, x + 500, y + 90))
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((x, y + 112, x + 500, y + 164))
 
     time.sleep(0.3)
     before = banner_pixels()
@@ -433,8 +468,8 @@ def exercise_external_notification(ui, files):
     wait("external file notification", message_visible)
     ui.editor(fixture)
     ui.record("external-change-nonblocking-banner")
-    # The notification follows the first toolbar row at the default window size.
-    ui.click(window, 260, 65)
+    # The notification follows the menu, toolbar, and document tab at the default window size.
+    ui.click(window, 270, 136)
     time.sleep(0.3)
     ui.click(window, 120, 150)
     ui.key("ctrl+End")
@@ -614,14 +649,14 @@ def exercise(ui, files, app):
                 # IN_ACCESS and IN_OPEN detect reads of the referenced local asset.
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the preview asset.")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Preview accessed a network or local-file resource.")
                 ui.record("markdown-preview-shown-without-resource-access")
             finally:
                 os.close(watch)
-        ui.click(window, 120, 100)
+        ui.click(window, 120, 160)
         ui.key("ctrl+End")
         addition = "!"
         ui.type(addition)
@@ -637,9 +672,9 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.saved(markdown, markdown_text)
-        ui.click(window, 794, 25)
+        ui.command(window, "preview")
         ui.record("markdown-preview-hidden-with-undo-and-find")
-        ui.click(window, 794, 25)
+        ui.command(window, "preview")
         time.sleep(0.5)
         plain = files / "highlighting.txt"
         ui.picker("ctrl+shift+s", "Save text file")
@@ -732,13 +767,13 @@ def exercise(ui, files, app):
             try:
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the Textile preview asset.")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Textile preview accessed a network or local-file resource.")
                 ui.record("textile-preview-shown-without-resource-access")
                 ui.record("redmine-references-and-local-contents-without-resource-access")
-                ui.click(window, 120, 100)
+                ui.click(window, 120, 160)
                 ui.key("ctrl+End")
                 ui.type("!")
                 ui.key("ctrl+s")
@@ -748,9 +783,9 @@ def exercise(ui, files, app):
                 ui.key("ctrl+z")
                 ui.key("ctrl+s")
                 ui.saved(textile, textile_text)
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 ui.record("textile-preview-hidden-with-undo")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Textile preview accessed a resource after an edit or toggle.")
@@ -856,14 +891,14 @@ def exercise(ui, files, app):
         for _ in range(5):
             ui.key("ctrl+plus")
         # Word Wrap follows Replace in the existing toolbar.
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.editor(wrapped)
         ui.record("word-wrap-enabled-long-unicode-line")
         ui.click(window, 120, 150)
         ui.key("ctrl+End")
         ui.type("!")
         ui.editor(wrapped, dirty=True)
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.record("word-wrap-disabled-after-edit")
         ui.click(window, 120, 150)
         ui.key("ctrl+z")
@@ -874,7 +909,7 @@ def exercise(ui, files, app):
         ui.editor(wrapped, dirty=True)
         ui.key("ctrl+s")
         ui.saved(wrapped, long_text + b"!")
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.key("ctrl+n")
         ui.editor()
         ui.picker("ctrl+o", "Open text file")
@@ -917,7 +952,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.saved(wrapped, long_text + b"!")
         ui.record("go-to-line-cancel-preserves-selection-and-bytes")
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.click(window, 120, 150)
         ui.key("ctrl+0")
         ui.key("ctrl+n")
@@ -965,16 +1000,16 @@ def exercise_preferences(ui, files, launch, executable, settings=None, arguments
 
     def pixels():
         shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
-        return (shot.crop((680, 10, 940, 40)).tobytes(), shot.crop((0, 100, 800, 250)).tobytes())
+        return (shot.crop((373, 36, 439, 68)).tobytes(), shot.crop((12, 160, 800, 310)).tobytes())
 
     app = launch([str(executable), *arguments], f"preferences-{mode}-first", cwd=files)
     window = open_fixture()
     time.sleep(0.5)
     defaults = pixels()
-    ui.click(window, 700, 25)
+    ui.command(window, "wrap")
     ui.key("Tab")
     ui.key("space")
-    ui.click(window, 200, 80)
+    ui.click(window, 120, 160)
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
@@ -1000,7 +1035,7 @@ def exercise_preferences(ui, files, launch, executable, settings=None, arguments
         raise RuntimeError("The simulated update changed persistent state.")
     app = launch([str(executable), *arguments], f"preferences-{mode}-restored", cwd=files)
     window = ui.editor()
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     ui.key("Return")
     window = ui.editor(fixture)
     ui.key("ctrl+Home")
@@ -1158,6 +1193,7 @@ def main():
         try:
             files = scratch / "files"
             files.mkdir()
+            exercise_menus(ui)
             exercise_drops(ui, files, launch)
             exercise_recent(ui, files)
             exercise_line_numbers(ui, files)
@@ -1193,7 +1229,7 @@ def main():
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()
-            ui.click(window, 120, 100)
+            ui.click(window, 120, 160)
             ui.type("discard on close")
             window = ui.editor(dirty=True)
             ui.close(window)
