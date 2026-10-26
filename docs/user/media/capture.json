@@ -1,0 +1,26 @@
+{
+  "sourceCommit": "12ec809ef5c33c73902f1195a81155bc819028ae",
+  "sourceDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "executableSha256": "2a5ae6676a31000450ffbea3bbc12ebf611ab6a768dc5829df35f23fb76556af",
+  "assemblySha256": "a16dd3ae2d27cf9e11b11201a6054ffae359f2406e967660120075808506152a",
+  "host": "Fedora Linux 44 (Container Image)",
+  "architecture": "x86_64",
+  "session": "Xvfb, X11, 100% scale, Light, 1040 x 760",
+  "sample": "docs/user/samples/field-notes.md",
+  "sampleSha256": "3a888d4d5862256462d384dbf3e43f644805bd0588ba681b0758861a331bcd9e",
+  "releaseCandidateValidated": false,
+  "images": [
+    {
+      "file": "markdown.png",
+      "width": 1040,
+      "height": 760,
+      "sha256": "920eeda16f6e6efe0d4735679d81b5c193423e5639047944169346fe1b6c4b7f"
+    },
+    {
+      "file": "search.png",
+      "width": 1040,
+      "height": 760,
+      "sha256": "8d5691dc84a5aa926a936438df5f764a3d3bc59eb1d183ef6361ce50f6e286d9"
+    }
+  ]
+}

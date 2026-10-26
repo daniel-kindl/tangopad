@@ -88,6 +88,14 @@ Review the resulting diff. Run verification again after changes. Formatting does
 not check Markdown prose, YAML semantics, or every possible IDE inspection.
 Use the writing rules below and inspect those files directly.
 
+For documentation changes, also run `python3 eng/test-check-docs.py` and
+`python3 eng/check-docs.py`. Hosted Linux CI runs both commands.
+These checks use the Python standard library and require no network access.
+They check inline Markdown links, local heading anchors, image descriptions,
+and product image dimensions, size limits, and capture hashes.
+They do not validate external URLs or product behavior.
+Follow [product documentation review](docs/product-documentation.md) for release validation and media capture.
+
 For an intentional dependency update, change `Directory.Packages.props`, then run:
 
 ```sh
