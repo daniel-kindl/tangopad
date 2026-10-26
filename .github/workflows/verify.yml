@@ -39,6 +39,11 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil at-spi2-core libatspi2.0-0
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
+      - name: Check documentation
+        if: runner.os == 'Linux'
+        run: |
+          python3 eng/test-check-docs.py
+          python3 eng/check-docs.py
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
         run: /usr/bin/python3 eng/check-native-editor.py
