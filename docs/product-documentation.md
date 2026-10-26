@@ -85,6 +85,8 @@ The checker does not request external URLs or implement a complete Markdown pars
 Reference-style links, raw HTML, and non-ATX headings require manual review if introduced.
 It does not prove installation behavior, visual correctness, accessibility, or freshness against a future release candidate.
 Review external links, rendered pages, and product instructions during final acceptance.
+The [documentation QA record](documentation-qa.md) gives the live rendering command,
+HTTP review procedure, development results, and remaining manual checks.
 
 ## Release-candidate acceptance record
 

@@ -43,6 +43,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           python3 eng/test-check-docs.py
+          python3 eng/test-review-docs.py
           python3 eng/check-docs.py
           python3 eng/test-release-notes.py
           python3 eng/release-notes.py
