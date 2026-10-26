@@ -50,6 +50,9 @@ jobs:
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
         run: /usr/bin/python3 eng/check-native-editor.py
+      - name: Check Linux user-guide workflows
+        if: runner.os == 'Linux'
+        run: /usr/bin/python3 eng/check-native-editor.py --user-guide-only
       - name: Audit Linux accessibility and display scaling
         if: runner.os == 'Linux'
         run: /usr/bin/python3 eng/check-native-accessibility.py

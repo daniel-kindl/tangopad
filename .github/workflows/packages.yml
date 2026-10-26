@@ -14,6 +14,7 @@ on:
       - '.config/dotnet-tools.json'
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
+      - 'eng/check-native-editor.py'
       - 'eng/check-release-validation.py'
       - 'eng/release-notes.py'
       - 'eng/test-release-notes.py'
@@ -62,7 +63,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+          sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil
       - name: Check release validation rules
         run: python eng/check-release-validation.py
       - name: Check release text
@@ -73,6 +74,18 @@ jobs:
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages
         run: python eng/package-release.py --rid ${{ matrix.rid }}
+      - name: Check Linux packaged user-guide workflows
+        if: runner.os == 'Linux'
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import sys
+          images = list(Path("artifacts/release/linux-x64").glob("*/*.AppImage"))
+          if len(images) != 1:
+              raise RuntimeError("Expected one Linux candidate AppImage.")
+          subprocess.run([sys.executable, "eng/check-native-editor.py", "--user-guide-only", "--executable", str(images[0])], check=True)
+          PY
       - name: Check native editor updates and recovery
         env:
           TANGOPAD_RECOVERY_ATTEMPTS: ${{ inputs.recovery_attempts || 5 }}
@@ -85,6 +98,7 @@ jobs:
           path: |
             artifacts/native-update/${{ matrix.rid }}/
             artifacts/native-helper/${{ matrix.rid }}/
+            artifacts/native-editor-*/
           if-no-files-found: warn
           retention-days: 7
       - name: Upload candidates

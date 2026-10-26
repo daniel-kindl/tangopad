@@ -93,6 +93,7 @@ They are a bounded source review, not a complete security or privacy audit.
 
 The native accessibility and platform limits remain explicit in the user guide.
 This pass adds no screen-reader, high-contrast, minimum-OS, signing, notarization, or production-installation claim.
+The [native user-guide record](user-guide-verification.md) separately records a Linux candidate run through the tutorial and recovery steps.
 
 ## Checks required before final sign-off
 
