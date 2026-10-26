@@ -17,6 +17,11 @@ Use Semantic Versioning. Before 1.0, document breaking changes in each minor rel
 The authoritative version is in `Directory.Build.props`.
 
 Use Conventional Commits for commits and for the squash commit subject.
+For a user-visible change, update Unreleased in [CHANGELOG.md](CHANGELOG.md).
+Use `Changelog: updated` in the PR description.
+For maintenance without a material user effect, use `Changelog: none.` and give the reason.
+The reviewer checks the entry or the stated exception.
+[Release notes workflow](docs/release-notes.md) defines curation, migration guidance, and publication review.
 The pull request title uses this form:
 
 ```text
@@ -95,6 +100,9 @@ They check inline Markdown links, local heading anchors, image descriptions,
 and product image dimensions, size limits, and capture hashes.
 They do not validate external URLs or product behavior.
 Follow [product documentation review](docs/product-documentation.md) for release validation and media capture.
+Also run `python3 eng/test-release-notes.py` and `python3 eng/release-notes.py`
+when changing the changelog, notes, or release scripts. Hosted CI runs these checks.
+Production packaging additionally requires `python3 eng/release-notes.py --publication` to pass.
 
 For an intentional dependency update, change `Directory.Packages.props`, then run:
 

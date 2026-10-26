@@ -25,6 +25,7 @@ Linux development build after the interface redesign. This is a real application
 Read the [user guide](docs/user/README.md) for installation, a first editing session,
 shortcuts, and troubleshooting. Use [GitHub Releases](https://github.com/daniel-kindl/tangopad/releases)
 for published artifacts when available. CI candidate artifacts are for testing.
+Read the [changelog](CHANGELOG.md) for merged changes awaiting release.
 
 There are no tabs, exports, autosave, or automatic recovery of unsaved document text.
 Save important work regularly. The [limitations](docs/user/troubleshooting.md#known-limitations)

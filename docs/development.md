@@ -77,5 +77,6 @@ A green editor gate does not prove package installation or update recovery.
 Keep [eng/release/notes.md](../eng/release/notes.md) consistent with the version being packaged.
 Record user-visible changes, breaking changes, platform limits, and known issues from verified work.
 Do not invent release dates or imply that an unpublished version shipped.
-[Issue #49](https://github.com/daniel-kindl/tangopad/issues/49) owns the full changelog and release-notes workflow.
+[Changelog and release notes](release-notes.md) defines the workflow under
+[issue #49](https://github.com/daniel-kindl/tangopad/issues/49).
 [Product documentation review](product-documentation.md) is a separate pre-release requirement under issue #48.

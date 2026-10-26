@@ -20,6 +20,7 @@ class ReleaseValidationTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         (self.root / "eng/release").mkdir(parents=True)
+        (self.root / "eng/release/notes.md").write_bytes(b"Reviewed fixture release notes.\n")
         shutil.copytree(ROOT / "eng/velopack", self.root / "eng/velopack")
         self.private = self.root / "private.pem"
         self.public = self.root / "eng/release/update-public-key.pem"
@@ -74,7 +75,8 @@ class ReleaseValidationTests(unittest.TestCase):
         digests = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in directory.iterdir()
                    if path.is_file() and path not in (manifest, Path(str(manifest) + ".sig"))}
         manifest.write_text(json.dumps({"version": self.version, "runtime": runtime, "production": True,
-            "source_commit": self.commit, "platform_signing": "none", "artifacts": digests}), encoding="utf-8")
+            "source_commit": self.commit, "platform_signing": "none", "artifacts": digests,
+            "release_notes_sha256": hashlib.sha256((self.root / "eng/release/notes.md").read_bytes()).hexdigest()}), encoding="utf-8")
         self.sign(manifest)
 
     def test_complete_sets_validate(self):
@@ -85,6 +87,11 @@ class ReleaseValidationTests(unittest.TestCase):
     def test_tampered_installer_is_rejected(self):
         (self.packages / "linux-x64/installer-linux-x64.zip").write_bytes(b"tampered installer")
         with self.assertRaisesRegex(ValueError, "signed SHA-256"):
+            self.validate(self.packages, self.commit)
+
+    def test_notes_changed_after_packaging_are_rejected(self):
+        (self.root / "eng/release/notes.md").write_bytes(b"Different release notes.\n")
+        with self.assertRaisesRegex(ValueError, "release notes"):
             self.validate(self.packages, self.commit)
 
     def test_unsigned_production_marker_is_rejected(self):
