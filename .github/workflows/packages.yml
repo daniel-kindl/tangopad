@@ -15,6 +15,9 @@ on:
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
       - 'eng/check-release-validation.py'
+      - 'eng/release-notes.py'
+      - 'eng/test-release-notes.py'
+      - 'CHANGELOG.md'
       - 'eng/*vpk.py'
       - 'eng/build-windows-updater.py'
       - 'eng/package-macos-installer.py'
@@ -62,6 +65,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
       - name: Check release validation rules
         run: python eng/check-release-validation.py
+      - name: Check release text
+        run: |
+          python eng/test-release-notes.py
+          python eng/release-notes.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages

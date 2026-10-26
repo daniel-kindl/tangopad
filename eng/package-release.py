@@ -74,6 +74,7 @@ def main():
         raise ValueError("Build this package on its target operating system.")
     if args.production and args.test_version:
         raise ValueError("Production packaging cannot override the authoritative version.")
+    runpy.run_path(str(ROOT / "eng/release-notes.py"))["validate"](ROOT, publication=args.production)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if args.production and subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip():
         raise ValueError("Production packages require a clean checkout of the reviewed source commit.")
@@ -152,6 +153,7 @@ def main():
                    for path in sorted(output.iterdir()) if path.is_file()}
         manifest.write_text(json.dumps({"version": release_version,
             "runtime": args.rid, "production": args.production, "source_commit": commit,
+            "release_notes_sha256": hashlib.sha256((ROOT / "eng/release/notes.md").read_bytes()).hexdigest(),
             "platform_signing": args.platform_signing, "artifacts": digests}, indent=2) + "\n", encoding="utf-8")
         run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", str(manifest) + ".sig", manifest)
     print(f"Packages: {output}")

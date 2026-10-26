@@ -22,6 +22,7 @@ Initial package support does not imply support for every OS version or CPU archi
 The candidate workflow builds each package on its native operating system.
 
 Version comes from `Directory.Build.props`. Stable publication uses `v<major>.<minor>.<patch>` tags.
+[Changelog and release notes](release-notes.md) defines the canonical history, notes template, and human review procedure.
 Update feeds use one runtime channel per row, such as `linux-x64`.
 These channels contain stable releases only. There is no automatic installation or forced restart.
 The initial check is manual. Automatic checks remain deferred.
@@ -43,6 +44,7 @@ Use `win-x64`, `osx-x64`, or `osx-arm64` on their corresponding hosts.
 The command creates a temporary test key, embeds its public key, and signs the test feed.
 It deletes the private key when packaging ends.
 Candidate packages are development artifacts. They are not production installers.
+Candidate packaging validates the current draft notes. A local `--test-version` override does not promote those notes to a public release.
 Their temporary key cannot authenticate production update feeds.
 Outputs are in `artifacts/release/<runtime>/<version>/`.
 `package.<runtime>.json` marks test output with `production: false`.
@@ -96,6 +98,9 @@ The script does not buy a certificate, create an identity, or bypass OS trust ch
 Review [Velopack signing](https://docs.velopack.io/packaging/signing) for provider setup.
 Certificate signing and notarization are optional future setup. They remain untested.
 
+Prepare versioned changelog entries and reviewed notes through the [release notes workflow](release-notes.md).
+Production packaging rejects Draft notes. It records the accepted notes hash in each signed package inventory.
+
 Run the repository verification before production packaging:
 
 ```sh
@@ -120,6 +125,9 @@ python eng/publish-release.py --packages artifacts/production --target <full-mai
 ```
 
 The command verifies the signed artifact inventory, production markers, versions, feed signatures, package sizes, and SHA-256 hashes.
+It also verifies the packaged notes hash and publication-ready changelog and notes.
+The local checkout must match the target commit.
+It writes `artifacts/release-notes.md` with versioned download links and checksums from the verified upload files.
 The inventory authenticates installers and portable archives as well as update packages.
 The command also requires successful native evidence from the target commit in both storage modes.
 Windows evidence must include recovery after backup. The full package must contain the same patched helper used by those checks.

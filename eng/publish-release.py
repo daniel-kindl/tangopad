@@ -11,6 +11,7 @@ import runpy
 
 _package = runpy.run_path(str(Path(__file__).with_name("package-release.py")))
 RUNTIMES, ROOT, run, version = (_package[name] for name in ("RUNTIMES", "ROOT", "run", "version"))
+NOTES = runpy.run_path(str(ROOT / "eng/release-notes.py"))
 
 
 def validate_packages(packages, target):
@@ -27,6 +28,8 @@ def validate_packages(packages, target):
                 or manifest.get("production") is not True or manifest.get("source_commit") != target
                 or manifest.get("platform_signing") not in ("none", "configured")):
             raise ValueError("Test packages and mismatched versions cannot be published.")
+        if manifest.get("release_notes_sha256") != hashlib.sha256((ROOT / "eng/release/notes.md").read_bytes()).hexdigest():
+            raise ValueError("The packaged release notes differ from the reviewed release notes.")
         directory = manifests[0].parent
         expected_files = manifest.get("artifacts", {})
         actual_files = {path.name for path in directory.iterdir() if path.is_file()
@@ -88,16 +91,23 @@ def main():
     args = parser.parse_args()
     if len(args.target) != 40 or any(c not in "0123456789abcdef" for c in args.target):
         raise ValueError("The release target must be a full commit SHA.")
+    NOTES["validate"](ROOT, publication=True)
+    if subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip() != args.target:
+        raise ValueError("Check out the release target before validating its notes and artifacts.")
     main_sha = args.target if args.validate_only else subprocess.check_output(["gh", "api", "repos/daniel-kindl/tangopad/git/ref/heads/main", "--jq", ".object.sha"], text=True).strip()
     if not args.validate_only and args.target != main_sha:
         raise ValueError("The release target must be the current main-branch commit.")
     artifacts = validate_packages(args.packages, args.target)
+    rendered = NOTES["render"](ROOT, artifacts)
+    notes_path = ROOT / "artifacts/release-notes.md"
+    notes_path.parent.mkdir(parents=True, exist_ok=True)
+    notes_path.write_text(rendered, encoding="utf-8")
     if args.validate_only:
-        print("Validated four production package sets and their native update evidence.")
+        print("Validated release notes, four production package sets, and their native update evidence.")
         return
     # Keep the release in draft until native update evidence and OS signing checks are reviewed.
     run("gh", "release", "create", "v" + version(), "--repo", "daniel-kindl/tangopad", "--draft",
-        "--target", args.target, "--title", "Tangopad " + version(), "--notes-file", ROOT / "eng/release/notes.md", *artifacts)
+        "--target", args.target, "--title", "Tangopad " + version(), "--notes-file", notes_path, *artifacts)
 
 
 if __name__ == "__main__":
