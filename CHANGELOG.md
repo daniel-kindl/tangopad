@@ -39,6 +39,8 @@ See [the release workflow](docs/release-notes.md) for curation and publication r
 
 ### Fixed
 
+- Reject release package sets that omit a required portable distribution or installer.
+  See [issue #115](https://github.com/daniel-kindl/tangopad/issues/115).
 - Include dependency licenses, third-party notices, and selected .NET runtime notices in desktop packages.
   See [issue #113](https://github.com/daniel-kindl/tangopad/issues/113).
 - Recover from a process exit during update startup coordination.

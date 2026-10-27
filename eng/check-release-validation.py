@@ -41,7 +41,14 @@ class ReleaseValidationTests(unittest.TestCase):
             with zipfile.ZipFile(package, "w") as archive:
                 archive.writestr("lib/net45/Squirrel.exe", self.helper_bytes)
                 archive.writestr("fixture.txt", "native package fixture")
-            (directory / f"installer-{runtime}.zip").write_bytes(b"independent installer fixture")
+            if runtime == "linux-x64":
+                distributions = [f"TangopadDesktop-{runtime}.AppImage"]
+            else:
+                installer_extension = "exe" if runtime == "win-x64" else "pkg"
+                distributions = [f"TangopadDesktop-{runtime}-Portable.zip",
+                                 f"TangopadDesktop-{runtime}-Setup.{installer_extension}"]
+            for name in distributions:
+                (directory / name).write_bytes(b"independent distribution fixture")
             feed = directory / f"releases.{runtime}.json"
             feed.write_text(json.dumps({"Assets": [{"PackageId": "TangopadDesktop", "Version": self.version,
                 "Type": "Full", "FileName": package.name, "Size": package.stat().st_size,
@@ -81,11 +88,54 @@ class ReleaseValidationTests(unittest.TestCase):
 
     def test_complete_sets_validate(self):
         artifacts = self.validate(self.packages, self.commit)
-        self.assertEqual(len(artifacts), 25)
+        self.assertEqual(len(artifacts), 28)
         self.assertIn(self.packages / "win-x64/native-helper.win-x64.json", artifacts)
 
+    def distribution_files(self):
+        return [path for path in self.packages.rglob("*")
+                if path.suffix in (".AppImage", ".zip", ".exe", ".pkg")]
+
+    def test_missing_distributions_are_rejected_even_with_signed_inventory(self):
+        for path in self.distribution_files():
+            with self.subTest(artifact=path.name):
+                original = path.read_bytes()
+                path.unlink()
+                self.write_manifest(path.parent.name)
+                try:
+                    with self.assertRaisesRegex(ValueError, "distribution artifact"):
+                        self.validate(self.packages, self.commit)
+                finally:
+                    path.write_bytes(original)
+                    self.write_manifest(path.parent.name)
+
+    def test_duplicate_distributions_are_rejected_even_with_signed_inventory(self):
+        for path in self.distribution_files():
+            with self.subTest(artifact=path.name):
+                duplicate = path.with_name("duplicate-" + path.name)
+                duplicate.write_bytes(path.read_bytes())
+                self.write_manifest(path.parent.name)
+                try:
+                    with self.assertRaisesRegex(ValueError, "distribution artifact"):
+                        self.validate(self.packages, self.commit)
+                finally:
+                    duplicate.unlink()
+                    self.write_manifest(path.parent.name)
+
+    def test_empty_distributions_are_rejected_even_with_signed_inventory(self):
+        for path in self.distribution_files():
+            with self.subTest(artifact=path.name):
+                original = path.read_bytes()
+                path.write_bytes(b"")
+                self.write_manifest(path.parent.name)
+                try:
+                    with self.assertRaisesRegex(ValueError, "distribution artifact"):
+                        self.validate(self.packages, self.commit)
+                finally:
+                    path.write_bytes(original)
+                    self.write_manifest(path.parent.name)
+
     def test_tampered_installer_is_rejected(self):
-        (self.packages / "linux-x64/installer-linux-x64.zip").write_bytes(b"tampered installer")
+        (self.packages / "linux-x64/TangopadDesktop-linux-x64.AppImage").write_bytes(b"tampered installer")
         with self.assertRaisesRegex(ValueError, "signed SHA-256"):
             self.validate(self.packages, self.commit)
 

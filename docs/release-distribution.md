@@ -21,6 +21,16 @@ See [Apple's installation-domain reference](https://developer.apple.com/library/
 Initial package support does not imply support for every OS version or CPU architecture.
 The candidate workflow builds each package on its native operating system.
 
+Before creating a draft release, the publisher requires one nonempty distribution
+file for each format in the table. It selects Linux `*.AppImage`, Windows `*.zip`
+and `*-Setup.exe`, and macOS `*.zip` and `*-Setup.pkg` from the signed inventory.
+A missing file, an empty file, or multiple matches fails validation, even when
+the inventory signature is valid. The existing checks also require a full update
+package, matching signed hashes, and native update evidence for each runtime.
+Filename and size checks do not establish installer validity. Native package
+acceptance remains required. [Issue #115](https://github.com/daniel-kindl/tangopad/issues/115)
+records the omission finding and its regression coverage under audit #52.
+
 Version comes from `Directory.Build.props`. Stable publication uses `v<major>.<minor>.<patch>` tags.
 [Changelog and release notes](release-notes.md) defines the canonical history, notes template, and human review procedure.
 Update feeds use one runtime channel per row, such as `linux-x64`.
