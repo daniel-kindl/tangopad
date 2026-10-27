@@ -24,6 +24,7 @@ Issues #45 and #47 are closed, but their engineering records still list native a
 Use the [release evidence requirements](release-distribution.md#required-native-evidence) and
 [accessibility record](ux/47-acceptance.md) as evidence boundaries.
 A closed issue does not replace a recorded package or accessibility result.
+The [native user-guide record](user-guide-verification.md) documents a Linux candidate run and the remaining platform checks.
 
 ## Capture real application images
 
