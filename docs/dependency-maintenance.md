@@ -20,6 +20,9 @@ The NuGet entry starts at `/`, where `Tangopad.slnx` lists every project under
 versions from `Directory.Packages.props`. Each project commits a
 `packages.lock.json` file containing its resolved direct and transitive packages.
 Review all affected lock files with each central version change.
+Review [distribution notices](distribution-notices.md) for application dependency
+changes. Update `eng/notices.json` and the copied legal text with the dependency
+update. A new package or version fails the notice check until its record is updated.
 
 NuGet version updates maintain explicitly declared dependencies. They do not
 independently upgrade every transitive package. Update the parent dependency

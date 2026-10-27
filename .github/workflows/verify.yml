@@ -47,6 +47,8 @@ jobs:
           python3 eng/check-docs.py
           python3 eng/test-release-notes.py
           python3 eng/release-notes.py
+          python3 eng/test-check-notices.py
+          python3 eng/check-notices.py
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
         run: /usr/bin/python3 eng/check-native-editor.py

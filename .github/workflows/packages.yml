@@ -15,6 +15,10 @@ on:
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
       - 'eng/check-native-editor.py'
+      - 'eng/check-notices.py'
+      - 'eng/test-check-notices.py'
+      - 'eng/notices.json'
+      - 'docs/licenses/**'
       - 'eng/check-release-validation.py'
       - 'eng/release-notes.py'
       - 'eng/test-release-notes.py'
@@ -66,6 +70,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil
       - name: Check release validation rules
         run: python eng/check-release-validation.py
+      - name: Check distribution notices
+        run: |
+          python eng/test-check-notices.py
+          python eng/check-notices.py
       - name: Check release text
         run: |
           python eng/test-release-notes.py

@@ -106,6 +106,11 @@ Also run `python3 eng/test-release-notes.py` and `python3 eng/release-notes.py`
 when changing the changelog, notes, or release scripts. Hosted CI runs these checks.
 Production packaging additionally requires `python3 eng/release-notes.py --publication` to pass.
 
+For dependency or packaging changes, also run `python3 eng/test-check-notices.py`
+and `python3 eng/check-notices.py`. Follow
+[distribution notices](docs/distribution-notices.md) to review source text,
+package versions, and final artifacts. Hosted CI runs both notice checks.
+
 For an intentional dependency update, change `Directory.Packages.props`, then run:
 
 ```sh
