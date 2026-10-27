@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate production package sets, then create a draft GitHub release."""
 import argparse
+import fnmatch
 import hashlib
 import json
 from pathlib import Path
@@ -40,6 +41,16 @@ def validate_packages(packages, target):
             path = directory / name
             if Path(name).name != name or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
                 raise ValueError("A release artifact does not match its signed SHA-256: " + name)
+        if runtime == "linux-x64":
+            distributions = ("*.AppImage",)
+        elif runtime == "win-x64":
+            distributions = ("*.zip", "*-Setup.exe")
+        else:
+            distributions = ("*.zip", "*-Setup.pkg")
+        for pattern in distributions:
+            matches = [directory / name for name in expected_files if fnmatch.fnmatchcase(name, pattern)]
+            if len(matches) != 1 or matches[0].stat().st_size == 0:
+                raise ValueError(f"One nonempty distribution artifact matching {pattern} is required for {runtime}.")
         evidence = json.loads((directory / "native-evidence/result.json").read_bytes())
         requirements = ("signature_rejected", "partial_download_rejected", "checksum_rejected",
                         "unsaved_cancel_preserved", "save_before_restart", "state_preserved", "native_failure_recovered", "other_window_preserved")
