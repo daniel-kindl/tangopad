@@ -173,6 +173,11 @@ The adapter accepts one signed stable feed from the fixed Tangopad GitHub reposi
 It validates application ID, runtime, filename, package type, size, version, and SHA-256.
 It rejects invalid signatures, prereleases, build metadata, and downgrades.
 It permits HTTPS redirects only to GitHub and its specified release-asset hosts.
+Each feed check and package download has a ten-minute deadline in the production
+transport. The deadline covers redirects and streamed response reads, including
+both the feed and its signature. It does not restart for each redirect or chunk.
+Caller cancellation can stop the operation earlier. A timeout stops the operation
+without applying an update and permits retry.
 It checks the staged package again before invoking the native updater.
 Offline checks, missing releases, and rejected downloads leave editing available and permit retry.
 

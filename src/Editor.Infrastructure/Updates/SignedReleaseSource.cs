@@ -14,9 +14,11 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task<VelopackAssetFeed> GetReleaseFeed(IVelopackLogger logger, string? appId, string channel, Guid? stagingId, VelopackAsset? latestLocalRelease)
     {
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(checkToken);
+        timeout.CancelAfter((transport ?? DefaultClient).Timeout);
         string name = $"releases.{releaseChannel}.json";
-        byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, checkToken).ConfigureAwait(false);
-        byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, checkToken).ConfigureAwait(false);
+        byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, timeout.Token).ConfigureAwait(false);
+        byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, timeout.Token).ConfigureAwait(false);
         return VerifyFeed(bytes, signature, publicKey, releaseChannel, expectedPackageId);
     }
 
@@ -41,18 +43,21 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task DownloadReleaseEntry(IVelopackLogger logger, VelopackAsset releaseEntry, string localFile, Action<int> progress, CancellationToken cancelToken)
     {
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
+        timeout.CancelAfter((transport ?? DefaultClient).Timeout);
+        CancellationToken token = timeout.Token;
         Uri address = new(Repository + $"download/v{releaseEntry.Version}/" + releaseEntry.FileName);
-        using HttpResponseMessage response = await GetAsync(address, cancelToken).ConfigureAwait(false);
-        using Stream input = await response.Content.ReadAsStreamAsync(cancelToken).ConfigureAwait(false);
+        using HttpResponseMessage response = await GetAsync(address, token).ConfigureAwait(false);
+        using Stream input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
         using FileStream output = new(localFile, FileMode.Create, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous);
         byte[] buffer = new byte[65536];
         long received = 0;
         int count;
-        while ((count = await input.ReadAsync(buffer, cancelToken).ConfigureAwait(false)) != 0)
+        while ((count = await input.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
         {
             received += count;
             if (received > releaseEntry.Size) { throw new InvalidDataException("The update package exceeds its authenticated size."); }
-            await output.WriteAsync(buffer.AsMemory(0, count), cancelToken).ConfigureAwait(false);
+            await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
             progress((int)(received * 100 / releaseEntry.Size));
         }
         if (received != releaseEntry.Size) { throw new InvalidDataException("The update package download is incomplete."); }

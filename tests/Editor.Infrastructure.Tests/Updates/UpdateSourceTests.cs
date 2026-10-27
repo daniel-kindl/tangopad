@@ -102,6 +102,68 @@ public sealed class UpdateSourceTests
         Assert.False(File.Exists(path));
     }
 
+    /// <summary>Timeouts and caller cancellation stop response bodies after headers arrive.</summary>
+    [Theory]
+    [InlineData("feed", false)]
+    [InlineData("signature", false)]
+    [InlineData("package", false)]
+    [InlineData("feed", true)]
+    [InlineData("signature", true)]
+    [InlineData("package", true)]
+    public async Task StalledResponseReadIsCancelled(string responsePart, bool callerCancellation)
+    {
+        using StalledStream body = new();
+        using Handler handler = new(request => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = responsePart == "signature" && !request.RequestUri!.AbsolutePath.EndsWith(".sig", StringComparison.Ordinal)
+                ? new ByteArrayContent("{}"u8.ToArray()) : new StreamContent(body)
+        });
+        using HttpClient client = new(handler, disposeHandler: false)
+        {
+            Timeout = callerCancellation ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(500)
+        };
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        SignedReleaseSource source = new("unused", "linux-x64", cancellation.Token, client);
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        VelopackAsset asset = new() { Version = SemanticVersion.Parse("0.2.0"), FileName = "TangopadDesktop-0.2.0-linux-x64-full.nupkg", Size = 3 };
+        Task operation = responsePart == "package"
+            ? source.DownloadReleaseEntry(new Logger(), asset, path, _ => { }, cancellation.Token)
+            : source.GetReleaseFeed(new Logger(), "TangopadDesktop", "linux-x64", null, null);
+        try
+        {
+            await body.ReadStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            if (callerCancellation) { await cancellation.CancelAsync().ConfigureAwait(true); }
+            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ConfigureAwait(true);
+            Assert.True(body.Disposed);
+        }
+        finally
+        {
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            try { await operation.ConfigureAwait(true); }
+            catch (OperationCanceledException) { }
+            File.Delete(path);
+        }
+    }
+
+    private sealed class StalledStream : MemoryStream
+    {
+        internal TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal bool Disposed { get; private set; }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _ = ReadStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return 0;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
     private sealed class Logger : IVelopackLogger
     {
         public void Log(VelopackLogLevel logLevel, string? message, Exception? exception) { }
