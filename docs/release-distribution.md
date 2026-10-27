@@ -53,6 +53,9 @@ Outputs are in `artifacts/release/<runtime>/<version>/`.
 Production mode rejects this version override.
 Package inputs reject portable data, state files, legacy JSON, portable markers, and symbolic links.
 Native libraries and license notices remain in the package.
+Packaging checks [distribution notices](distribution-notices.md) in the publish
+directory and final portable and full update artifacts before signing the feed.
+The package includes source records and notices from its selected .NET runtime pack.
 The script isolates runtime publish lock files from the repository's ordinary build lock files.
 The SDK, package versions, tool version, and inputs are pinned. Binary byte equality remains outside the verification policy.
 

@@ -39,6 +39,8 @@ See [the release workflow](docs/release-notes.md) for curation and publication r
 
 ### Fixed
 
+- Include dependency licenses, third-party notices, and selected .NET runtime notices in desktop packages.
+  See [issue #113](https://github.com/daniel-kindl/tangopad/issues/113).
 - Recover from a process exit during update startup coordination.
   See [PR #100](https://github.com/daniel-kindl/tangopad/pull/100).
 - Distinguish checked toolbar toggles with an outline in both themes.

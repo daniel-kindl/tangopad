@@ -127,6 +127,8 @@ def main():
             "-p:PublishSingleFile=true", f"-p:Version={release_version}",
             f"-p:UpdatePublicKeyPath={public_key}",
             f"-p:ReleaseLockDirectory={temporary}/locks", "--output", publish)
+        notices = runpy.run_path(str(ROOT / "eng/check-notices.py"))
+        notice_inventory = notices["prepare_payload"](ROOT, publish, args.rid, ROOT / "src/Editor.App/obj/project.assets.json")
         check_payload(publish)
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
         pack_args = [*tool, "pack", "--packId", "TangopadDesktop",
@@ -144,6 +146,7 @@ def main():
                 output, args.rid, "TangopadDesktop", "Tangopad", release_version,
                 os.environ.get("TANGOPAD_MAC_INSTALL_IDENTITY") if args.platform_signing == "configured" else None,
                 os.environ.get("TANGOPAD_MAC_NOTARY_PROFILE") if args.platform_signing == "configured" else None)
+        notices["verify_packages"](ROOT, output, args.rid, notice_inventory)
         sign_feed(output, args.rid, private_key, public_key)
         if args.rid == "win-x64":
             shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")
