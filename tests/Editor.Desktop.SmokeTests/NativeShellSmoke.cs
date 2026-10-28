@@ -6,14 +6,17 @@ namespace Editor.Desktop.SmokeTests;
 
 internal static class NativeShellSmoke
 {
+    /// <summary>Names an installed package executable to check instead of the build output.</summary>
+    internal const string ExecutableVariable = "TANGOPAD_SMOKE_EXECUTABLE";
+
     private static readonly TimeSpan WindowTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(15);
 
     internal static async Task<NativeStartupResult> RunAsync(CancellationToken cancellationToken)
     {
-        string directory = ResolveAppDirectory();
         string executableName = OperatingSystem.IsWindows() ? "Editor.App.exe" : "Editor.App";
-        string executable = Path.Combine(directory, executableName);
+        string executable = ResolveExecutable(Environment.GetEnvironmentVariable(ExecutableVariable), ResolveAppDirectory(), executableName);
+        string directory = Path.GetDirectoryName(executable) ?? throw new DirectoryNotFoundException("The executable has no directory.");
         return !File.Exists(executable)
             ? WithHost(NativeStartupResult.NotTested(
                 $"The shell executable is absent at {executable}.",
@@ -256,6 +259,11 @@ internal static class NativeShellSmoke
         }
 
         return null;
+    }
+
+    internal static string ResolveExecutable(string? installed, string buildDirectory, string executableName)
+    {
+        return string.IsNullOrWhiteSpace(installed) ? Path.Combine(buildDirectory, executableName) : installed;
     }
 
     private static string ResolveAppDirectory()
