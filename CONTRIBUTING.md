@@ -13,6 +13,8 @@
 `main` holds stable releases. `dev` integrates reviewed changes and is the default
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
 request from this repository's `dev` branch into `main`.
+This branch flow is a tangopad exception to [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
+Branch from `dev`, target `dev`, and merge `dev` into a branch to update it.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.
 
@@ -27,6 +29,8 @@ The pull request title uses this form:
 ```text
 type[optional scope][optional !]: description
 ```
+
+Keep the title at 50 characters or fewer. See [dkstack version control](https://github.com/daniel-kindl/dkstack/blob/v1/version-control/index.md).
 
 `chore(build): pin the .NET SDK` matches the form.
 The square brackets in the form mark optional parts. Do not write the brackets in a title.
@@ -140,7 +144,7 @@ when a real consumer needs a boundary. Add no empty interfaces, stub services,
 or unused extension mechanisms. See [design policy](docs/architecture.md#design-policy).
 
 Test behavior through its consumer. For a defect or new behavior, first write a
-failing test when a cheap, reliable test target exists. Assert literal expected
+failing test. See [dkstack testing](https://github.com/daniel-kindl/dkstack/blob/v1/coding/testing.md). Assert literal expected
 results. Add Core or Application test projects with their first behavior test.
 Do not add placeholder tests or test counts as goals.
 
