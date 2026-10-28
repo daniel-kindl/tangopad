@@ -12,6 +12,9 @@ internal static class Program
     {
         VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         string? updateError = DesktopApplicationUpdater.WaitForPendingUpdate();
+#if TANGOPAD_UPDATE_TEST
+        if (UpdateTest.UpdateTestHook.TryRun(args)) { return; }
+#endif
         string path = UserDataLocation.StatePath(args, DesktopApplicationUpdater.GetDistributionDirectory());
         DesktopApplicationUpdater updater = new(args);
         AppStateStore state = new(path, Path.GetDirectoryName(path));
