@@ -14,6 +14,7 @@ import sys
 
 WORKFLOW = ".github/workflows/packages.yml"
 TARGETS = ("win-x64", "linux-x64", "osx-x64", "osx-arm64")
+JOB_NAME = "Package ({rid})"
 UPDATE_STEP = "Update the real package through the editor"
 
 
@@ -26,7 +27,7 @@ def gh_api(endpoint):
 def _missing_targets(jobs):
     missing = []
     for rid in TARGETS:
-        good = [job for job in jobs if job.get("name") == f"Package ({rid})" and job.get("conclusion") == "success"
+        good = [job for job in jobs if job.get("name") == JOB_NAME.format(rid=rid) and job.get("conclusion") == "success"
                 and any(step.get("name") == UPDATE_STEP and step.get("conclusion") == "success"
                         for step in job.get("steps") or [])]
         if not good:
