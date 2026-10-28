@@ -32,7 +32,8 @@ class PackOutputChecks(unittest.TestCase):
         return command, printed.getvalue(), error
 
     def test_failure_writes_command_exit_code_and_output_tail(self):
-        script = "import sys; print('HE' + 'AD-' + 'x' * 40000); print('vpk-out-' + 'end'); print('vpk-err-' + 'end', file=sys.stderr); sys.exit(3)"
+        script = ("import sys; print('HE' + 'AD-' + 'x' * 40000, flush=True); print('vpk-out-' + 'end', flush=True); "
+                  "print('vpk-err-' + 'end', file=sys.stderr, flush=True); sys.exit(3)")
         command, printed, error = self.run_pack(script)
         self.assertIsNotNone(error)
         self.assertIn(' '.join(command), printed)
