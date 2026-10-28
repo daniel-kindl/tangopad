@@ -39,7 +39,8 @@ See [the release workflow](docs/release-notes.md) for curation and publication r
 
 ### Fixed
 
-- Stop stalled update checks and downloads when the operation timeout expires.
+- Stop stalled update checks when the operation timeout expires.
+  Stop package downloads that receive no data for the timeout period.
   See [issue #117](https://github.com/daniel-kindl/tangopad/issues/117).
 - Reject release package sets that omit a required portable distribution or installer.
   See [issue #115](https://github.com/daniel-kindl/tangopad/issues/115).
