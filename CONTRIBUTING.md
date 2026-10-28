@@ -30,7 +30,7 @@ The pull request title uses this form:
 type[optional scope][optional !]: description
 ```
 
-Keep the title at 50 characters or fewer. See [dkstack version control](https://github.com/daniel-kindl/dkstack/blob/v1/version-control/index.md).
+Keep the title at 50 bytes or fewer. An ASCII character is one byte. Other characters can use more than one byte. See [dkstack version control](https://github.com/daniel-kindl/dkstack/blob/v1/version-control/index.md).
 
 `chore(build): pin the .NET SDK` matches the form.
 The square brackets in the form mark optional parts. Do not write the brackets in a title.
@@ -57,6 +57,8 @@ Reviewers still review the change.
 [eng/check-pr-title.sh](eng/check-pr-title.sh) is the title rule.
 The script runs the positive and negative examples.
 The script then checks one title.
+[eng/test-check-pr-title.py](eng/test-check-pr-title.py) tests the 50-byte limit.
+If you change the title rule, run `python3 eng/test-check-pr-title.py`.
 Do not copy the rule into a second checker.
 `dotnet msbuild eng/verify.proj` does not check pull request titles.
 
