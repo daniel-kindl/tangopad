@@ -13,6 +13,18 @@ namespace Editor.Infrastructure;
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+    private readonly IFileSync sync;
+
+    /// <summary>Initializes a store that flushes saves with the operating system.</summary>
+    public FileTextDocumentStore()
+        : this(FileSync.Default)
+    {
+    }
+
+    internal FileTextDocumentStore(IFileSync sync)
+    {
+        this.sync = sync;
+    }
 
     /// <inheritdoc />
     public async Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
