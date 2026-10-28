@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Check the result rules of the real package update check."""
+import json
+from pathlib import Path
+import runpy
+import tempfile
+import unittest
+
+CHECK = runpy.run_path(str(Path(__file__).with_name("check-package-update.py")))
+MARK = "Tangopad.UpdateTestHook.v1"
+
+
+def event(name, version, pid=1, error=None):
+    return {"Event": name, "Marker": MARK, "Version": version, "ProcessId": pid, "ProcessPath": "x", "Error": error}
+
+
+class PackageUpdateChecks(unittest.TestCase):
+    def test_feed_has_exactly_three_names(self):
+        self.assertEqual(CHECK["feed_names"]("osx-arm64", "1.0.1"),
+                         ["releases.osx-arm64.json", "releases.osx-arm64.json.sig", "TangopadDesktop-1.0.1-osx-arm64-full.nupkg"])
+
+    def test_update_needs_every_step_and_a_new_process(self):
+        good = [event("start", "1.0.0"), event("downloaded", "1.0.1"), event("applying", "1.0.1"), event("restarted", "1.0.1", 2)]
+        CHECK["check_updated"](good)
+        for broken in (good[:3], [*good[:3], event("restarted", "1.0.0", 2)], [*good[:3], event("restarted", "1.0.1", 1)],
+                       [event("start", "1.0.1"), *good[1:]]):
+            with self.subTest(events=broken), self.assertRaises(RuntimeError):
+                CHECK["check_updated"](broken)
+
+    def test_bad_signature_must_stop_before_apply(self):
+        self.assertEqual("bad", CHECK["check_rejected"]([event("start", "1.0.0"), event("error", "1.0.0", error="bad")]))
+        for broken in ([event("start", "1.0.0")], [event("start", "1.0.0"), event("downloaded", "1.0.1"), event("error", "1.0.0")],
+                       [event("start", "1.0.0"), event("no-update", "1.0.0")]):
+            with self.subTest(events=broken), self.assertRaises(RuntimeError):
+                CHECK["check_rejected"](broken)
+
+    def test_report_must_show_the_new_version(self):
+        CHECK["check_report"]([event("report", "1.0.1")])
+        with self.assertRaises(RuntimeError):
+            CHECK["check_report"]([event("report", "1.0.0")])
+
+    def test_events_without_the_marker_are_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "e.jsonl"
+            path.write_text(json.dumps({**event("start", "1.0.0"), "Marker": "other"}) + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "update-test hook"):
+                CHECK["read_events"](path)
+            self.assertEqual([], CHECK["read_events"](Path(directory) / "missing.jsonl"))
+
+
+if __name__ == "__main__":
+    unittest.main()

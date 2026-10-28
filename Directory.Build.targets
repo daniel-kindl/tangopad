@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    TangopadUpdateTest=true builds the update-test hook into the editor. Only
+    eng/package-release.py with update-test turned on sets it. The guard stops the build when the
+    property is on together with the production update key or inside the release workflow.
+  -->
+  <Target Name="TangopadUpdateTestGuard" BeforeTargets="CollectPackageReferences;BeforeBuild;CoreCompile" Condition="'$(TangopadUpdateTest)' == 'true'">
+    <PropertyGroup>
+      <_TangopadProductionKey>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)eng/release/update-public-key.pem'))</_TangopadProductionKey>
+      <_TangopadTestKey Condition="'$(UpdatePublicKeyPath)' != ''">$([System.IO.Path]::GetFullPath('$(UpdatePublicKeyPath)'))</_TangopadTestKey>
+      <_TangopadTestKeyIsProduction>false</_TangopadTestKeyIsProduction>
+      <_TangopadTestKeyIsProduction Condition="'$(_TangopadTestKey)' == '' or '$(_TangopadTestKey)' == '$(_TangopadProductionKey)' or !Exists('$(_TangopadTestKey)')">true</_TangopadTestKeyIsProduction>
+      <_TangopadTestKeyIsProduction Condition="'$(_TangopadTestKeyIsProduction)' == 'false' and Exists('$(_TangopadProductionKey)') and '$([System.IO.File]::ReadAllText($(_TangopadTestKey)).Trim())' == '$([System.IO.File]::ReadAllText($(_TangopadProductionKey)).Trim())'">true</_TangopadTestKeyIsProduction>
+    </PropertyGroup>
+    <Error Code="TANGOPAD001" Condition="'$(TANGOPAD_RELEASE_BUILD)' != ''"
+           Text="An update-test build is not allowed in a release build (TANGOPAD_RELEASE_BUILD is set)." />
+    <Error Code="TANGOPAD002" Condition="'$(_TangopadTestKeyIsProduction)' == 'true'"
+           Text="An update-test build needs a separate test update key. It cannot use the production update key." />
+  </Target>
+</Project>

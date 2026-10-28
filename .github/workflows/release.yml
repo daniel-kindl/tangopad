@@ -16,6 +16,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     environment: release
     timeout-minutes: 60
+    env:
+      # The build refuses the test-only update hook when this is set.
+      TANGOPAD_RELEASE_BUILD: "1"
     strategy:
       fail-fast: false
       matrix:
