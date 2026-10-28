@@ -228,10 +228,10 @@ public sealed class TextileHighlightingTests
             return new(await Task.FromResult("# Heading\r\nordinary text").ConfigureAwait(true), destination);
         }
 
-        public Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        public Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             SavedText = text;
-            return Task.FromResult<string?>(destination);
+            return Task.FromResult<SaveResult?>(new SaveResult(destination, true));
         }
     }
 

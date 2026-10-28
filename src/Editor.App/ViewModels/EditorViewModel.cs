@@ -366,7 +366,8 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
         }
 
         token.ThrowIfCancellationRequested();
-        while (!await Session.SaveAsAsync(path, false, token).ConfigureAwait(true))
+        SaveOutcome outcome;
+        while (!(outcome = await Session.SaveAsWithOutcomeAsync(path, false, token).ConfigureAwait(true)).Saved)
         {
             string snapshot = Text;
             ConflictDecision decision = await dialogs.ConfirmConflictAsync(path).ConfigureAwait(true);
@@ -390,13 +391,21 @@ internal sealed partial class EditorViewModel(ITextDocumentStore store, IEditorD
                 return false;
             }
 
-            if (await Session.SaveAsAsync(path, true, token).ConfigureAwait(true))
+            outcome = await Session.SaveAsWithOutcomeAsync(path, true, token).ConfigureAwait(true);
+            if (outcome.Saved)
             {
                 break;
             }
         }
         RecordRecent(path);
         OnPropertyChanged(nameof(Format));
+        if (!outcome.Flushed)
+        {
+            // The file is written, but it may not survive a power loss. The document stays modified.
+            await dialogs.ShowErrorAsync(DocumentSession.NotFlushedMessage).ConfigureAwait(true);
+            return false;
+        }
+
         return true;
     }
 

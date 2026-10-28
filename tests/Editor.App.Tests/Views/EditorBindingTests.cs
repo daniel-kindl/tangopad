@@ -1256,10 +1256,10 @@ public sealed class EditorBindingTests
             return new(await Load.Task.ConfigureAwait(true), destination);
         }
 
-        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        public async Task<Application.SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             await Task.FromException(new InvalidOperationException("This test does not save documents.")).ConfigureAwait(true);
-            return destination;
+            return new Application.SaveResult(destination, true);
         }
     }
 }

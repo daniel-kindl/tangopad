@@ -10,6 +10,10 @@ namespace Editor.Application;
 /// </remarks>
 public sealed class DocumentSession
 {
+    /// <summary>The message when the file was written but the store could not flush it to the disk.</summary>
+    public const string NotFlushedMessage =
+        "The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.";
+
     private readonly ITextDocumentStore store;
     private bool saving;
 
@@ -71,7 +75,7 @@ public sealed class DocumentSession
     /// <param name="destination">The nonblank destination for the snapshot.</param>
     /// <param name="cancellationToken">The token that cancels the save.</param>
     /// <param name="overwrite">Whether the user explicitly permits replacing the current disk state.</param>
-    /// <returns>True after persistence and acknowledgement, or false for a conflict without a write.</returns>
+    /// <returns>True after the write, or false for a conflict without a write. See <see cref="SaveAsWithOutcomeAsync"/> for the flush state.</returns>
     /// <exception cref="InvalidOperationException">A save is already pending.</exception>
     /// <remarks>
     /// Failure or observed cancellation preserves the baseline and destination.
@@ -79,6 +83,18 @@ public sealed class DocumentSession
     /// The adapter might have written data in that case. A retry remains possible.
     /// </remarks>
     public async Task<bool> SaveAsAsync(string destination, bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        return (await SaveAsWithOutcomeAsync(destination, overwrite, cancellationToken).ConfigureAwait(true)).Saved;
+    }
+
+    /// <summary>Saves a snapshot and reports whether it was written and flushed.</summary>
+    /// <param name="destination">The nonblank destination for the snapshot.</param>
+    /// <param name="overwrite">Whether the user explicitly permits replacing the current disk state.</param>
+    /// <param name="cancellationToken">The token that cancels the save.</param>
+    /// <returns>The outcome. Saved is false for a conflict without a write.</returns>
+    /// <exception cref="InvalidOperationException">A save is already pending.</exception>
+    /// <remarks>When Flushed is false, the session keeps the new revision and destination, so a later save is not a conflict, and the document stays modified.</remarks>
+    public async Task<SaveOutcome> SaveAsWithOutcomeAsync(string destination, bool overwrite = false, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         cancellationToken.ThrowIfCancellationRequested();
@@ -91,17 +107,25 @@ public sealed class DocumentSession
         try
         {
             string snapshot = Document.Text;
-            string? persisted = await store.SaveAsync(destination, snapshot, Revision, overwrite, cancellationToken).ConfigureAwait(true);
+            SaveResult? persisted = await store.SaveAsync(destination, snapshot, Revision, overwrite, cancellationToken).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
             if (persisted is null)
             {
-                return false;
+                return new SaveOutcome(false, false);
             }
 
-            Revision = persisted;
+            Revision = persisted.Revision;
+            if (!persisted.Flushed)
+            {
+                // The file is on disk with this revision, so a later save is not a conflict.
+                // The document stays modified, so the user saves again.
+                Destination = destination;
+                return new SaveOutcome(true, false);
+            }
+
             Document.AcceptChanges(snapshot);
             Destination = destination;
-            return true;
+            return new SaveOutcome(true, true);
         }
         finally
         {

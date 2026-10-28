@@ -19,9 +19,9 @@ public interface ITextDocumentStore
     /// <param name="expectedRevision">The last loaded or saved revision, or null before the first persistence.</param>
     /// <param name="overwrite">Whether the caller explicitly permits replacing the current destination.</param>
     /// <param name="cancellationToken">The token that cancels the save.</param>
-    /// <returns>The persisted revision, or null for a conflict with no write.</returns>
+    /// <returns>The persisted revision and whether it reached the disk, or null for a conflict with no write.</returns>
     /// <remarks>A failed or cancelled task must never report successful persistence.</remarks>
-    Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken);
+    Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken);
 }
 
 /// <summary>Contains exact text and an adapter-owned revision of the source bytes.</summary>
@@ -34,4 +34,16 @@ public sealed class StoredDocument(string text, string revision)
 
     /// <summary>Gets the opaque revision, including destination identity.</summary>
     public string Revision { get; } = revision;
+}
+
+/// <summary>Contains the revision of a written snapshot and whether the adapter could flush it to the disk.</summary>
+/// <param name="revision">The opaque revision of the written bytes, including destination identity.</param>
+/// <param name="flushed">False when the snapshot is in place but the adapter could not flush it to the disk.</param>
+public sealed class SaveResult(string revision, bool flushed)
+{
+    /// <summary>Gets the opaque revision of the written bytes, including destination identity.</summary>
+    public string Revision { get; } = revision;
+
+    /// <summary>Gets a value indicating whether the adapter flushed the snapshot to the disk.</summary>
+    public bool Flushed { get; } = flushed;
 }

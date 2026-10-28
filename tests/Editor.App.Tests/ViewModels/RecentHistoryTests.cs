@@ -78,10 +78,10 @@ public sealed class RecentHistoryTests
             return new(await Task.FromException<string>(new UnauthorizedAccessException("Access denied.")).ConfigureAwait(true), destination);
         }
 
-        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
+        public async Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
         {
             await Task.FromException(new UnauthorizedAccessException("Access denied.")).ConfigureAwait(true);
-            return destination;
+            return new SaveResult(destination, true);
         }
     }
 
