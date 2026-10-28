@@ -6,7 +6,7 @@ using Velopack.Sources;
 
 namespace Editor.Infrastructure.Updates;
 
-internal sealed class SignedReleaseSource(string publicKey, string releaseChannel, CancellationToken checkToken, HttpClient? transport = null, string expectedPackageId = "TangopadDesktop") : IUpdateSource
+internal sealed class SignedReleaseSource(string publicKey, string releaseChannel, CancellationToken checkToken, HttpClient? transport = null, string expectedPackageId = "TangopadDesktop", TimeProvider? timeProvider = null) : IUpdateSource
 {
     private const string Repository = "https://github.com/daniel-kindl/tangopad/releases/";
     private const int MaximumFeedBytes = 65536;
@@ -14,7 +14,7 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task<VelopackAssetFeed> GetReleaseFeed(IVelopackLogger logger, string? appId, string channel, Guid? stagingId, VelopackAsset? latestLocalRelease)
     {
-        using CancellationTokenSource timeout = StartDeadline(checkToken);
+        using Deadline timeout = StartDeadline(checkToken);
         string name = $"releases.{releaseChannel}.json";
         byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, timeout.Token).ConfigureAwait(false);
         byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, timeout.Token).ConfigureAwait(false);
@@ -42,7 +42,7 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task DownloadReleaseEntry(IVelopackLogger logger, VelopackAsset releaseEntry, string localFile, Action<int> progress, CancellationToken cancelToken)
     {
-        using CancellationTokenSource idle = StartDeadline(cancelToken);
+        using Deadline idle = StartDeadline(cancelToken);
         CancellationToken token = idle.Token;
         Uri address = new(Repository + $"download/v{releaseEntry.Version}/" + releaseEntry.FileName);
         using HttpResponseMessage response = await GetAsync(address, token).ConfigureAwait(false);
@@ -53,7 +53,7 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
         int count;
         while ((count = await input.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
         {
-            RenewIdleDeadline(idle, count);
+            idle.Renew(count);
             received += count;
             if (received > releaseEntry.Size) { throw new InvalidDataException("The update package exceeds its authenticated size."); }
             await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
@@ -64,16 +64,36 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     // The feed and the signature share one total deadline. The package uses the same window as an
     // inactivity deadline: it covers the headers and is renewed only when a read returns bytes.
-    private CancellationTokenSource StartDeadline(CancellationToken outer)
+    private Deadline StartDeadline(CancellationToken outer)
     {
-        CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(outer);
-        deadline.CancelAfter((transport ?? DefaultClient).Timeout);
-        return deadline;
+        return new Deadline((transport ?? DefaultClient).Timeout, timeProvider ?? TimeProvider.System, outer);
     }
 
-    private void RenewIdleDeadline(CancellationTokenSource idle, int count)
+    private sealed class Deadline : IDisposable
     {
-        if (count > 0) { idle.CancelAfter((transport ?? DefaultClient).Timeout); }
+        private readonly CancellationTokenSource timer;
+        private readonly CancellationTokenSource linked;
+        private readonly TimeSpan window;
+
+        internal Deadline(TimeSpan window, TimeProvider time, CancellationToken outer)
+        {
+            this.window = window;
+            timer = new CancellationTokenSource(window, time);
+            linked = CancellationTokenSource.CreateLinkedTokenSource(outer, timer.Token);
+        }
+
+        internal CancellationToken Token => linked.Token;
+
+        internal void Renew(int count)
+        {
+            if (count > 0) { timer.CancelAfter(window); }
+        }
+
+        public void Dispose()
+        {
+            linked.Dispose();
+            timer.Dispose();
+        }
     }
 
     private async Task<byte[]> ReadBoundedAsync(Uri address, int maximum, CancellationToken token)
