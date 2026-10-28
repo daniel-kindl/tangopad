@@ -146,6 +146,12 @@ def main():
         notices = runpy.run_path(str(ROOT / "eng/check-notices.py"))
         notice_inventory = notices["prepare_payload"](ROOT, publish, args.rid, ROOT / "src/Editor.App/obj/project.assets.json")
         check_payload(publish)
+        prepack = runpy.run_path(str(ROOT / "eng/update-test-marker.py"))
+        # Early signal before packing. The package scan after packing stays the gate.
+        if args.update_test:
+            prepack["require_present_in"](prepack["directory_files"](publish))
+        else:
+            prepack["require_absent"](prepack["directory_files"](publish))
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
         pack_args = [*tool, "pack", "--packId", "TangopadDesktop",
                      "--packTitle", "Tangopad", "--packVersion", release_version, "--runtime", args.rid,
@@ -167,7 +173,9 @@ def main():
         marker = runpy.run_path(str(ROOT / "eng/update-test-marker.py"))
         if args.update_test:
             # Positive control: the same scan that guards releases must find the marker here.
-            marker["require_present"](next(output.glob("*.nupkg")))
+            for artifact in marker["zip_artifacts"](output):
+                if artifact.suffix.lower() in (".nupkg", ".appimage"):
+                    marker["require_present"](artifact)
         else:
             marker["require_absent"](marker["zip_artifacts"](output))
         if args.rid == "win-x64":
