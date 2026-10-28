@@ -2,7 +2,10 @@
 
 ## Choose a build
 
-The first stable release is not yet published. The formats below are candidate formats.
+The first stable release, 1.0.0, is not yet published.
+Version 1.0.0 targets Windows x64, Linux x64, macOS x64 (Intel), and macOS arm64 (Apple silicon).
+There is no package for other platforms or CPU architectures.
+The formats below are candidate formats.
 Their existence in CI does not establish production installation or OS trust acceptance.
 Retain backups when testing candidates.
 
@@ -24,11 +27,32 @@ See [native startup](../native-startup.md) for host libraries.
 AppImage host and FUSE requirements need validation on the selected release's supported distributions.
 This table establishes no minimum OS version or support for other CPU architectures.
 
-Windows and Apple certificate signing and macOS notarization are optional in the current pipeline.
-Unsigned packages can cause SmartScreen or Gatekeeper prompts.
+### Open an unsigned package
+
+The 1.0.0 packages are not signed with a Windows or Apple certificate.
+The macOS packages are not notarized.
 An update-feed signature authenticates update content, but does not replace platform signing.
 Tangopad does not bypass OS protections.
-If the OS blocks launch, report the package, OS, and exact message.
+Download packages only from [GitHub Releases](https://github.com/daniel-kindl/tangopad/releases).
+Compare the SHA-256 hash with the value in the release notes before you open a package.
+
+On Windows, Microsoft Defender SmartScreen shows a warning for a downloaded file that has no established reputation.
+The unsigned Tangopad Setup file has no such reputation, so expect this warning.
+Read the [SmartScreen overview](https://learn.microsoft.com/windows/security/operating-system-security/virus-and-threat-protection/microsoft-defender-smartscreen/) for how SmartScreen evaluates files.
+This guide does not give steps to continue past the warning.
+
+On macOS, Gatekeeper blocks the first open of Tangopad because the app is not registered with Apple by a known developer.
+To open the app after you confirm the download, do these steps from
+[Apple's instructions](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac):
+
+1. Try to open Tangopad. macOS shows a warning and does not open the app.
+2. Choose **Apple menu > System Settings**, then click **Privacy & Security** in the sidebar.
+3. Go to **Security**, then click **Open**.
+4. Click **Open Anyway**. This button is available for about an hour after you try to open the app.
+5. Enter your login password, then click **OK**.
+
+macOS saves the app as an exception. Later opens do not show the warning.
+If the OS blocks launch in a different way, report the package, OS, and exact message.
 
 ## Start from source
 
