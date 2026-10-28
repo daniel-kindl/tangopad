@@ -49,9 +49,8 @@ repository layout, CI, and release work.
 [Report a bug](https://github.com/daniel-kindl/tangopad/issues/new/choose) with the
 application version, OS, steps, and expected result. Remove private document text
 and paths before attaching logs or screenshots.
-For a suspected vulnerability, use
-[GitHub private vulnerability reporting](https://github.com/daniel-kindl/tangopad/security/advisories/new)
-if available. Otherwise, open an issue that asks for a private contact without disclosing exploit details or secrets.
+For a suspected vulnerability, follow the [security policy](SECURITY.md).
+Do not put exploit details or secrets in a public issue.
 
 Tangopad uses the [MIT license](LICENSE).
 It builds on Avalonia, AvaloniaEdit, CommunityToolkit.Mvvm, Markdig, Velopack, and Lucide icons.
