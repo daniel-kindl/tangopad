@@ -132,7 +132,7 @@
       "editor.application": {
         "type": "Project",
         "dependencies": {
-          "Editor.Core": "[0.1.0, )"
+          "Editor.Core": "[1.0.0, )"
         }
       },
       "editor.core": {

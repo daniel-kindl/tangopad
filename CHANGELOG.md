@@ -3,10 +3,14 @@
 This file is the canonical history of user-visible changes.
 Entries follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) categories.
 Published versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-The first public release is pending. The entries below describe merged, unreleased work.
+The 1.0.0 entry records the planned contents of the first public release.
 See [the release workflow](docs/release-notes.md) for curation and publication rules.
 
 ## Unreleased
+
+[Unreleased comparison](https://github.com/daniel-kindl/tangopad/compare/v1.0.0...dev)
+
+## 1.0.0 - 2026-10-28
 
 ### Added
 
@@ -48,3 +52,5 @@ See [the release workflow](docs/release-notes.md) for curation and publication r
 - Distinguish checked toolbar toggles with an outline in both themes.
   Native screen-reader and OS high-contrast acceptance remain incomplete.
   See [PR #102](https://github.com/daniel-kindl/tangopad/pull/102).
+
+[1.0.0 release](https://github.com/daniel-kindl/tangopad/releases/tag/v1.0.0)
