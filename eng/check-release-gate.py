@@ -42,6 +42,8 @@ def check(repo, sha, api=gh_api):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo or ""):
         raise ValueError("The release gate needs the owner/name repository.")
     problems = []
+    # The gate reads one page of 100 runs and one page of 100 jobs. It does not follow pagination.
+    # This fails closed: a green run or job that is not on the first page is not seen, so the release stops.
     try:
         runs = api(f"repos/{repo}/actions/workflows/packages.yml/runs?head_sha={sha}&status=success&per_page=100")
         candidates = [run for run in runs.get("workflow_runs") or []

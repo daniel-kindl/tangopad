@@ -46,8 +46,11 @@ def sudo_available():
     """Return True only when sudo runs without a password prompt."""
     if shutil.which("sudo") is None:
         return False
-    return subprocess.run(["sudo", "-n", "true"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                          stderr=subprocess.DEVNULL).returncode == 0
+    try:
+        return subprocess.run(["sudo", "-n", "true"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, timeout=30).returncode == 0
+    except subprocess.TimeoutExpired:
+        return False
 
 
 def runner_uid():
