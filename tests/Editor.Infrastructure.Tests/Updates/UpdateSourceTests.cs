@@ -164,6 +164,27 @@ public sealed class UpdateSourceTests
         finally { File.Delete(path); }
     }
 
+    /// <summary>A slow package body that sends bytes inside each idle window completes after the timeout has passed.</summary>
+    [Fact]
+    public async Task SlowSteadyPackageCompletesBeyondTimeout()
+    {
+        const int chunks = 8;
+        using ChunkedStream body = new(chunks, TimeSpan.FromMilliseconds(200), stallAfterChunks: false);
+        using Handler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) });
+        using HttpClient client = new(handler, disposeHandler: false) { Timeout = TimeSpan.FromMilliseconds(500) };
+        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client);
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
+            await source.DownloadReleaseEntry(new Logger(), PackageAsset(chunks), path, _ => { }, TestContext.Current.CancellationToken)
+                .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            Assert.True(elapsed.Elapsed > TimeSpan.FromMilliseconds(1000));
+            Assert.Equal(new byte[chunks], await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true));
+        }
+        finally { File.Delete(path); }
+    }
+
     /// <summary>The feed and the signature share one deadline, so slow reads that each fit the timeout still fail together.</summary>
     [Fact]
     public async Task FeedAndSignatureShareOneDeadline()
