@@ -81,7 +81,7 @@ Do not delete portable `data/` while trying another package.
 - Local UTF-8 files only. File replacement does not retain all filesystem metadata.
 - Preview is bounded and read-only. Document links and images do not load external resources.
 - Linux uses X11 or XWayland. Native Wayland file drops need separate acceptance.
-- On Linux, screen readers cannot read the document text. The editor has no AT-SPI `Text` interface.
+- On Linux, screen readers cannot read the document text. The source editor has no AT-SPI `Text` interface.
 - OS high-contrast behavior, physical monitor transitions, and native screen-reader workflows still need platform checks.
 - Candidate formats do not establish minimum OS versions or successful production installation on every platform.
 
