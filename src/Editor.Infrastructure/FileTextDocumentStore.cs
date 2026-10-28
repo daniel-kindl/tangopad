@@ -7,8 +7,10 @@ namespace Editor.Infrastructure;
 
 /// <summary>Stores plain text in local UTF-8 files.</summary>
 /// <remarks>
-/// Loads consume one initial UTF-8 BOM. Saves add no BOM and replace the destination directory entry.
-/// Replacement does not preserve file metadata. See ADR 0009 for optimistic concurrency limits.
+/// Loads consume one initial UTF-8 BOM. Saves add no BOM. A save follows a symbolic link to its target file,
+/// writes a temporary file in the folder of that file, copies the Unix permission bits of the existing file,
+/// flushes the temporary file, renames it over the target and then flushes the folder.
+/// The save does not keep the owner, ACLs, extended attributes or timestamps. See ADR 0009 for optimistic concurrency limits.
 /// </remarks>
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
@@ -66,7 +68,9 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             return null;
         }
 
-        string temporary = Path.Combine(Path.GetDirectoryName(path)!, $".tangopad-{Guid.NewGuid():N}.tmp");
+        string target = ResolveTarget(path);
+        string folder = Path.GetDirectoryName(target)!;
+        string temporary = Path.Combine(folder, $".tangopad-{Guid.NewGuid():N}.tmp");
         bool created = false;
         try
         {
@@ -88,6 +92,12 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
                 using StreamWriter writer = new(stream, StrictUtf8);
                 await writer.WriteAsync(text.AsMemory(), cancellationToken).ConfigureAwait(false);
                 await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+                if (!OperatingSystem.IsWindows() && before is not null)
+                {
+                    File.SetUnixFileMode(stream.SafeFileHandle, File.GetUnixFileMode(target) & PermissionBits);
+                }
+
+                sync.FlushFile(stream);
             }
 
             string persisted = await ReadRevisionAsync(temporary, null, false, cancellationToken).ConfigureAwait(false)
@@ -104,14 +114,16 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             // A new destination uses a non-overwriting move, including the final race window.
             try
             {
-                File.Move(temporary, path, overwrite: before is not null);
+                File.Move(temporary, target, overwrite: before is not null);
             }
-            catch (IOException) when (before is null && File.Exists(path))
+            catch (IOException) when (before is null && File.Exists(target))
             {
                 File.Delete(temporary);
                 return null;
             }
 
+            created = false;
+            sync.FlushDirectory(folder);
             return persisted;
         }
         catch (Exception failure)
@@ -130,6 +142,20 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
 
             throw;
         }
+    }
+
+    private const UnixFileMode PermissionBits = (UnixFileMode)0b111_111_111;
+
+    private static string ResolveTarget(string path)
+    {
+        FileInfo entry = new(path);
+        if (entry.LinkTarget is null)
+        {
+            return path;
+        }
+
+        FileSystemInfo? target = entry.ResolveLinkTarget(returnFinalTarget: true);
+        return target is null ? path : Path.GetFullPath(target.FullName);
     }
 
     private static string Revision(string path, long length, DateTime modified, byte[] hash)
