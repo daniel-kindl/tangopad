@@ -96,6 +96,7 @@ formatter exclusion. Follow [dkstack quality gates](https://github.com/daniel-ki
 Prefer correcting the source. Generated source and external or platform API contracts
 can justify a narrow exception when the diagnostic cannot be corrected locally.
 The SDK defaults listed above are the only current warning exclusions.
+This section applies until [dkstack issue #41](https://github.com/daniel-kindl/dkstack/issues/41) adds a rule for documented exceptions. Then this section keeps only the tangopad specifics and links to that rule.
 
 ## Gate evidence
 
