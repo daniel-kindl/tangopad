@@ -189,7 +189,7 @@ def main():
 
 def source_commit():
     """Return the commit that the check runs on."""
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, timeout=QUERY_TIMEOUT).strip()
 
 
 if __name__ == "__main__":
