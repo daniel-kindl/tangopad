@@ -33,7 +33,7 @@ The committed images show the 1.0.0 Linux AppImage from a Package candidates run
 executable and assembly hashes, host, sample hash, dimensions, and image hashes.
 It also records the build run, the artifact name, and the AppImage hash.
 The AppImage has one single-file executable, so the executable hash and the assembly hash are the same.
-The images are not final release-candidate evidence until the draft release exists.
+The images are not release-candidate evidence. Compare them with the draft release before you use them as evidence.
 If the interface changes before the draft release, capture the images again from the draft release candidate.
 The capture uses only [the synthetic sample](user/samples/field-notes.md).
 No personal document, user profile, or local file path appears in the images.
