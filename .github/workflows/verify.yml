@@ -50,6 +50,7 @@ jobs:
           python3 eng/test-check-notices.py
           python3 eng/test-check-package-launch.py
           python3 eng/check-notices.py
+          python3 eng/test-check-pr-title.py
           python3 eng/test-check-native-update.py
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
