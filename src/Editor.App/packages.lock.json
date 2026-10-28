@@ -212,7 +212,7 @@
       "editor.application": {
         "type": "Project",
         "dependencies": {
-          "Editor.Core": "[0.1.0, )"
+          "Editor.Core": "[1.0.0, )"
         }
       },
       "editor.core": {
@@ -221,20 +221,20 @@
       "editor.formats.markdown": {
         "type": "Project",
         "dependencies": {
-          "Editor.Preview": "[0.1.0, )",
+          "Editor.Preview": "[1.0.0, )",
           "Markdig": "[1.5.0, )"
         }
       },
       "editor.formats.textile": {
         "type": "Project",
         "dependencies": {
-          "Editor.Preview": "[0.1.0, )"
+          "Editor.Preview": "[1.0.0, )"
         }
       },
       "editor.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "Editor.Application": "[0.1.0, )",
+          "Editor.Application": "[1.0.0, )",
           "Velopack": "[1.2.161, )"
         }
       },
