@@ -22,8 +22,10 @@ internal sealed partial class FileSync : IFileSync
 {
     private const int ReadOnly = 0;
 
-    // The flag values differ between the systems: see fcntl.h on Linux (x64 and arm64) and on macOS.
+    // The flag values differ between the systems and processors: see fcntl.h on Linux and on macOS.
+    // Linux x64 uses 0x10000 for O_DIRECTORY. Linux arm64 and 32-bit arm use 0x4000. O_CLOEXEC is 0x80000 on all three.
     private const int LinuxDirectory = 0x0001_0000;
+    private const int LinuxArmDirectory = 0x0000_4000;
     private const int LinuxCloseOnExec = 0x0008_0000;
     private const int MacDirectory = 0x0010_0000;
     private const int MacCloseOnExec = 0x0100_0000;
@@ -44,8 +46,15 @@ internal sealed partial class FileSync : IFileSync
     /// <returns>The flags, or null when the values for this system are not known.</returns>
     internal static int? DirectoryOpenFlags(bool isMacOS, Architecture architecture)
     {
-        _ = architecture;
-        return isMacOS ? ReadOnly | MacDirectory | MacCloseOnExec : ReadOnly | LinuxDirectory | LinuxCloseOnExec;
+        int? linuxDirectory = architecture switch
+        {
+            Architecture.X64 => LinuxDirectory,
+            Architecture.Arm64 or Architecture.Arm => LinuxArmDirectory,
+            Architecture.X86 or Architecture.Wasm or Architecture.S390x or Architecture.LoongArch64
+                or Architecture.Armv6 or Architecture.Ppc64le or Architecture.RiscV64 => null,
+            _ => null,
+        };
+        return isMacOS ? ReadOnly | MacDirectory | MacCloseOnExec : ReadOnly | linuxDirectory | LinuxCloseOnExec;
     }
 
     /// <inheritdoc />
@@ -66,7 +75,13 @@ internal sealed partial class FileSync : IFileSync
             return true;
         }
 
-        int descriptor = NativeMethods.Open(path, directoryFlags ?? (ReadOnly | LinuxDirectory | LinuxCloseOnExec));
+        // With unknown flags an open could follow the wrong rules, so skip the flush and report it.
+        if (directoryFlags is not int flags)
+        {
+            return false;
+        }
+
+        int descriptor = NativeMethods.Open(path, flags);
         if (descriptor < 0)
         {
             throw new IOException($"The folder '{path}' could not be opened to flush it (error {Marshal.GetLastPInvokeError()}).");
