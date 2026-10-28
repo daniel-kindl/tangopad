@@ -148,6 +148,12 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
 
     private static string ResolveTarget(string path)
     {
+        // Windows keeps the previous save path: the link itself is replaced.
+        if (OperatingSystem.IsWindows())
+        {
+            return path;
+        }
+
         FileInfo entry = new(path);
         if (entry.LinkTarget is null)
         {
