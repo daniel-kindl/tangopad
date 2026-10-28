@@ -55,7 +55,10 @@ def _appimage_contains(content, depth):
         try:
             run_extractor(image, output, EXTRACT_SECONDS)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
-            raise ValueError(f"The AppImage extraction failed, so the marker scan cannot pass: {type(error).__name__}") from error
+            detail = getattr(error, "stderr", None) or b""
+            detail = detail.decode("utf-8", "replace") if isinstance(detail, bytes) else str(detail)
+            raise ValueError(f"The AppImage extraction failed, so the marker scan cannot pass: {type(error).__name__}: "
+                             f"{error} {detail.strip()[-2000:]}") from error
         files = [path for path in (output / "squashfs-root").rglob("*") if path.is_file() and not path.is_symlink()]
         if not files:
             raise ValueError("The AppImage extraction gave no files, so the marker scan cannot pass.")
