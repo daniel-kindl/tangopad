@@ -359,7 +359,7 @@ public sealed class DocumentSessionTests
         Assert.True(store.Overwrite);
         Assert.Equal("disk-v1", store.Expected);
         session.Document.ReplaceText("newer");
-        store.Pending.SetResult("disk-v2");
+        store.Pending.SetResult(new SaveResult("disk-v2", true));
         Assert.True(await pending.ConfigureAwait(true));
         Assert.Equal("newer", session.Document.Text);
         Assert.True(session.Document.IsDirty);
@@ -376,17 +376,17 @@ public sealed class DocumentSessionTests
     {
         internal string? Expected { get; private set; }
         internal bool Overwrite { get; private set; }
-        internal TaskCompletionSource<string?>? Pending { get; set; }
+        internal TaskCompletionSource<SaveResult?>? Pending { get; set; }
         public Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken)
         {
             return Task.FromResult(new StoredDocument("loaded", "disk-v1"));
         }
 
-        public Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
+        public Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
         {
             Expected = expectedRevision;
             Overwrite = overwrite;
-            return Pending?.Task ?? Task.FromResult<string?>(null);
+            return Pending?.Task ?? Task.FromResult<SaveResult?>(null);
         }
     }
 
@@ -407,12 +407,12 @@ public sealed class DocumentSessionTests
             return new(await (Load?.Invoke(cancellationToken) ?? Task.FromResult(Text)).ConfigureAwait(true), destination);
         }
 
-        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
+        public async Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
         {
             Writes.Add((destination, text));
             SaveToken = cancellationToken;
             await Save(cancellationToken).ConfigureAwait(true);
-            return destination;
+            return new SaveResult(destination, true);
         }
     }
 }

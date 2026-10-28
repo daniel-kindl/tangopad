@@ -59,7 +59,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
     }
 
     /// <inheritdoc />
-    public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
+    public async Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         ArgumentNullException.ThrowIfNull(text);
@@ -139,7 +139,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
                 throw new IOException(SavedButNotFlushedMessage, failure);
             }
 
-            return persisted;
+            return new SaveResult(persisted, true);
         }
         catch (Exception failure)
         {

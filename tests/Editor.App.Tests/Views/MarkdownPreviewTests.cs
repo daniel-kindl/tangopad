@@ -475,11 +475,11 @@ public sealed class MarkdownPreviewTests
             return new(await Task.FromResult(LoadedText).ConfigureAwait(true), destination);
         }
 
-        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        public async Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             SavedText = text;
             await (Failure ? Task.FromException(new IOException("Save failed.")) : Save.WaitAsync(cancellationToken)).ConfigureAwait(true);
-            return destination;
+            return new SaveResult(destination, true);
         }
     }
 

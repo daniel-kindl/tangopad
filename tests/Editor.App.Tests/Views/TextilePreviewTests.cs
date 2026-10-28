@@ -413,9 +413,9 @@ public sealed class TextilePreviewTests
         {
             return Task.FromResult(new StoredDocument(LoadedText, destination));
         }
-        public Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        public Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<string?>(destination);
+            return Task.FromResult<SaveResult?>(new SaveResult(destination, true));
         }
     }
 

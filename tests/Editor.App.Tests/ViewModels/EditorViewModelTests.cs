@@ -626,11 +626,11 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
             return new(await (PendingLoad?.Task ?? (LoadError is { } error ? Task.FromException<string>(error) : Task.FromResult("loaded\r\n\n"))).ConfigureAwait(true), destination);
         }
 
-        public async Task<string?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        public async Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
         {
             Snapshot = text;
             await PendingSave.Task.ConfigureAwait(true);
-            return destination;
+            return new SaveResult(destination, true);
         }
     }
 

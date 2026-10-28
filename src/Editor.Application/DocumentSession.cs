@@ -91,14 +91,14 @@ public sealed class DocumentSession
         try
         {
             string snapshot = Document.Text;
-            string? persisted = await store.SaveAsync(destination, snapshot, Revision, overwrite, cancellationToken).ConfigureAwait(true);
+            SaveResult? persisted = await store.SaveAsync(destination, snapshot, Revision, overwrite, cancellationToken).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
             if (persisted is null)
             {
                 return false;
             }
 
-            Revision = persisted;
+            Revision = persisted.Revision;
             Document.AcceptChanges(snapshot);
             Destination = destination;
             return true;

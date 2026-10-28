@@ -93,7 +93,7 @@ public sealed class SafeSaveTests : IDisposable
         _ = File.CreateSymbolicLink(link, first);
 
         RecordingSync sync = new(target);
-        string? revision = await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken);
+        string? revision = (await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken))?.Revision;
 
         Assert.Equal(first, new FileInfo(link).LinkTarget);
         if (chain)
@@ -166,7 +166,7 @@ public sealed class SafeSaveTests : IDisposable
         _ = File.CreateSymbolicLink(link, target);
 
         RecordingSync sync = new(target);
-        string? revision = await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken);
+        string? revision = (await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken))?.Revision;
 
         Assert.Equal(target, new FileInfo(link).LinkTarget);
         Assert.Equal("new", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
