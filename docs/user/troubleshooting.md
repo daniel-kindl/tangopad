@@ -8,6 +8,9 @@ Close other programs that can hold the file open, particularly on Windows.
 Use **Save As** to a writable local directory to preserve the current text.
 Do not close the editor until important edits are saved.
 
+If save shows "The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", the file already has the new text.
+The document stays modified. Select **Save** again.
+
 Invalid UTF-8 files cannot be opened. Convert a copy to UTF-8 with a tool that supports the original encoding.
 Keep the original until you check the converted text.
 There is no encoding selector or automatic legacy-encoding detection.
@@ -75,10 +78,22 @@ After a failed native replacement, retain the existing installation and state ba
 Report the version, package source, OS message, and whether the old version can still start.
 Do not delete portable `data/` while trying another package.
 
+## What save keeps
+
+Save writes the text to a temporary file in the same folder, and then replaces the file.
+
+- On Linux and macOS, save keeps the read, write and execute permissions of an existing file. Save removes the setuid, setgid and sticky bits.
+- On Linux and macOS, a new file gets mode 0600.
+- On Linux and macOS, save keeps a symbolic link. The link target gets the new content.
+- On Linux and macOS, if the folder is not writable, save fails and the file stays unchanged.
+- On Windows, save replaces a symbolic link with a regular file. Save does not keep file attributes.
+- Save does not keep the owner, the group, ACLs, extended attributes or timestamps.
+- Save replaces the file, so a hard link to the old file keeps the old content.
+
 ## Known limitations
 
 - One document per window. There are no tabs, exports, autosave, or crash recovery of unsaved text.
-- Local UTF-8 files only. File replacement does not retain all filesystem metadata.
+- Local UTF-8 files only. Save does not keep all file metadata. See [what save keeps](#what-save-keeps).
 - Preview is bounded and read-only. Document links and images do not load external resources.
 - Linux uses X11 or XWayland. Native Wayland file drops need separate acceptance.
 - On Linux, screen readers cannot read the document text. The source editor has no AT-SPI `Text` interface.
