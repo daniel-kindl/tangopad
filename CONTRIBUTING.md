@@ -2,17 +2,19 @@
 
 ## Prepare a change
 
-1. Create a GitHub Issue with a bounded outcome and acceptance criteria.
+1. Create a GitHub Issue. Follow [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
 2. Assign the issue to an appropriate milestone from [the backlog](docs/backlog.md).
 3. Create a short-lived `feat/<issue>-<name>`, `fix/<issue>-<name>`, or `chore/<issue>-<name>` branch from `dev`.
 4. Read [architecture](docs/architecture.md) before changing module ownership or dependencies.
 5. Choose the owning layer and directory from the [placement rules](docs/architecture.md#file-placement).
 6. Record directory and namespace placement in the issue.
-7. Implement the smallest change that satisfies the issue.
+7. Implement the change. Follow [dkstack practices](https://github.com/daniel-kindl/dkstack/blob/v1/coding/practices.md).
 
 `main` holds stable releases. `dev` integrates reviewed changes and is the default
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
 request from this repository's `dev` branch into `main`.
+This branch flow is a tangopad exception to [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
+Branch from `dev`, target `dev`, and merge `dev` into a branch to update it.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.
 
@@ -27,6 +29,8 @@ The pull request title uses this form:
 ```text
 type[optional scope][optional !]: description
 ```
+
+Keep the title at 50 characters or fewer. See [dkstack version control](https://github.com/daniel-kindl/dkstack/blob/v1/version-control/index.md).
 
 `chore(build): pin the .NET SDK` matches the form.
 The square brackets in the form mark optional parts. Do not write the brackets in a title.
@@ -140,7 +144,7 @@ when a real consumer needs a boundary. Add no empty interfaces, stub services,
 or unused extension mechanisms. See [design policy](docs/architecture.md#design-policy).
 
 Test behavior through its consumer. For a defect or new behavior, first write a
-failing test when a cheap, reliable test target exists. Assert literal expected
+failing test. See [dkstack testing](https://github.com/daniel-kindl/dkstack/blob/v1/coding/testing.md). Assert literal expected
 results. Add Core or Application test projects with their first behavior test.
 Do not add placeholder tests or test counts as goals.
 
@@ -150,8 +154,8 @@ adapter exists. Native UI smoke checks and performance benchmarks need observabl
 behavior and platform-specific acceptance criteria. Use native startup tests for
 lifecycle checks. Use headless tests for control behavior.
 
-Use ASD-STE100 principles for technical prose. Keep terms consistent and sentences
-short. State the actor and one instruction per sentence. Preserve uncertainty,
+Follow [dkstack writing](https://github.com/daniel-kindl/dkstack/blob/v1/writing/index.md) for technical prose.
+State the actor in each instruction. Preserve uncertainty,
 modality, technical meaning, and exact API names. These rules do not claim formal
 dictionary compliance. For product text, first write clear technical wording,
 then revise it for natural language without changing its meaning.

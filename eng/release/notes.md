@@ -1,4 +1,4 @@
-# Tangopad 0.1.0
+# Tangopad 1.0.0
 
 Status: Draft
 
@@ -53,6 +53,7 @@ See [release distribution](https://github.com/daniel-kindl/tangopad/blob/dev/doc
 - Preview is bounded and read-only. Document links stay inactive and images remain descriptions.
 - Linux uses X11 or XWayland. The recorded Linux audit lacks an accessible source-text interface.
 - Native screen-reader, OS high-contrast, production installation, and final documentation checks remain pending.
+- Uninstall is not tested in 1.0.0. The release ships with this limit.
 
 Review [known limitations](https://github.com/daniel-kindl/tangopad/blob/dev/docs/user/troubleshooting.md#known-limitations)
 and the [user guide](https://github.com/daniel-kindl/tangopad/blob/dev/docs/user/README.md) before testing candidates.

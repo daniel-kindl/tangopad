@@ -14,9 +14,10 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task<VelopackAssetFeed> GetReleaseFeed(IVelopackLogger logger, string? appId, string channel, Guid? stagingId, VelopackAsset? latestLocalRelease)
     {
+        using CancellationTokenSource timeout = StartDeadline(checkToken);
         string name = $"releases.{releaseChannel}.json";
-        byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, checkToken).ConfigureAwait(false);
-        byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, checkToken).ConfigureAwait(false);
+        byte[] bytes = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name), MaximumFeedBytes, timeout.Token).ConfigureAwait(false);
+        byte[] signature = await ReadBoundedAsync(new Uri(Repository + "latest/download/" + name + ".sig"), 256, timeout.Token).ConfigureAwait(false);
         return VerifyFeed(bytes, signature, publicKey, releaseChannel, expectedPackageId);
     }
 
@@ -41,21 +42,38 @@ internal sealed class SignedReleaseSource(string publicKey, string releaseChanne
 
     public async Task DownloadReleaseEntry(IVelopackLogger logger, VelopackAsset releaseEntry, string localFile, Action<int> progress, CancellationToken cancelToken)
     {
+        using CancellationTokenSource idle = StartDeadline(cancelToken);
+        CancellationToken token = idle.Token;
         Uri address = new(Repository + $"download/v{releaseEntry.Version}/" + releaseEntry.FileName);
-        using HttpResponseMessage response = await GetAsync(address, cancelToken).ConfigureAwait(false);
-        using Stream input = await response.Content.ReadAsStreamAsync(cancelToken).ConfigureAwait(false);
+        using HttpResponseMessage response = await GetAsync(address, token).ConfigureAwait(false);
+        using Stream input = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
         using FileStream output = new(localFile, FileMode.Create, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous);
         byte[] buffer = new byte[65536];
         long received = 0;
         int count;
-        while ((count = await input.ReadAsync(buffer, cancelToken).ConfigureAwait(false)) != 0)
+        while ((count = await input.ReadAsync(buffer, token).ConfigureAwait(false)) != 0)
         {
+            RenewIdleDeadline(idle, count);
             received += count;
             if (received > releaseEntry.Size) { throw new InvalidDataException("The update package exceeds its authenticated size."); }
-            await output.WriteAsync(buffer.AsMemory(0, count), cancelToken).ConfigureAwait(false);
+            await output.WriteAsync(buffer.AsMemory(0, count), token).ConfigureAwait(false);
             progress((int)(received * 100 / releaseEntry.Size));
         }
         if (received != releaseEntry.Size) { throw new InvalidDataException("The update package download is incomplete."); }
+    }
+
+    // The feed and the signature share one total deadline. The package uses the same window as an
+    // inactivity deadline: it covers the headers and is renewed only when a read returns bytes.
+    private CancellationTokenSource StartDeadline(CancellationToken outer)
+    {
+        CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(outer);
+        deadline.CancelAfter((transport ?? DefaultClient).Timeout);
+        return deadline;
+    }
+
+    private void RenewIdleDeadline(CancellationTokenSource idle, int count)
+    {
+        if (count > 0) { idle.CancelAfter((transport ?? DefaultClient).Timeout); }
     }
 
     private async Task<byte[]> ReadBoundedAsync(Uri address, int maximum, CancellationToken token)
