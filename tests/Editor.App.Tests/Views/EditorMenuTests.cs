@@ -72,7 +72,7 @@ public sealed class EditorMenuTests
             Task showing = command.ExecuteAsync(null);
             AboutDialog about = Assert.IsType<AboutDialog>(Assert.Single(window.OwnedWindows));
             Assert.Equal("About Tangopad", about.Title);
-            Assert.Equal("Version 0.1.0", about.VersionText.Text);
+            Assert.Equal("Version 1.0.0", about.VersionText.Text);
             about.CloseButton.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.Button.ClickEvent));
             await showing.ConfigureAwait(true);
             Assert.Empty(window.OwnedWindows);

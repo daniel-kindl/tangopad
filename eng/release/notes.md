@@ -1,4 +1,4 @@
-# Tangopad 0.1.0
+# Tangopad 1.0.0
 
 Status: Draft
 
