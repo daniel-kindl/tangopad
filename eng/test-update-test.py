@@ -123,6 +123,13 @@ class Workflows(unittest.TestCase):
         self.assertIn('GH_TOKEN: ${{ github.token }}', job)
         self.assertNotIn('continue-on-error', job)
 
+    def test_every_main_commit_gets_a_real_update_run_for_the_gate(self):
+        text = (ROOT / '.github/workflows/packages.yml').read_text(encoding='utf-8')
+        trigger = re.search(r'(?m)^  push:\n((?:    .*\n)*)', text.split('\njobs:\n', 1)[0])
+        self.assertIsNotNone(trigger, 'packages.yml must run on a push to main.')
+        self.assertEqual('    branches: [main]\n', trigger.group(1), 'The push trigger must have no path filter.')
+        self.assertIn('WORKFLOW = ".github/workflows/packages.yml"', (ENG / 'check-release-gate.py').read_text(encoding='utf-8'))
+
     def test_every_release_job_depends_on_the_gate(self):
         text = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         names = re.findall(r'(?m)^  ([a-z-]+):\n', text.split('\njobs:\n', 1)[1])
