@@ -97,6 +97,12 @@ def wait_for(path, count, seconds):
     return read_events(path)
 
 
+def stop_editors(rid, root):
+    """Stop the installed editors. The launch check's stop lists Windows processes only."""
+    if rid.startswith("win-"):
+        LAUNCH["stop_installed"](root)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rid", choices=LAUNCH["RUNTIMES"], required=True)
@@ -156,7 +162,7 @@ def main():
                     check_updated(events)
                     result["update_events"] = events
                 server.shutdown()
-            LAUNCH["stop_installed"](root)
+            stop_editors(rid, root)
             report = evidence / "report.jsonl"
             code, output = run_editor(executable, {**environment, "TANGOPAD_UPDATE_TEST_REPORT": str(report)})
             (evidence / "report.log").write_text(f"exit code {code}\n{output}", encoding="utf-8")
@@ -166,7 +172,7 @@ def main():
         finally:
             (evidence / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
             print(json.dumps(result, indent=2), flush=True)
-            LAUNCH["stop_installed"](root)
+            stop_editors(rid, root)
 
 
 if __name__ == "__main__":
