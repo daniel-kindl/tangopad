@@ -10,6 +10,9 @@ namespace Editor.Application;
 /// </remarks>
 public sealed class DocumentSession
 {
+    /// <summary>The message when the file was written but the store could not flush it to the disk.</summary>
+    public const string NotFlushedMessage = "";
+
     private readonly ITextDocumentStore store;
     private bool saving;
 

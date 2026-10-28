@@ -614,6 +614,54 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.True(applied);
     }
 
+    /// <summary>A save that was written but not flushed shows the error and keeps the edits. Save again is a plain save with no conflict.</summary>
+    [Fact]
+    public async Task SaveAgainAfterFlushFailureHasNoConflict()
+    {
+        FlakyStore store = new();
+        Dialogs dialogs = new() { SavePath = "/flaky.txt" };
+        EditorViewModel viewModel = new(store, dialogs, new EditorLabels("Untitled", "{0}{1} - Tangopad", " *"))
+        {
+            Text = "first"
+        };
+
+        Assert.False(await viewModel.SaveAsync().ConfigureAwait(true));
+        Assert.Equal(DocumentSession.NotFlushedMessage, dialogs.Error);
+        Assert.Equal("The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", dialogs.Error);
+        Assert.True(viewModel.IsDirty);
+        Assert.Equal("/flaky.txt", viewModel.Session.Destination);
+        Assert.Equal(0, dialogs.Conflicts);
+
+        Assert.True(await viewModel.SaveAsync().ConfigureAwait(true));
+        Assert.False(viewModel.IsDirty);
+        Assert.Equal(0, dialogs.Conflicts);
+        Assert.Equal(2, store.Saves);
+    }
+
+    private sealed class FlakyStore : ITextDocumentStore
+    {
+        private string? disk;
+
+        internal int Saves { get; private set; }
+
+        public Task<StoredDocument> LoadAsync(string destination, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new StoredDocument("", disk ?? "none"));
+        }
+
+        public Task<SaveResult?> SaveAsync(string destination, string text, string? expectedRevision, bool overwrite, CancellationToken cancellationToken = default)
+        {
+            if (!overwrite && !string.Equals(expectedRevision, disk, StringComparison.Ordinal))
+            {
+                return Task.FromResult<SaveResult?>(null);
+            }
+
+            Saves++;
+            disk = $"r{Saves}";
+            return Task.FromResult<SaveResult?>(new SaveResult(disk, Saves > 1));
+        }
+    }
+
     private sealed class Store : ITextDocumentStore
     {
         internal TaskCompletionSource PendingSave { get; } = new();
@@ -636,7 +684,8 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
 
     private sealed class Dialogs : IEditorDialogs
     {
-        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { return Task.FromResult(ConflictDecision.Cancel); }
+        internal int Conflicts { get; private set; }
+        public Task<ConflictDecision> ConfirmConflictAsync(string destination) { Conflicts++; return Task.FromResult(ConflictDecision.Cancel); }
         internal UnsavedDecision Decision { get; set; } = UnsavedDecision.Cancel;
         internal string? OpenPath { get; set; }
         internal string? SavePath { get; set; }

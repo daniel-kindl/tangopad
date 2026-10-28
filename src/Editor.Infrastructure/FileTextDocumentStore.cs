@@ -131,7 +131,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             created = false;
             try
             {
-                sync.FlushDirectory(folder);
+                _ = sync.FlushDirectory(folder);
             }
             catch (IOException failure)
             {

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Editor.Application;
 using Xunit;
 
@@ -109,29 +110,80 @@ public sealed class SafeSaveTests : IDisposable
         Assert.StartsWith(link + "\n", revision, StringComparison.Ordinal);
     }
 
-    /// <summary>Checks that a failed folder flush after the rename keeps the new content and the modified state.</summary>
+    /// <summary>Checks that a failed folder flush after the rename reports the written revision as not flushed.</summary>
     [Fact]
-    public async Task FolderFlushFailureAfterRenameSaysTheFileWasSaved()
+    public async Task FolderFlushFailureAfterRenameReportsNotFlushed()
     {
         string path = Path.Combine(directory, "flush.txt");
         await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
-        IOException cause = new("disk");
-        FileTextDocumentStore failing = new(new FailingFolderSync(cause));
-        DocumentSession session = await DocumentSession.LoadAsync(failing, path, TestContext.Current.CancellationToken);
+
+        SaveResult? result = await new FileTextDocumentStore(new FailingFolderSync(1)).SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.False(result.Flushed);
+        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal([path], Directory.GetFileSystemEntries(directory));
+    }
+
+    /// <summary>Checks that the session shows the error, keeps the document modified and then saves again with no conflict.</summary>
+    [Fact]
+    public async Task SaveAgainAfterFlushFailureIsAPlainSave()
+    {
+        string path = Path.Combine(directory, "again.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        FailingFolderSync sync = new(1);
+        DocumentSession session = await DocumentSession.LoadAsync(new FileTextDocumentStore(sync), path, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("new");
 
         IOException failure = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
 
-        Assert.Equal(FileTextDocumentStore.SavedButNotFlushedMessage, failure.Message);
         Assert.Equal("The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", failure.Message);
-        Assert.Same(cause, failure.InnerException);
-        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
-        Assert.Equal([path], Directory.GetFileSystemEntries(directory));
+        Assert.Equal(DocumentSession.NotFlushedMessage, failure.Message);
         Assert.True(session.Document.IsDirty);
         Assert.Equal(path, session.Destination);
+
+        Assert.True(await session.SaveAsync(TestContext.Current.CancellationToken));
+
+        Assert.False(session.Document.IsDirty);
+        Assert.Equal(2, sync.Calls);
+        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
     }
 
-    /// <summary>Checks that the default sync opens only folders, with the flags of the current system.</summary>
+    /// <summary>Checks that a change by another process after a flush failure still gives a conflict.</summary>
+    [Fact]
+    public async Task ExternalChangeAfterFlushFailureStillConflicts()
+    {
+        string path = Path.Combine(directory, "external.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        DocumentSession session = await DocumentSession.LoadAsync(new FileTextDocumentStore(new FailingFolderSync(1)), path, TestContext.Current.CancellationToken);
+        session.Document.ReplaceText("new");
+        _ = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
+        await File.WriteAllTextAsync(path, "other process", TestContext.Current.CancellationToken);
+
+        Assert.False(await session.SaveAsync(TestContext.Current.CancellationToken));
+
+        Assert.True(session.Document.IsDirty);
+        Assert.Equal("other process", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>Checks the folder open flags for each system and processor.</summary>
+    /// <param name="isMacOS">Whether the system is macOS.</param>
+    /// <param name="architecture">The process architecture.</param>
+    /// <param name="expected">The expected flags, or null when the values are not known.</param>
+    [Theory]
+    [InlineData(false, Architecture.X64, 0x0001_0000 | 0x0008_0000)]
+    [InlineData(false, Architecture.Arm64, 0x0000_4000 | 0x0008_0000)]
+    [InlineData(false, Architecture.Arm, 0x0000_4000 | 0x0008_0000)]
+    [InlineData(false, Architecture.X86, null)]
+    [InlineData(false, Architecture.S390x, null)]
+    [InlineData(true, Architecture.Arm64, 0x0010_0000 | 0x0100_0000)]
+    [InlineData(true, Architecture.X64, 0x0010_0000 | 0x0100_0000)]
+    public void DirectoryOpenFlagsFollowTheSystemAndProcessor(bool isMacOS, Architecture architecture, int? expected)
+    {
+        Assert.Equal(expected, FileSync.DirectoryOpenFlags(isMacOS, architecture));
+    }
+
+    /// <summary>Checks that the default sync opens only folders.</summary>
     [Fact]
     public async Task DefaultSyncOpensOnlyFolders()
     {
@@ -141,12 +193,33 @@ public sealed class SafeSaveTests : IDisposable
             return;
         }
 
-        int expected = OperatingSystem.IsMacOS() ? 0x0010_0000 | 0x0100_0000 : 0x0001_0000 | 0x0008_0000;
-        Assert.Equal(expected, FileSync.DirectoryOpenFlags);
         string file = Path.Combine(directory, "file.txt");
         await File.WriteAllTextAsync(file, "text", TestContext.Current.CancellationToken);
 
         _ = Assert.ThrowsAny<IOException>(() => FileSync.Default.FlushDirectory(file));
+    }
+
+    /// <summary>Checks that a processor with unknown flags saves the file but reports it as not flushed.</summary>
+    [Fact]
+    public async Task UnknownProcessorSavesButReportsNotFlushed()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows has no folder flush.");
+            return;
+        }
+
+        string path = Path.Combine(directory, "unknown.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        FileSync unknown = new(null);
+
+        Assert.False(unknown.FlushDirectory(directory));
+        SaveResult? result = await new FileTextDocumentStore(unknown).SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(result);
+        Assert.False(result.Flushed);
+        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal([path], Directory.GetFileSystemEntries(directory));
     }
 
     /// <summary>Checks that a save through a symbolic link keeps the link and changes the target file.</summary>
@@ -239,11 +312,11 @@ public sealed class SafeSaveTests : IDisposable
     {
         string missing = Path.Combine(directory, "missing");
 
-        FileSync.Default.FlushDirectory(directory);
+        Assert.True(FileSync.Default.FlushDirectory(directory));
 
         if (OperatingSystem.IsWindows())
         {
-            FileSync.Default.FlushDirectory(missing);
+            Assert.True(FileSync.Default.FlushDirectory(missing));
         }
         else
         {
@@ -272,17 +345,20 @@ public sealed class SafeSaveTests : IDisposable
         Directory.Delete(directory, recursive: true);
     }
 
-    /// <summary>Flushes files and fails each folder flush.</summary>
-    private sealed class FailingFolderSync(IOException failure) : IFileSync
+    /// <summary>Flushes files and fails the first folder flushes.</summary>
+    private sealed class FailingFolderSync(int failures) : IFileSync
     {
+        public int Calls { get; private set; }
+
         public void FlushFile(FileStream stream)
         {
             stream.Flush(flushToDisk: true);
         }
 
-        public void FlushDirectory(string path)
+        public bool FlushDirectory(string path)
         {
-            throw failure;
+            Calls++;
+            return Calls > failures ? true : throw new IOException("disk");
         }
     }
 
@@ -299,9 +375,10 @@ public sealed class SafeSaveTests : IDisposable
             stream.Flush(flushToDisk: true);
         }
 
-        public void FlushDirectory(string path)
+        public bool FlushDirectory(string path)
         {
             Events.Add($"folder {path} {State()}");
+            return true;
         }
 
         private string State()
