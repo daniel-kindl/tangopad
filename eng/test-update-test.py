@@ -176,5 +176,170 @@ class BuildGuard(unittest.TestCase):
         self.assertIn('TANGOPAD001', completed.stdout)
 
 
+APPIMAGE_HEAD = b'\x7fELF\x02\x01\x01\x00AI\x02' + b'\x00' * 53
+
+
+class AppImageScan(unittest.TestCase):
+    """The Linux package keeps the app in a compressed AppImage. The scan extracts it and fails closed."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name)
+        self.module = scanner()
+        self.globals = self.module['contains_marker'].__globals__
+        self.globals['platform_system'] = lambda: 'Linux'
+        self.calls = []
+
+    def fake(self, files=None, error=None):
+        def extract(image, destination, timeout):
+            self.calls.append((Path(image), Path(destination), timeout))
+            if error is not None:
+                raise error
+            for name, content in (files or {}).items():
+                path = Path(destination) / 'squashfs-root' / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+        self.globals['run_extractor'] = extract
+
+    def appimage(self, name='TangopadDesktop-linux-x64.AppImage'):
+        path = self.directory / name
+        path.write_bytes(APPIMAGE_HEAD + os.urandom(256))
+        return path
+
+    def test_positive_control_extracts_a_test_appimage_and_finds_the_marker(self):
+        self.fake({'usr/bin/Editor.App': assembly(MARKER, 'utf-16-le')})
+        image = self.appimage()
+        self.module['require_present'](image)
+        self.assertEqual(1, len(self.calls))
+        self.assertNotEqual(image.parent, self.calls[0][0].parent, 'The scan extracts a copy in a fresh directory.')
+        self.assertGreater(self.calls[0][2], 0)
+
+    def test_production_appimage_without_the_marker_passes(self):
+        self.fake({'usr/bin/Editor.App': assembly('Tangopad.UpdateTestHook', 'utf-16-le'), 'AppRun': b'run'})
+        self.module['require_absent']([self.appimage()])
+        self.assertEqual(1, len(self.calls))
+
+    def test_production_appimage_with_the_marker_fails(self):
+        self.fake({'usr/bin/Editor.App': assembly(MARKER, 'utf-8')})
+        with self.assertRaisesRegex(ValueError, 'update-test marker'):
+            self.module['require_absent']([self.appimage()])
+
+    def test_appimage_inside_a_nupkg_is_extracted(self):
+        self.fake({'usr/bin/Editor.App': assembly(MARKER, 'utf-16-le')})
+        package = self.directory / 'TangopadDesktop-1.0.0-linux-x64-full.nupkg'
+        package.write_bytes(zipped({'lib/app/TangopadDesktop.AppImage': APPIMAGE_HEAD + os.urandom(64)}))
+        with self.assertRaisesRegex(ValueError, 'update-test marker'):
+            self.module['require_absent']([package])
+        self.assertEqual(1, len(self.calls))
+
+    def test_renamed_appimage_is_found_by_its_magic(self):
+        self.fake({'usr/bin/Editor.App': assembly(MARKER, 'utf-16-le')})
+        self.assertTrue(self.module['contains_marker'](self.appimage('renamed.bin')))
+
+    def test_fails_closed_on_a_host_that_is_not_linux(self):
+        self.fake({'usr/bin/Editor.App': b'clean'})
+        for system in ('Darwin', 'Windows'):
+            self.globals['platform_system'] = lambda system=system: system
+            with self.subTest(system=system), self.assertRaisesRegex(ValueError, 'only on Linux'):
+                self.module['require_absent']([self.appimage()])
+        self.assertEqual([], self.calls)
+
+    def test_fails_closed_when_extraction_fails(self):
+        self.fake(error=subprocess.CalledProcessError(1, ['extract']))
+        with self.assertRaisesRegex(ValueError, 'extraction failed'):
+            self.module['require_absent']([self.appimage()])
+
+    def test_fails_closed_when_extraction_cannot_start(self):
+        self.fake(error=FileNotFoundError('unshare'))
+        with self.assertRaisesRegex(ValueError, 'extraction failed'):
+            self.module['require_absent']([self.appimage()])
+
+    def test_fails_closed_on_a_timeout(self):
+        self.fake(error=subprocess.TimeoutExpired(['extract'], 1))
+        with self.assertRaisesRegex(ValueError, 'extraction failed'):
+            self.module['require_absent']([self.appimage()])
+
+    def test_fails_closed_when_extraction_yields_no_files(self):
+        for files in ({}, None):
+            self.fake(files)
+            with self.subTest(files=files), self.assertRaisesRegex(ValueError, 'no files'):
+                self.module['require_absent']([self.appimage()])
+
+    def test_each_extraction_uses_a_fresh_directory_that_is_removed(self):
+        self.fake({'AppRun': b'run'})
+        self.module['require_absent']([self.appimage(), self.appimage('second.AppImage')])
+        destinations = [call[1] for call in self.calls]
+        self.assertEqual(2, len(set(destinations)))
+        self.assertFalse(any(path.exists() for path in destinations))
+
+    def test_real_extractor_isolates_the_network_and_does_not_run_the_app(self):
+        recorded = {}
+
+        class FakeSubprocess:
+            CalledProcessError = subprocess.CalledProcessError
+            TimeoutExpired = subprocess.TimeoutExpired
+            DEVNULL = subprocess.DEVNULL
+            PIPE = subprocess.PIPE
+
+            @staticmethod
+            def run(command, **options):
+                recorded.update(command=command, **options)
+                return subprocess.CompletedProcess(command, 0)
+
+        self.globals['subprocess'] = FakeSubprocess
+        image = self.appimage()
+        self.module['run_extractor'](image, self.directory, 30)
+        command = recorded['command']
+        self.assertEqual(['unshare', '--user', '--map-root-user', '--net', '--'], command[:5])
+        self.assertEqual([str(image), '--appimage-extract'], command[5:])
+        self.assertEqual(30, recorded['timeout'])
+        self.assertTrue(recorded['check'])
+        self.assertEqual(str(self.directory), str(recorded['cwd']))
+        self.assertNotIn('APPIMAGE_EXTRACT_AND_RUN', recorded['env'])
+        self.assertFalse({'http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY'} & set(recorded['env']))
+
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('unshare'), 'needs Linux')
+    def test_real_extraction_of_a_file_that_is_not_an_appimage_fails_closed(self):
+        image = self.appimage()
+        image.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'extraction failed'):
+            self.module['require_absent']([image])
+
+
+class PackageReleaseScans(unittest.TestCase):
+    def test_package_release_scans_the_published_folder_before_packing(self):
+        source = (ENG / 'package-release.py').read_text(encoding='utf-8')
+        packing = source.index('pack_args = ')
+        for call in ('["require_present_in"](prepack["directory_files"](publish))',
+                     '["require_absent"](prepack["directory_files"](publish))'):
+            self.assertLess(source.index(call), packing, call)
+
+    def test_directory_helpers(self):
+        module = scanner()
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / 'sub').mkdir()
+            (folder / 'sub/Editor.App').write_bytes(assembly(MARKER, 'utf-16-le'))
+            (folder / 'other').write_bytes(b'clean')
+            self.assertEqual(2, len(module['directory_files'](folder)))
+            module['require_present_in'](module['directory_files'](folder))
+            with self.assertRaisesRegex(ValueError, 'update-test marker'):
+                module['require_absent'](module['directory_files'](folder))
+            (folder / 'sub/Editor.App').unlink()
+            with self.assertRaisesRegex(ValueError, 'positive control'):
+                module['require_present_in'](module['directory_files'](folder))
+            with self.assertRaisesRegex(ValueError, 'positive control'):
+                module['require_present_in']([])
+
+    def test_zip_artifacts_include_the_appimage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            for name in ('a.nupkg', 'b-Portable.zip', 'TangopadDesktop-linux-x64.AppImage', 'notes.json'):
+                (folder / name).write_bytes(b'x')
+            self.assertEqual(['TangopadDesktop-linux-x64.AppImage', 'a.nupkg', 'b-Portable.zip'],
+                             [path.name for path in scanner()['zip_artifacts'](folder)])
+
+
 if __name__ == '__main__':
     unittest.main()
