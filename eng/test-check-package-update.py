@@ -66,5 +66,41 @@ class PackageUpdateChecks(unittest.TestCase):
             self.assertEqual([], CHECK["read_events"](Path(directory) / "missing.jsonl"))
 
 
+    def test_run_editor_passes_a_time_limit_to_the_editor_process(self):
+        recorded = []
+        module = CHECK['run_editor'].__globals__
+        original = module['subprocess']
+        class FakeSubprocess:
+            PIPE, STDOUT = original.PIPE, original.STDOUT
+            @staticmethod
+            def run(command, **options):
+                recorded.append(options.get('timeout'))
+                return original.CompletedProcess(command, 0, stdout='')
+        module['subprocess'] = FakeSubprocess
+        try:
+            CHECK['run_editor'](Path('editor'), {})
+            CHECK['run_editor'](Path('editor'), {}, timeout=5)
+        finally:
+            module['subprocess'] = original
+        self.assertEqual(2, len(recorded))
+        self.assertTrue(all(isinstance(value, (int, float)) and 0 < value <= 600 for value in recorded), recorded)
+        self.assertEqual(5, recorded[1])
+
+    def test_restart_wait_has_a_limit(self):
+        self.assertTrue(0 < CHECK['RESTART_SECONDS'] <= 600, CHECK['RESTART_SECONDS'])
+        with tempfile.TemporaryDirectory() as directory:
+            module = CHECK['wait_for'].__globals__
+            original = module['time']
+            clock = [0.0]
+            module['time'] = type('T', (), {'monotonic': staticmethod(lambda: clock[0]),
+                                            'sleep': staticmethod(lambda seconds: clock.__setitem__(0, clock[0] + seconds))})
+            try:
+                self.assertEqual([], CHECK['wait_for'](Path(directory) / 'none.jsonl', 4, 10))
+            finally:
+                module['time'] = original
+            self.assertGreaterEqual(clock[0], 10)
+            self.assertLess(clock[0], 20)
+
+
 if __name__ == "__main__":
     unittest.main()

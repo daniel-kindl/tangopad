@@ -360,6 +360,21 @@ class AppImageScan(unittest.TestCase):
         self.globals['shutil'] = type('S', (), {'which': staticmethod(lambda name: None)})
         self.assertFalse(self.module['sudo_available']())
 
+    def test_sudo_check_has_a_time_limit_and_fails_closed_on_timeout(self):
+        recorded = []
+        self.globals['shutil'] = type('S', (), {'which': staticmethod(lambda name: '/usr/bin/sudo'),
+                                                'rmtree': staticmethod(shutil.rmtree)})
+        class FakeSubprocess:
+            DEVNULL = subprocess.DEVNULL
+            TimeoutExpired = subprocess.TimeoutExpired
+            @staticmethod
+            def run(command, **options):
+                recorded.append(options.get('timeout'))
+                raise subprocess.TimeoutExpired(command, options.get('timeout'))
+        self.globals['subprocess'] = FakeSubprocess
+        self.assertFalse(self.module['sudo_available']())
+        self.assertEqual([30], recorded)
+
     def test_extracted_files_not_owned_by_the_runner_uid_fail_closed(self):
         self.fake({'AppRun': b'run'})
         self.globals['runner_uid'] = lambda: os.getuid() + 1

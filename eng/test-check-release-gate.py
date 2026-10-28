@@ -108,6 +108,22 @@ class ReleaseGate(unittest.TestCase):
         api = Api([run(2, conclusion='failure'), run(1)], {1: green_jobs(), 2: []})
         self.assertEqual(1, self.check(api))
 
+    def test_old_failed_attempt_and_new_green_attempt_use_only_the_latest_attempt(self):
+        class AttemptApi(Api):
+            def __call__(self, endpoint):
+                self.calls.append(endpoint)
+                if '/jobs' in endpoint:
+                    old = [job(rid, conclusion='failure', step='failure') for rid in TARGETS]
+                    new = green_jobs()
+                    return {'jobs': new if 'filter=latest' in endpoint else old + new}
+                return {'workflow_runs': self.runs}
+        api = AttemptApi([run(7)], {})
+        self.assertEqual(7, gate()['check'](REPO, SHA, api=api))
+        jobs_query = [call for call in api.calls if '/jobs' in call]
+        self.assertEqual(1, len(jobs_query))
+        self.assertIn('filter=latest', jobs_query[0])
+        self.assertNotIn('filter=all', jobs_query[0])
+
 
 FAKE_GH = """#!/usr/bin/env python3
 import json, os, sys
@@ -118,6 +134,8 @@ answers = json.loads(os.environ['FAKE_GH_ANSWERS'])
 key = 'jobs' if '/jobs' in endpoint else 'runs'
 print(json.dumps(answers[key]))
 """
+
+
 
 
 class ReleaseGateProcess(unittest.TestCase):
