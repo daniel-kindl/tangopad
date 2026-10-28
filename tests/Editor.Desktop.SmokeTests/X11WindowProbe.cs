@@ -116,7 +116,8 @@ internal static partial class X11WindowProbe
             return false;
         }
 
-        if (!TryFindWindow(display, XDefaultRootWindow(display), pidAtom, processId, 0, [], out ulong window))
+        HashSet<long> owners = ProcessTree.WithDescendants(processId, ProcessTree.ReadLinux());
+        if (!TryFindWindow(display, XDefaultRootWindow(display), pidAtom, owners, 0, [], out ulong window))
         {
             return false;
         }
@@ -166,7 +167,7 @@ internal static partial class X11WindowProbe
         IntPtr display,
         ulong window,
         ulong pidAtom,
-        int processId,
+        HashSet<long> owners,
         int depth,
         HashSet<ulong> seen,
         out ulong found)
@@ -177,7 +178,7 @@ internal static partial class X11WindowProbe
             return false;
         }
 
-        if (TryReadPid(display, window, pidAtom, out long pid) && pid == processId)
+        if (TryReadPid(display, window, pidAtom, out long pid) && owners.Contains(pid))
         {
             found = window;
             return true;
@@ -200,7 +201,7 @@ internal static partial class X11WindowProbe
             for (uint index = 0; index < limit; index++)
             {
                 ulong child = (ulong)Marshal.ReadIntPtr(children, (int)index * IntPtr.Size);
-                if (TryFindWindow(display, child, pidAtom, processId, depth + 1, seen, out found))
+                if (TryFindWindow(display, child, pidAtom, owners, depth + 1, seen, out found))
                 {
                     return true;
                 }
