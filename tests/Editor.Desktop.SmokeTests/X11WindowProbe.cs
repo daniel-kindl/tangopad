@@ -106,6 +106,12 @@ internal static partial class X11WindowProbe
         return (null, "Xvfb did not open a display. " + lastError);
     }
 
+    /// <summary>Returns the launched process and its descendants, which can own the shell window.</summary>
+    internal static HashSet<long> WindowOwners(int processId)
+    {
+        return ProcessTree.WithDescendants(processId, ProcessTree.ReadLinux());
+    }
+
     internal static bool TrySendDelete(IntPtr display, int processId)
     {
         ulong pidAtom = Intern(display, "_NET_WM_PID");
@@ -116,7 +122,7 @@ internal static partial class X11WindowProbe
             return false;
         }
 
-        HashSet<long> owners = ProcessTree.WithDescendants(processId, ProcessTree.ReadLinux());
+        HashSet<long> owners = WindowOwners(processId);
         if (!TryFindWindow(display, XDefaultRootWindow(display), pidAtom, owners, 0, [], out ulong window))
         {
             return false;

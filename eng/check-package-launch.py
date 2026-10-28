@@ -4,7 +4,7 @@ import argparse
 import contextlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import platform
 import re
 import shutil
@@ -16,6 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 RUNTIMES = {"win-x64": "Windows", "linux-x64": "Linux", "osx-x64": "Darwin", "osx-arm64": "Darwin"}
 INSTALLERS = {"win": "*-Setup.exe", "linux": "*.AppImage", "osx": "*-Setup.pkg"}
 PASS = "PASS. The shell opened a native window."
+CHILD_TIMEOUT = 600
+QUERY_TIMEOUT = 60
+SETTLE_LIMIT = 60
+SETTLE_QUIET = 2
 
 
 def find_candidate(release, rid):
@@ -56,19 +60,67 @@ def smoke_environment(environment, executable):
     return {**environment, "TANGOPAD_SMOKE_EXECUTABLE": str(executable)}
 
 
+def editor_processes(root, listing):
+    """Return the editor process IDs in a Get-Process JSON listing whose executable is below the root."""
+    entries = json.loads(listing) if listing.strip() else []
+    entries = [entries] if isinstance(entries, dict) else entries
+    prefix = str(PureWindowsPath(root)).rstrip("\\").lower() + "\\"
+    return sorted(entry["Id"] for entry in entries if str(PureWindowsPath(entry.get("Path") or "")).lower().startswith(prefix))
+
+
+def list_editor_processes(root):
+    """Return the IDs of the editor processes that run from the installed files."""
+    command = "Get-Process | Where-Object { $_.ProcessName -eq 'Editor.App' } | Select-Object Id,Path | ConvertTo-Json -Compress"
+    listing = subprocess.run(["powershell", "-NoProfile", "-Command", command], check=True, capture_output=True, text=True,
+                             timeout=QUERY_TIMEOUT).stdout
+    return editor_processes(root, listing)
+
+
+def wait_until_settled(executable, processes, clock=time.monotonic, sleep=time.sleep, limit=SETTLE_LIMIT, quiet=SETTLE_QUIET):
+    """Wait until the executable exists and the set of installed editor processes has not changed for the quiet time."""
+    start = clock()
+    last, since = None, start
+    while True:
+        now = clock()
+        current = frozenset(processes()) if executable.is_file() else None
+        if current != last:
+            last, since = current, now
+        elif current is not None and now - since >= quiet:
+            return set(current)
+        if now - start >= limit:
+            raise RuntimeError(f"The installed editor did not settle within {limit} s.")
+        sleep(0.5)
+
+
 def stop_installed(root):
-    """Stop editor processes that the installer started from the installed files."""
-    if platform.system() == "Windows":
-        command = ("Get-Process Editor.App -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '" + str(root) +
-                   "\\*' } | Stop-Process -Force")
-        subprocess.run(["powershell", "-NoProfile", "-Command", command], check=False)
+    """Stop editor processes that the installer started from the installed files, and prove that none still run."""
+    running = list_editor_processes(root)
+    if running:
+        subprocess.run(["powershell", "-NoProfile", "-Command", "Stop-Process -Force -Id " + ",".join(map(str, running))],
+                       check=False, timeout=QUERY_TIMEOUT)
+        remaining = list_editor_processes(root)
+        if remaining:
+            raise RuntimeError(f"An installed editor is still running after the stop: {remaining}")
 
 
-def install(rid, installer, resources, work):
+def refuse_existing_bundle(bundle):
+    """Raise when an application is already at the macOS install destination."""
+    if bundle.exists():
+        raise RuntimeError("The installer check refuses to replace an existing Tangopad application.")
+
+
+def check_macos_domains(domains):
+    """Raise unless the macOS installer can install only for the current user."""
+    if "CurrentUserHomeDirectory" not in domains or "LocalSystem" in domains:
+        raise RuntimeError("The macOS installer does not restrict installation to the current user.")
+
+
+def install(rid, installer, resources, work, home=None):
     if rid.startswith("win-"):
         root = work / "installed"
-        subprocess.run([str(installer), "--silent", "--installto", str(root)], check=True)
-        time.sleep(5)
+        # Setup can start the editor after it installs. Wait for Setup to exit and for the editor processes to settle.
+        subprocess.run([str(installer), "--silent", "--installto", str(root)], check=True, timeout=CHILD_TIMEOUT)
+        wait_until_settled(installed_executable(rid, root), lambda: list_editor_processes(root), time.monotonic, time.sleep)
         stop_installed(root)
         return root
     if rid.startswith("linux-"):
@@ -78,17 +130,19 @@ def install(rid, installer, resources, work):
         installed_executable(rid, root).chmod(0o755)
         return root
     # Installer checks use a fresh hosted macOS account and the package's actual destination.
-    root = Path.home() / "Applications"
+    root = (home or Path.home()) / "Applications"
     root.mkdir(exist_ok=True)
     bundle = root / "Tangopad.app"
-    if bundle.exists():
-        raise RuntimeError("The installer check refuses to replace an existing Tangopad application.")
-    domains = subprocess.check_output(["installer", "-pkg", str(installer), "-dominfo"], text=True)
-    if "CurrentUserHomeDirectory" not in domains or "LocalSystem" in domains:
-        raise RuntimeError("The macOS installer does not restrict installation to the current user.")
-    subprocess.run(["installer", "-pkg", str(installer), "-target", "CurrentUserHomeDirectory"], check=True)
+    refuse_existing_bundle(bundle)
+    check_macos_domains(subprocess.check_output(["installer", "-pkg", str(installer), "-dominfo"], text=True, timeout=QUERY_TIMEOUT))
+    subprocess.run(["installer", "-pkg", str(installer), "-target", "CurrentUserHomeDirectory"], check=True, timeout=CHILD_TIMEOUT)
     resources.callback(shutil.rmtree, bundle, True)
     return root
+
+
+def run_smoke(command, environment):
+    """Run the native startup test against the installed executable with a time limit."""
+    return subprocess.run(command, cwd=ROOT, env=environment, check=False, capture_output=True, text=True, timeout=CHILD_TIMEOUT)
 
 
 def main():
@@ -118,8 +172,7 @@ def main():
         command = ["dotnet", "test", "--project", "tests/Editor.Desktop.SmokeTests", "--configuration", "Release", "--no-build",
                    "--report-xunit-trx", "--report-xunit-trx-filename", "package-launch.trx", "--results-directory", str(evidence)]
         print(f"Package launch check {rid}: {executable}", flush=True)
-        completed = subprocess.run(command, cwd=ROOT, env=smoke_environment(environment, executable), check=False,
-                                   capture_output=True, text=True)
+        completed = run_smoke(command, smoke_environment(environment, executable))
         (evidence / "smoke.log").write_text(completed.stdout + completed.stderr, encoding="utf-8")
         reports = "".join(path.read_text(encoding="utf-8") for path in evidence.glob("*.trx"))
         try:
