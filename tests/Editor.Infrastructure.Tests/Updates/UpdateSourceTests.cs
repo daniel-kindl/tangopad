@@ -199,6 +199,35 @@ public sealed class UpdateSourceTests
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => check.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
+    /// <summary>The package idle deadline uses the injected clock: moving only that clock past the window cancels a stalled read.</summary>
+    [Fact]
+    public async Task PackageIdleDeadlineUsesInjectedClock()
+    {
+        TimeSpan window = TimeSpan.FromHours(1);
+        ManualTimeProvider time = new();
+        using OneByteThenStallStream body = new();
+        using Handler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) });
+        using HttpClient client = new(handler, disposeHandler: false) { Timeout = window };
+        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client, timeProvider: time);
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using CancellationTokenSource cleanup = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task download = source.DownloadReleaseEntry(new Logger(), PackageAsset(3), path, _ => { }, cleanup.Token);
+        try
+        {
+            await body.StallStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            time.Advance(window + TimeSpan.FromMilliseconds(1));
+            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => download.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ConfigureAwait(true);
+            Assert.Equal(1, body.Sent);
+        }
+        finally
+        {
+            await cleanup.CancelAsync().ConfigureAwait(true);
+            try { await download.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true); }
+            catch (OperationCanceledException) { }
+            File.Delete(path);
+        }
+    }
+
     private static VelopackAsset PackageAsset(long size)
     {
         return new() { Version = SemanticVersion.Parse("0.2.0"), FileName = "TangopadDesktop-0.2.0-linux-x64-full.nupkg", Size = size };
@@ -307,6 +336,26 @@ public sealed class UpdateSourceTests
                 Dispose();
                 return ValueTask.CompletedTask;
             }
+        }
+    }
+
+    /// <summary>Sends one zero byte, then reports the next read and waits until it is cancelled.</summary>
+    private sealed class OneByteThenStallStream : MemoryStream
+    {
+        internal TaskCompletionSource StallStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal int Sent { get; private set; }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (Sent == 0)
+            {
+                buffer.Span[0] = 0;
+                Sent++;
+                return 1;
+            }
+            _ = StallStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+            return 0;
         }
     }
 
