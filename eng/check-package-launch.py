@@ -181,10 +181,15 @@ def main():
             print((completed.stdout + completed.stderr)[-16000:], flush=True)
             raise
         result = {"runtime": rid, "version": version, "installer": installer.name, "executable": str(executable),
-                  "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+                  "source_commit": source_commit(),
                   "os": platform.platform(), "launch": message}
         (evidence / "result.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(result, indent=2), flush=True)
+
+
+def source_commit():
+    """Return the commit that the check runs on."""
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
 
 
 if __name__ == "__main__":
