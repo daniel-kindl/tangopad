@@ -14,6 +14,7 @@
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
 request from this repository's `dev` branch into `main`.
 This branch flow is a tangopad exception to [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
+[AGENTS.md](AGENTS.md#branch-flow) lists this exception.
 Branch from `dev`, target `dev`, and merge `dev` into a branch to update it.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.

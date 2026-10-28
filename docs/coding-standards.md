@@ -93,10 +93,10 @@ A new exception needs a rule ID, the smallest applicable scope, a reason, and re
 in the issue or pull request. Record persistent exceptions here or beside the code.
 Do not add broad pragmas, blanket `NoWarn`, global analyzer disabling, or a general
 formatter exclusion. Follow [dkstack quality gates](https://github.com/daniel-kindl/dkstack/blob/v1/coding/quality-gates.md).
+This policy is listed in [dkstack exceptions](../AGENTS.md#diagnostic-exceptions).
 Prefer correcting the source. Generated source and external or platform API contracts
 can justify a narrow exception when the diagnostic cannot be corrected locally.
 The SDK defaults listed above are the only current warning exclusions.
-This section applies until [dkstack issue #41](https://github.com/daniel-kindl/dkstack/issues/41) adds a rule for documented exceptions. Then this section keeps only the tangopad specifics and links to that rule.
 
 ## Gate evidence
 
