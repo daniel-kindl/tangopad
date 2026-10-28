@@ -4,8 +4,11 @@ Tangopad is an offline-first desktop editor for plain text, Markdown, and Redmin
 Edit local files, search and replace text, and preview markup beside its source.
 No account is required.
 
-**Pre-release:** The first stable release is not yet published.
-Candidate packages target Windows x64, Linux x64, and macOS x64 and arm64.
+**Pre-release:** The first stable release, 1.0.0, is not yet published.
+Version 1.0.0 targets Windows x64, Linux x64, macOS x64, and macOS arm64.
+The 1.0.0 packages are not signed with a Windows or Apple certificate.
+Windows SmartScreen shows a warning for the Setup file.
+macOS Gatekeeper blocks the first open of the app.
 See [installation and platform limits](docs/user/install.md) before choosing a package.
 
 ![Tangopad on Linux with Markdown source on the left and a read-only preview on the right.](docs/user/media/markdown.png)
