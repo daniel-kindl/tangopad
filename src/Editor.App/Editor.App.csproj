@@ -5,6 +5,13 @@
     <!-- Debug InitializeComponent calls AttachDevTools. This project does not reference Avalonia.Diagnostics. -->
     <AvaloniaNameGeneratorAttachDevTools>false</AvaloniaNameGeneratorAttachDevTools>
   </PropertyGroup>
+  <!-- The update-test hook is compiled only when eng/package-release.py builds an update-test package. -->
+  <PropertyGroup Condition="'$(TangopadUpdateTest)' == 'true'">
+    <DefineConstants>$(DefineConstants);TANGOPAD_UPDATE_TEST</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(TangopadUpdateTest)' != 'true'">
+    <Compile Remove="UpdateTest/**" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="../../docs/licenses/*.txt" Link="licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../eng/notices.json" Link="licenses/notices.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

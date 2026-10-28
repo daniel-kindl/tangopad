@@ -159,6 +159,31 @@ Review every attached package and the recorded platform evidence before publishi
 A published stable release becomes the GitHub `latest` feed.
 Never replace an asset under an existing release version.
 
+### Wait for the real-update run on main
+
+`Prepare draft release` starts with the job `gate`.
+The job runs only when the workflow starts from `main`.
+The job runs `eng/check-release-gate.py` for the `main` commit that the workflow packages.
+The gate fails if no successful `Package candidates` run exists for that exact commit.
+In that run, the job `Package (<rid>)` and its step "Update the real package through the editor" must pass for each of win-x64, linux-x64, osx-x64 and osx-arm64.
+The gate also fails if the GitHub Actions API lookup fails.
+No package job starts until the gate passes.
+
+Each push to `main` starts a `Package candidates` run for the new commit.
+The workflow cancels an older run on the same branch when a newer run starts.
+So only the newest `main` commit can get a successful run.
+
+Before you start `Prepare draft release`:
+
+1. Find the `Package candidates` run from the push to `main`.
+2. Make sure that its commit is the current `main` commit.
+3. Wait until the run passes on all four targets.
+4. Start `Prepare draft release` from `main`.
+
+If the run is missing, was cancelled or failed, start `Package candidates` on `main` with `workflow_dispatch`.
+Wait until that run passes on all four targets, then go to step 4.
+If the gate fails, do not start `Prepare draft release` again until a run for the current `main` commit passes.
+
 ## Update behavior and trust
 
 The Updates panel shows the installed version, check result, available version, download bytes, release notes, progress, and errors.
