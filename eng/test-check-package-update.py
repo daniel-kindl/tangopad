@@ -15,6 +15,24 @@ def event(name, version, pid=1, error=None):
 
 
 class PackageUpdateChecks(unittest.TestCase):
+    def test_stop_editors_uses_the_windows_stop_only_on_windows(self):
+        calls = []
+        launch = CHECK['stop_editors'].__globals__['LAUNCH']
+        original = launch['stop_installed']
+        launch['stop_installed'] = calls.append
+        try:
+            for rid in ('linux-x64', 'osx-x64', 'osx-arm64'):
+                CHECK['stop_editors'](rid, Path('root'))
+            self.assertEqual([], calls)
+            CHECK['stop_editors']('win-x64', Path('root'))
+            self.assertEqual([Path('root')], calls)
+        finally:
+            launch['stop_installed'] = original
+
+    def test_main_stops_editors_only_through_the_platform_guard(self):
+        source = Path(__file__).with_name('check-package-update.py').read_text(encoding='utf-8')
+        self.assertNotIn('LAUNCH["stop_installed"](root)', source.split('def main', 1)[1])
+
     def test_feed_has_exactly_three_names(self):
         self.assertEqual(CHECK["feed_names"]("osx-arm64", "1.0.1"),
                          ["releases.osx-arm64.json", "releases.osx-arm64.json.sig", "TangopadDesktop-1.0.1-osx-arm64-full.nupkg"])
