@@ -2,6 +2,7 @@
 # This file is the pull request title rule.
 # Call this file from the pull request workflow. Do not copy the rule.
 set -eu -o pipefail
+# LC_ALL=C makes ${#title} count bytes, not characters.
 export LC_ALL=C
 readonly MAX_TITLE_LENGTH=50
 
@@ -113,7 +114,7 @@ reject_title() {
     'Write a description with visible text.' \
     'Do not add leading or trailing whitespace.' \
     'The title must be one line.' \
-    "The title must be ${MAX_TITLE_LENGTH} characters or fewer. The title has ${#TITLE} characters." \
+    "The title must be ${MAX_TITLE_LENGTH} bytes or fewer. The title has ${#TITLE} bytes." \
     "Received title: $(display_title "$TITLE")" >&2
 }
 

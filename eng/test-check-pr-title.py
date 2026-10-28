@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the 50-character limit of the pull request title rule."""
+"""Check the 50-byte limit of the pull request title rule."""
 
 import os
 from pathlib import Path
@@ -10,6 +10,7 @@ SCRIPT = Path(__file__).with_name('check-pr-title.sh')
 TITLE_49 = 'docs: describe the title length rule for reviewer'
 TITLE_50 = 'docs: describe the title length rule for reviewers'
 TITLE_51 = 'docs: describe the title length rules for reviewers'
+TITLE_50_CHARACTERS_51_BYTES = 'docs: describe the title length rule for reviewer\u00e9'
 
 
 def run(*arguments, title=None):
@@ -33,8 +34,20 @@ class TitleLengthChecks(unittest.TestCase):
     def test_check_rejects_51_characters_and_states_the_limit(self):
         result = run('--check', title=TITLE_51)
         self.assertEqual(1, result.returncode)
-        self.assertIn('50 characters or fewer', result.stderr)
-        self.assertIn('51 characters', result.stderr)
+        self.assertIn('50 bytes or fewer', result.stderr)
+        self.assertIn('The title has 51 bytes.', result.stderr)
+
+    def test_check_counts_bytes_not_characters(self):
+        title = TITLE_50_CHARACTERS_51_BYTES
+        self.assertEqual((50, 51), (len(title), len(title.encode('utf-8'))))
+        result = run('--check', title=title)
+        self.assertEqual(1, result.returncode, result.stdout)
+        self.assertIn('The title has 51 bytes.', result.stderr)
+
+    def test_check_accepts_50_ascii_bytes(self):
+        self.assertEqual(50, len(TITLE_50.encode('utf-8')))
+        result = run('--check', title=TITLE_50)
+        self.assertEqual(0, result.returncode, result.stderr)
 
     def test_examples_include_the_limit_cases(self):
         result = run('--examples')
