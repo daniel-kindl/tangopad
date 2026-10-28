@@ -40,15 +40,13 @@ public sealed class SafeSaveTests : IDisposable
         string target = Path.Combine(folder, "target.txt");
         string link = Path.Combine(directory, "link.txt");
         await File.WriteAllTextAsync(target, "old", TestContext.Current.CancellationToken);
-        try
+        if (OperatingSystem.IsWindows())
         {
-            _ = File.CreateSymbolicLink(link, target);
-        }
-        catch (Exception error) when (OperatingSystem.IsWindows() && error is IOException or UnauthorizedAccessException)
-        {
-            Assert.Skip("This Windows user cannot create symbolic links.");
+            Assert.Skip("Windows keeps the previous save path. Links are followed only on Unix.");
             return;
         }
+
+        _ = File.CreateSymbolicLink(link, target);
 
         RecordingSync sync = new(target);
         string? revision = await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken);
@@ -58,6 +56,44 @@ public sealed class SafeSaveTests : IDisposable
         Assert.Equal([target], Directory.GetFileSystemEntries(folder));
         Assert.Equal(["file old 3", "folder " + folder + " new"], sync.Events);
         Assert.StartsWith(link + "\n", revision, StringComparison.Ordinal);
+    }
+
+    /// <summary>Checks that a save into a read-only folder fails and does not write the file in place.</summary>
+    [Fact]
+    public async Task SaveIntoReadOnlyFolderFailsAndKeepsTheOriginal()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Unix folder modes do not apply on Windows.");
+            return;
+        }
+
+        string folder = Directory.CreateDirectory(Path.Combine(directory, "locked")).FullName;
+        string path = Path.Combine(folder, "original.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        File.SetUnixFileMode(path, (UnixFileMode)0b110_100_100);
+        byte[] bytes = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+        File.SetUnixFileMode(folder, (UnixFileMode)0b101_101_101);
+        try
+        {
+            if (IsFolderWritable(folder))
+            {
+                Assert.Skip("This user can write to read-only folders.");
+                return;
+            }
+
+            Exception failure = await Assert.ThrowsAnyAsync<Exception>(
+                () => store.SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken));
+
+            Assert.True(failure is UnauthorizedAccessException or IOException, failure.ToString());
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+            Assert.Equal((UnixFileMode)0b110_100_100, File.GetUnixFileMode(path));
+            Assert.Equal([path], Directory.GetFileSystemEntries(folder));
+        }
+        finally
+        {
+            File.SetUnixFileMode(folder, (UnixFileMode)0b111_000_000);
+        }
     }
 
     /// <summary>Checks that the temporary file reaches the disk before the rename and the folder after it.</summary>
@@ -95,6 +131,21 @@ public sealed class SafeSaveTests : IDisposable
         else
         {
             _ = Assert.ThrowsAny<IOException>(() => FileSync.Default.FlushDirectory(missing));
+        }
+    }
+
+    private static bool IsFolderWritable(string folder)
+    {
+        string probe = Path.Combine(folder, ".probe");
+        try
+        {
+            File.WriteAllText(probe, string.Empty);
+            File.Delete(probe);
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 
