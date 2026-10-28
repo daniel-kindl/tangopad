@@ -2,10 +2,13 @@
 """Check the 50-character limit of the pull request title rule."""
 
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import unittest
 
+# On Windows, a bare 'bash' can start WSL. Use the bash on PATH.
+BASH = shutil.which('bash') or 'bash'
 SCRIPT = Path(__file__).with_name('check-pr-title.sh')
 TITLE_49 = 'docs: describe the title length rule for reviewer'
 TITLE_50 = 'docs: describe the title length rule for reviewers'
@@ -21,7 +24,7 @@ def run(*arguments, title=None, locale=None):
             environment[name] = locale
     if title is not None:
         environment['TITLE'] = title
-    return subprocess.run(['bash', str(SCRIPT), *arguments], env=environment, capture_output=True, text=True, check=False)
+    return subprocess.run([BASH, str(SCRIPT), *arguments], env=environment, capture_output=True, text=True, check=False)
 
 
 class TitleLengthChecks(unittest.TestCase):
