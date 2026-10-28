@@ -92,8 +92,14 @@ class PackageUpdateChecks(unittest.TestCase):
             module = CHECK['wait_for'].__globals__
             original = module['time']
             clock = [0.0]
+
+            def sleep(seconds):
+                clock[0] += seconds
+                if clock[0] > 20:
+                    raise AssertionError(f'wait_for did not stop at its limit: {clock[0]} s of fake time')
+
             module['time'] = type('T', (), {'monotonic': staticmethod(lambda: clock[0]),
-                                            'sleep': staticmethod(lambda seconds: clock.__setitem__(0, clock[0] + seconds))})
+                                            'sleep': staticmethod(sleep)})
             try:
                 self.assertEqual([], CHECK['wait_for'](Path(directory) / 'none.jsonl', 4, 10))
             finally:
