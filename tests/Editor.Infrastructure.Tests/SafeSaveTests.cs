@@ -1,3 +1,4 @@
+using Editor.Application;
 using Xunit;
 
 namespace Editor.Infrastructure.Tests;
@@ -116,7 +117,7 @@ public sealed class SafeSaveTests : IDisposable
         await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
         IOException cause = new("disk");
         FileTextDocumentStore failing = new(new FailingFolderSync(cause));
-        Editor.Application.DocumentSession session = await Editor.Application.DocumentSession.LoadAsync(failing, path, TestContext.Current.CancellationToken);
+        DocumentSession session = await DocumentSession.LoadAsync(failing, path, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("new");
 
         IOException failure = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
