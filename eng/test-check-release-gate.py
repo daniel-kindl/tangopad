@@ -2,6 +2,7 @@
 """Unit tests for the release gate. Every case without a full green update run must fail."""
 import json
 import os
+import re
 from pathlib import Path
 import runpy
 import subprocess
@@ -145,6 +146,39 @@ class ReleaseGateProcess(unittest.TestCase):
     def test_gate_exits_zero_only_for_a_full_green_run_of_the_packaged_commit(self):
         completed, _ = self.gate_process([run()], green_jobs())
         self.assertEqual(0, completed.returncode, completed.stderr)
+
+
+class GateMatchesPackagesWorkflow(unittest.TestCase):
+    """The gate reads job and step names from packages.yml runs. They must not drift apart."""
+
+    def workflow(self):
+        return (ENG.parent / '.github' / 'workflows' / 'packages.yml').read_text(encoding='utf-8')
+
+    def package_job(self):
+        text = self.workflow()
+        start = text.index('\n  package:\n')
+        rest = text[start + 1:]
+        following = re.search(r'\n  [A-Za-z0-9_-]+:\n', rest[1:])
+        return rest if following is None else rest[:following.start() + 1]
+
+    def test_package_job_names_match_the_gate_for_every_matrix_target(self):
+        values = gate()
+        block = self.package_job()
+        template = re.search(r'^    name: (.+)$', block, re.M).group(1).strip()
+        rids = tuple(re.findall(r'^ +rid: (\S+)$', block, re.M))
+        self.assertEqual(set(rids), set(values['TARGETS']))
+        self.assertEqual(len(rids), len(values['TARGETS']))
+        for rid in rids:
+            workflow_name = template.replace('${{ matrix.rid }}', rid)
+            self.assertEqual(workflow_name, values['JOB_NAME'].format(rid=rid))
+
+    def test_update_step_name_matches_the_gate(self):
+        values = gate()
+        names = re.findall(r'^      - name: (.+)$', self.package_job(), re.M)
+        self.assertIn(values['UPDATE_STEP'], [name.strip() for name in names])
+
+    def test_gate_reads_the_packages_workflow_file(self):
+        self.assertEqual(gate()['WORKFLOW'], '.github/workflows/packages.yml')
 
 
 if __name__ == '__main__':
