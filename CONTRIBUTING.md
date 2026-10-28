@@ -2,26 +2,36 @@
 
 ## Prepare a change
 
-1. Create a GitHub Issue with a bounded outcome and acceptance criteria.
+1. Create a GitHub Issue. Follow [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
 2. Assign the issue to an appropriate milestone from [the backlog](docs/backlog.md).
 3. Create a short-lived `feat/<issue>-<name>`, `fix/<issue>-<name>`, or `chore/<issue>-<name>` branch from `dev`.
 4. Read [architecture](docs/architecture.md) before changing module ownership or dependencies.
 5. Choose the owning layer and directory from the [placement rules](docs/architecture.md#file-placement).
 6. Record directory and namespace placement in the issue.
-7. Implement the smallest change that satisfies the issue.
+7. Implement the change. Follow [dkstack practices](https://github.com/daniel-kindl/dkstack/blob/v1/coding/practices.md).
 
 `main` holds stable releases. `dev` integrates reviewed changes and is the default
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
 request from this repository's `dev` branch into `main`.
+This branch flow is a tangopad exception to [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
+[AGENTS.md](AGENTS.md#branch-flow) lists this exception.
+Branch from `dev`, target `dev`, and merge `dev` into a branch to update it.
 Use Semantic Versioning. Before 1.0, document breaking changes in each minor release.
 The authoritative version is in `Directory.Build.props`.
 
 Use Conventional Commits for commits and for the squash commit subject.
+For a user-visible change, update Unreleased in [CHANGELOG.md](CHANGELOG.md).
+Use `Changelog: updated` in the PR description.
+For maintenance without a material user effect, use `Changelog: none.` and give the reason.
+The reviewer checks the entry or the stated exception.
+[Release notes workflow](docs/release-notes.md) defines curation, migration guidance, and publication review.
 The pull request title uses this form:
 
 ```text
 type[optional scope][optional !]: description
 ```
+
+Keep the title at 50 characters or fewer. A character is one Unicode code point. Some marks that look like one character, such as a flag emoji or a letter with a combining accent, are more than one code point. See [dkstack version control](https://github.com/daniel-kindl/dkstack/blob/v1/version-control/index.md).
 
 `chore(build): pin the .NET SDK` matches the form.
 The square brackets in the form mark optional parts. Do not write the brackets in a title.
@@ -48,6 +58,8 @@ Reviewers still review the change.
 [eng/check-pr-title.sh](eng/check-pr-title.sh) is the title rule.
 The script runs the positive and negative examples.
 The script then checks one title.
+[eng/test-check-pr-title.py](eng/test-check-pr-title.py) tests the 50-character limit.
+If you change the title rule, run `python3 eng/test-check-pr-title.py`.
 Do not copy the rule into a second checker.
 `dotnet msbuild eng/verify.proj` does not check pull request titles.
 
@@ -88,6 +100,24 @@ Review the resulting diff. Run verification again after changes. Formatting does
 not check Markdown prose, YAML semantics, or every possible IDE inspection.
 Use the writing rules below and inspect those files directly.
 
+For documentation changes, also run `python3 eng/test-check-docs.py` and
+`python3 eng/test-review-docs.py`, then `python3 eng/check-docs.py`.
+Hosted Linux CI runs these commands.
+These checks use the Python standard library and require no network access.
+They check inline Markdown links, local heading anchors, image descriptions,
+and product image dimensions, size limits, and capture hashes.
+They do not validate external URLs or product behavior.
+Follow [product documentation review](docs/product-documentation.md) for release validation and media capture.
+Use [documentation QA](docs/documentation-qa.md) for optional GitHub rendering and external-link review.
+Also run `python3 eng/test-release-notes.py` and `python3 eng/release-notes.py`
+when changing the changelog, notes, or release scripts. Hosted CI runs these checks.
+Production packaging additionally requires `python3 eng/release-notes.py --publication` to pass.
+
+For dependency or packaging changes, also run `python3 eng/test-check-notices.py`
+and `python3 eng/check-notices.py`. Follow
+[distribution notices](docs/distribution-notices.md) to review source text,
+package versions, and final artifacts. Hosted CI runs both notice checks.
+
 For an intentional dependency update, change `Directory.Packages.props`, then run:
 
 ```sh
@@ -97,6 +127,9 @@ dotnet restore Tangopad.slnx --force-evaluate
 Review and commit the lock files with the version change. Update
 `eng/architecture.json` only when the direct dependency graph changes.
 Run full verification. Do not use `--force-evaluate` to bypass an unexpected locked-restore failure.
+
+[Dependency maintenance](docs/dependency-maintenance.md) describes the weekly
+Dependabot group, security updates, coverage limits, and review procedure.
 
 ## Write code and tests
 
@@ -114,7 +147,7 @@ when a real consumer needs a boundary. Add no empty interfaces, stub services,
 or unused extension mechanisms. See [design policy](docs/architecture.md#design-policy).
 
 Test behavior through its consumer. For a defect or new behavior, first write a
-failing test when a cheap, reliable test target exists. Assert literal expected
+failing test. See [dkstack testing](https://github.com/daniel-kindl/dkstack/blob/v1/coding/testing.md). Assert literal expected
 results. Add Core or Application test projects with their first behavior test.
 Do not add placeholder tests or test counts as goals.
 
@@ -124,8 +157,8 @@ adapter exists. Native UI smoke checks and performance benchmarks need observabl
 behavior and platform-specific acceptance criteria. Use native startup tests for
 lifecycle checks. Use headless tests for control behavior.
 
-Use ASD-STE100 principles for technical prose. Keep terms consistent and sentences
-short. State the actor and one instruction per sentence. Preserve uncertainty,
+Follow [dkstack writing](https://github.com/daniel-kindl/dkstack/blob/v1/writing/index.md) for technical prose.
+State the actor in each instruction. Preserve uncertainty,
 modality, technical meaning, and exact API names. These rules do not claim formal
 dictionary compliance. For product text, first write clear technical wording,
 then revise it for natural language without changing its meaning.

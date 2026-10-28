@@ -63,6 +63,14 @@ A host that cannot open a window does not pass.
 The test output starts with `NOT TESTED:` and states a follow-up.
 A host that opens a window and then fails starts with `FAILED.`.
 
+## Accessibility and display audit
+
+`python3 eng/check-native-accessibility.py` inspects the running X11 application through AT-SPI.
+It checks native dimensions and accessible bounds at 100%, 125%, 150%, and 200% scaling.
+It requires libatspi and the accessibility bus launcher in addition to the native workflow tools.
+Ubuntu CI installs `libatspi2.0-0` and `at-spi2-core` for this audit.
+See [accessibility and display acceptance](ux/47-acceptance.md) for the scope and remaining screen-reader and contrast gaps.
+
 ## Bootstrap results
 
 These results precede the editor integration.

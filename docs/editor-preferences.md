@@ -2,8 +2,10 @@
 
 Tangopad restores Word Wrap, Line Numbers, and editor font size on desktop startup.
 The defaults are Word Wrap off, Line Numbers on, and font size 15.
-Font size stays between 8 and 48. Theme follows the existing application policy.
-There is no theme selection or general preferences dialog.
+Font size stays between 8 and 48.
+View > Appearance offers Follow System, Light, and Dark for the current window.
+Appearance starts with Follow System and is not saved across restarts.
+There is no general preferences dialog.
 
 Preferences apply to the window. New, Open, Save As, Reload, file drops, and
 Markdown preview preserve them. Preference changes do not modify document identity,

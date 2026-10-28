@@ -2,7 +2,18 @@
 # This file is the pull request title rule.
 # Call this file from the pull request workflow. Do not copy the rule.
 set -eu -o pipefail
-export LC_ALL=C
+readonly MAX_TITLE_LENGTH=50
+
+# Count Unicode code points in UTF-8 text. The count does not use the locale
+# of the caller, because C.UTF-8 does not exist on all runners.
+# Each code point has one byte that is not a continuation byte (0x80 to 0xBF).
+# This count is exact only for valid UTF-8. GitHub always sends the title as
+# valid UTF-8, so invalid input cannot reach this check.
+character_count() {
+  local LC_ALL=C
+  local lead_bytes=${1//[$'\x80'-$'\xbf']/}
+  printf '%s' "${#lead_bytes}"
+}
 
 usage() {
   printf '%s\n' \
@@ -28,6 +39,9 @@ title_matches() {
   local pattern="^(${type})(\\(${scope}\\))?(!)?: [^[:space:]](.*[^[:space:]])?$"
 
   if [[ $title == *$'\n'* || $title == *$'\r'* ]]; then
+    return 1
+  fi
+  if (( $(character_count "$title") > MAX_TITLE_LENGTH )); then
     return 1
   fi
   [[ $title =~ $pattern ]]
@@ -68,6 +82,8 @@ examples() {
   record_example accept 'type revert' 'revert: undo the document change'
   record_example accept 'type style' 'style: apply the format'
   record_example accept 'type test' 'test(desktop): verify native startup'
+  record_example accept 'title of 49 characters' 'docs: describe the title length rule for reviewer'
+  record_example accept 'title of 50 characters' 'docs: describe the title length rule for reviewers'
 
   record_example reject 'invalid type' 'feature: add document identity'
   record_example reject 'invalid type case' 'Feat: add document identity'
@@ -88,6 +104,7 @@ examples() {
   record_example reject 'extra space after colon' 'feat:  add document identity'
   record_example reject 'repeated breaking change indicator' 'feat!!: change document identity'
   record_example reject 'second line' $'feat: add document identity\nmore'
+  record_example reject 'title of 51 characters' 'docs: describe the title length rules for reviewers'
 
   if (( example_failures > 0 )); then
     printf 'Title examples failed.\n' >&2
@@ -106,6 +123,7 @@ reject_title() {
     'Write a description with visible text.' \
     'Do not add leading or trailing whitespace.' \
     'The title must be one line.' \
+    "The title must be ${MAX_TITLE_LENGTH} characters or fewer. The title has $(character_count "$TITLE") characters." \
     "Received title: $(display_title "$TITLE")" >&2
 }
 

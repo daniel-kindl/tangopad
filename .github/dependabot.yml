@@ -1,15 +1,21 @@
 version: 2
+multi-ecosystem-groups:
+  weekly-dependencies:
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Etc/UTC
+    target-branch: dev
+    commit-message:
+      prefix: chore(deps)
+    labels: [dependencies]
 updates:
   - package-ecosystem: nuget
     directory: /
-    schedule:
-      interval: weekly
-    groups:
-      avalonia:
-        patterns: ['Avalonia.*']
-      xunit:
-        patterns: ['xunit.*']
+    patterns: ['*']
+    multi-ecosystem-group: weekly-dependencies
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
+    patterns: ['*']
+    multi-ecosystem-group: weekly-dependencies

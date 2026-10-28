@@ -65,7 +65,17 @@ def main():
     parser.add_argument("--production", action="store_true")
     parser.add_argument("--platform-signing", choices=("none", "configured"), default="none")
     parser.add_argument("--test-version", help="Use a stable version for local upgrade tests only.")
+    parser.add_argument("--update-test", action="store_true",
+                        help="Build the update-test hook into the editor. Output goes to artifacts/update-test, never to a release.")
+    parser.add_argument("--update-key-dir", type=Path,
+                        help="Keep the per-run update-test key here, so that two update-test versions share it.")
     args = parser.parse_args()
+    if args.production and (args.update_test or args.update_key_dir):
+        raise ValueError("Production packaging cannot use --update-test or --update-key-dir.")
+    if args.update_key_dir and not args.update_test:
+        raise ValueError("--update-key-dir is only for --update-test packages.")
+    if args.update_test and os.environ.get("TANGOPAD_RELEASE_BUILD"):
+        raise ValueError("An update-test package is not allowed in a release build (TANGOPAD_RELEASE_BUILD is set).")
     private_key_pem = os.environ.pop("TANGOPAD_UPDATE_PRIVATE_KEY_PEM", None)
     release_version = args.test_version or version()
     if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", release_version or ""):
@@ -74,10 +84,11 @@ def main():
         raise ValueError("Build this package on its target operating system.")
     if args.production and args.test_version:
         raise ValueError("Production packaging cannot override the authoritative version.")
+    runpy.run_path(str(ROOT / "eng/release-notes.py"))["validate"](ROOT, publication=args.production)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if args.production and subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip():
         raise ValueError("Production packages require a clean checkout of the reviewed source commit.")
-    output = ROOT / "artifacts" / "release" / args.rid / release_version
+    output = ROOT / "artifacts" / ("update-test" if args.update_test else "release") / args.rid / release_version
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
@@ -107,10 +118,15 @@ def main():
                            "--signInstallIdentity", required_environment("TANGOPAD_MAC_INSTALL_IDENTITY"),
                            "--notaryProfile", required_environment("TANGOPAD_MAC_NOTARY_PROFILE")]
         else:
-            private_key = temporary / "test-private.pem"
-            public_key = temporary / "test-public.pem"
-            run("openssl", "genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", private_key)
+            key_directory = args.update_key_dir or temporary
+            key_directory.mkdir(parents=True, exist_ok=True)
+            private_key = key_directory / "test-private.pem"
+            public_key = key_directory / "test-public.pem"
+            if not private_key.is_file():
+                run("openssl", "genpkey", "-algorithm", "EC", "-pkeyopt", "ec_paramgen_curve:P-256", "-out", private_key)
             run("openssl", "pkey", "-in", private_key, "-pubout", "-out", public_key)
+            if public_key.read_bytes().strip() == (ROOT / "eng/release/update-public-key.pem").read_bytes().strip():
+                raise ValueError("Test packages cannot use the production update key.")
         key_info = subprocess.check_output(["openssl", "pkey", "-pubin", "-in", str(public_key), "-text", "-noout"], text=True)
         if "ASN1 OID: prime256v1" not in key_info:
             raise ValueError("The update trust key must use ECDSA P-256.")
@@ -125,8 +141,17 @@ def main():
             "--runtime", args.rid, "--self-contained", "true", "--disable-build-servers",
             "-p:PublishSingleFile=true", f"-p:Version={release_version}",
             f"-p:UpdatePublicKeyPath={public_key}",
+            *(["-p:TangopadUpdateTest=true"] if args.update_test else []),
             f"-p:ReleaseLockDirectory={temporary}/locks", "--output", publish)
+        notices = runpy.run_path(str(ROOT / "eng/check-notices.py"))
+        notice_inventory = notices["prepare_payload"](ROOT, publish, args.rid, ROOT / "src/Editor.App/obj/project.assets.json")
         check_payload(publish)
+        prepack = runpy.run_path(str(ROOT / "eng/update-test-marker.py"))
+        # Early signal before packing. The package scan after packing stays the gate.
+        if args.update_test:
+            prepack["require_present_in"](prepack["directory_files"](publish))
+        else:
+            prepack["require_absent"](prepack["directory_files"](publish))
         executable = "Editor.App.exe" if args.rid.startswith("win-") else "Editor.App"
         pack_args = [*tool, "pack", "--packId", "TangopadDesktop",
                      "--packTitle", "Tangopad", "--packVersion", release_version, "--runtime", args.rid,
@@ -143,7 +168,16 @@ def main():
                 output, args.rid, "TangopadDesktop", "Tangopad", release_version,
                 os.environ.get("TANGOPAD_MAC_INSTALL_IDENTITY") if args.platform_signing == "configured" else None,
                 os.environ.get("TANGOPAD_MAC_NOTARY_PROFILE") if args.platform_signing == "configured" else None)
+        notices["verify_packages"](ROOT, output, args.rid, notice_inventory)
         sign_feed(output, args.rid, private_key, public_key)
+        marker = runpy.run_path(str(ROOT / "eng/update-test-marker.py"))
+        if args.update_test:
+            # Positive control: the same scan that guards releases must find the marker here.
+            for artifact in marker["zip_artifacts"](output):
+                if artifact.suffix.lower() in (".nupkg", ".appimage"):
+                    marker["require_present"](artifact)
+        else:
+            marker["require_absent"](marker["zip_artifacts"](output))
         if args.rid == "win-x64":
             shutil.copyfile(ROOT / "artifacts/native-helper/win-x64/native-helper.win-x64.json", output / "native-helper.win-x64.json")
         shutil.copyfile(public_key, output / f"update-key.{args.rid}.pem")
@@ -152,7 +186,8 @@ def main():
                    for path in sorted(output.iterdir()) if path.is_file()}
         manifest.write_text(json.dumps({"version": release_version,
             "runtime": args.rid, "production": args.production, "source_commit": commit,
-            "platform_signing": args.platform_signing, "artifacts": digests}, indent=2) + "\n", encoding="utf-8")
+            "release_notes_sha256": hashlib.sha256((ROOT / "eng/release/notes.md").read_bytes()).hexdigest(),
+            "platform_signing": args.platform_signing, "update_test": args.update_test, "artifacts": digests}, indent=2) + "\n", encoding="utf-8")
         run("openssl", "dgst", "-sha256", "-sign", private_key, "-out", str(manifest) + ".sig", manifest)
     print(f"Packages: {output}")
 

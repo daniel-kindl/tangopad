@@ -24,7 +24,125 @@
     <Setter Property="Spacing" Value="{StaticResource Spacing.Actions}" />
   </Style>
   <Style Selector="Button">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
     <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}" />
+  </Style>
+  <Style Selector="Border.menu-bar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Menu}" />
+  </Style>
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="FontFamily" Value="{StaticResource Font.Body}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+  </Style>
+  <Style Selector="Border.command-bar">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.CommandBar}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Bar}" />
+  </Style>
+  <Style Selector="Button.icon-button, CheckBox.icon-toggle">
+    <Setter Property="Width" Value="{StaticResource Size.Command.Height}" />
+    <Setter Property="Height" Value="{StaticResource Size.Command.Height}" />
+    <Setter Property="MinHeight" Value="{StaticResource Size.Command.Height}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Icon}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.icon-button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+  </Style>
+  <Style Selector="Button.icon-button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource Brush.Hover}" />
+  </Style>
+  <Style Selector="Border.toggle-icon-background">
+    <Setter Property="Padding" Value="{StaticResource Inset.Icon}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+  </Style>
+  <Style Selector="CheckBox.icon-toggle:checked /template/ Border#IconBackground">
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Toggle.Checked}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Selected}" />
+  </Style>
+  <Style Selector="CheckBox.icon-toggle:pointerover /template/ Border#IconBackground">
+    <Setter Property="Background" Value="{DynamicResource Brush.Hover}" />
+  </Style>
+  <Style Selector="CheckBox.icon-toggle:focus-visible /template/ Border#IconBackground">
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Text.Primary}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Toggle.Focus}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Toggle.Focus}" />
+  </Style>
+  <Style Selector="Viewbox.editor-icon">
+    <Setter Property="Width" Value="{StaticResource Size.Icon}" />
+    <Setter Property="Height" Value="{StaticResource Size.Icon}" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Path.icon-stroke">
+    <Setter Property="Stroke" Value="{DynamicResource Brush.Icon}" />
+    <Setter Property="StrokeThickness" Value="1.8" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+  </Style>
+  <Style Selector="Button.icon-button:disabled Viewbox, CheckBox.icon-toggle:disabled /template/ Viewbox">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+  <Style Selector="Border.toolbar-divider">
+    <Setter Property="Width" Value="{StaticResource Size.Divider}" />
+    <Setter Property="Margin" Value="{StaticResource Inset.Divider}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Border}" />
+  </Style>
+  <Style Selector="Border.document-strip">
+    <Setter Property="Padding" Value="{StaticResource Inset.TabStrip}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Background}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Bar}" />
+  </Style>
+  <Style Selector="Border.document-tab">
+    <Setter Property="Padding" Value="{StaticResource Inset.DocumentTab}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Canvas}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Tab}" />
+  </Style>
+  <Style Selector="Ellipse.dirty-indicator">
+    <Setter Property="Width" Value="{StaticResource Size.DirtyIndicator}" />
+    <Setter Property="Height" Value="{StaticResource Size.DirtyIndicator}" />
+    <Setter Property="Fill" Value="{DynamicResource Brush.Accent}" />
+  </Style>
+  <Style Selector="Button.preview-action">
+    <Setter Property="Margin" Value="{StaticResource Inset.PreviewAction}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.PreviewAction}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Status}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.pane-heading">
+    <Setter Property="Padding" Value="{StaticResource Inset.PaneHeading}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Canvas}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Bar}" />
+  </Style>
+  <Style Selector="Border.pane-heading TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.PaneHeading}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="LetterSpacing" Value="1.2" />
+  </Style>
+  <Style Selector="Border.status-bar">
+    <Setter Property="Padding" Value="{StaticResource Inset.Status}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+    <Setter Property="BorderThickness" Value="{StaticResource Border.Status}" />
+  </Style>
+  <Style Selector="TextBlock.about-title">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.About.Title}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="Button:focus-visible">
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.Focus}" />
@@ -34,6 +152,9 @@
   </Style>
   <Style Selector="edit|TextEditor">
     <Setter Property="FontFamily" Value="{StaticResource Font.Editor}" />
+    <Setter Property="Padding" Value="{StaticResource Inset.Editor}" />
+    <Setter Property="Background" Value="{DynamicResource Brush.Canvas}" />
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />
     <Setter Property="LineNumbersForeground" Value="{DynamicResource Brush.Text.Muted}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
   </Style>
@@ -41,13 +162,15 @@
     <Setter Property="SelectionBrush" Value="{DynamicResource Brush.Selection}" />
   </Style>
   <Style Selector="TextBlock.editor-status">
+    <Setter Property="FontSize" Value="{StaticResource FontSize.Status}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Muted}" />
   </Style>
   <Style Selector="TextBlock.error-message">
     <Setter Property="Foreground" Value="{DynamicResource Brush.Error}" />
   </Style>
   <Style Selector="StackPanel.preview-body">
-    <Setter Property="Margin" Value="{StaticResource Inset.Toolbar}" />
+    <Setter Property="Margin" Value="{StaticResource Inset.Preview}" />
   </Style>
   <Style Selector="TextBlock.preview-block">
     <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Primary}" />

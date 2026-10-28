@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -8,6 +9,7 @@ namespace Editor.Infrastructure.Updates;
 // Startup and apply share this gate. A new editor must not open while the native helper can terminate old processes.
 internal sealed class UpdateHandoff : IDisposable
 {
+    private const int NoSuchUnixProcess = 3;
     private readonly string marker;
 
     private UpdateHandoff(string marker)
@@ -73,13 +75,22 @@ internal sealed class UpdateHandoff : IDisposable
 
     private static bool IsOwnerRunning(int pid, long started)
     {
-        try
+        return IsOwnerRunning(() =>
         {
             using Process process = Process.GetProcessById(pid);
             return !process.HasExited && process.StartTime.ToUniversalTime().Ticks == started;
+        });
+    }
+
+    internal static bool IsOwnerRunning(Func<bool> readOwnerIdentity)
+    {
+        try
+        {
+            return readOwnerIdentity();
         }
         catch (ArgumentException) { return false; }
         catch (InvalidOperationException) { return false; }
+        catch (Win32Exception error) when (!OperatingSystem.IsWindows() && error.NativeErrorCode == NoSuchUnixProcess) { return false; }
     }
 
     private static bool IsHelperRunning()

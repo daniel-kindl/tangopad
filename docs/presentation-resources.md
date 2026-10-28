@@ -1,7 +1,8 @@
 # Presentation resources
 
 Issues #22, #23, #24, and #27 share one presentation change in PR #26.
-The editor keeps its existing layout, commands, text rules, and dialog decisions.
+The editor keeps its commands, text rules, and dialog decisions.
+[The interface design draft](ux/47-design.md) describes the local shell revision.
 
 ## Ownership
 
@@ -88,15 +89,18 @@ App.axaml merges two application resource dictionaries:
 
 Keys describe their role, such as `Size.Dialog.Width`, `Spacing.Actions`, and `Brush.Text.Primary`.
 The Light and Dark dictionaries define the same semantic brush roles.
-General control roles alias existing Fluent or AvaloniaEdit resources.
+Shell, canvas, text, border, and accent roles define matching light and dark palettes.
+Interaction roles retain Fluent or AvaloniaEdit resources.
 Markdown Heading, Code, and Link roles define source colors for each theme.
-Fluent retains its platform accent and control states.
+Fluent retains focus, selection, and control interaction behavior.
+The shell uses a shared neutral palette and blue accent roles.
+Help contains About and Check for Updates. The status bar contains document information only.
 App requests `ThemeVariant.Default`, so the platform theme applies by default.
 Changing the application theme updates existing controls through DynamicResource references.
 
 Styles/EditorStyles.axaml consolidates dialog layout, typography, and control presentation.
-Window dimensions stay 960 by 680, with minimum dimensions of 400 by 250.
-Dialogs stay 460 pixels wide. Toolbar spacing stays 8 pixels.
+Default window dimensions are 1040 by 760, with minimum dimensions of 400 by 250.
+Dialogs stay 460 pixels wide. The compact icon toolbar uses shared target dimensions and wraps when necessary.
 The editor starts at 15 pixels with a monospace font.
 
 ## Resource selection and exceptions

@@ -21,7 +21,18 @@ See [Apple's installation-domain reference](https://developer.apple.com/library/
 Initial package support does not imply support for every OS version or CPU architecture.
 The candidate workflow builds each package on its native operating system.
 
+Before creating a draft release, the publisher requires one nonempty distribution
+file for each format in the table. It selects Linux `*.AppImage`, Windows `*.zip`
+and `*-Setup.exe`, and macOS `*.zip` and `*-Setup.pkg` from the signed inventory.
+A missing file, an empty file, or multiple matches fails validation, even when
+the inventory signature is valid. The existing checks also require a full update
+package, matching signed hashes, and native update evidence for each runtime.
+Filename and size checks do not establish installer validity. Native package
+acceptance remains required. [Issue #115](https://github.com/daniel-kindl/tangopad/issues/115)
+records the omission finding and its regression coverage under audit #52.
+
 Version comes from `Directory.Build.props`. Stable publication uses `v<major>.<minor>.<patch>` tags.
+[Changelog and release notes](release-notes.md) defines the canonical history, notes template, and human review procedure.
 Update feeds use one runtime channel per row, such as `linux-x64`.
 These channels contain stable releases only. There is no automatic installation or forced restart.
 The initial check is manual. Automatic checks remain deferred.
@@ -43,6 +54,7 @@ Use `win-x64`, `osx-x64`, or `osx-arm64` on their corresponding hosts.
 The command creates a temporary test key, embeds its public key, and signs the test feed.
 It deletes the private key when packaging ends.
 Candidate packages are development artifacts. They are not production installers.
+Candidate packaging validates the current draft notes. A local `--test-version` override does not promote those notes to a public release.
 Their temporary key cannot authenticate production update feeds.
 Outputs are in `artifacts/release/<runtime>/<version>/`.
 `package.<runtime>.json` marks test output with `production: false`.
@@ -51,6 +63,9 @@ Outputs are in `artifacts/release/<runtime>/<version>/`.
 Production mode rejects this version override.
 Package inputs reject portable data, state files, legacy JSON, portable markers, and symbolic links.
 Native libraries and license notices remain in the package.
+Packaging checks [distribution notices](distribution-notices.md) in the publish
+directory and final portable and full update artifacts before signing the feed.
+The package includes source records and notices from its selected .NET runtime pack.
 The script isolates runtime publish lock files from the repository's ordinary build lock files.
 The SDK, package versions, tool version, and inputs are pinned. Binary byte equality remains outside the verification policy.
 
@@ -96,6 +111,9 @@ The script does not buy a certificate, create an identity, or bypass OS trust ch
 Review [Velopack signing](https://docs.velopack.io/packaging/signing) for provider setup.
 Certificate signing and notarization are optional future setup. They remain untested.
 
+Prepare versioned changelog entries and reviewed notes through the [release notes workflow](release-notes.md).
+Production packaging rejects Draft notes. It records the accepted notes hash in each signed package inventory.
+
 Run the repository verification before production packaging:
 
 ```sh
@@ -120,6 +138,9 @@ python eng/publish-release.py --packages artifacts/production --target <full-mai
 ```
 
 The command verifies the signed artifact inventory, production markers, versions, feed signatures, package sizes, and SHA-256 hashes.
+It also verifies the packaged notes hash and publication-ready changelog and notes.
+The local checkout must match the target commit.
+It writes `artifacts/release-notes.md` with versioned download links and checksums from the verified upload files.
 The inventory authenticates installers and portable archives as well as update packages.
 The command also requires successful native evidence from the target commit in both storage modes.
 Windows evidence must include recovery after backup. The full package must contain the same patched helper used by those checks.
@@ -138,6 +159,31 @@ Review every attached package and the recorded platform evidence before publishi
 A published stable release becomes the GitHub `latest` feed.
 Never replace an asset under an existing release version.
 
+### Wait for the real-update run on main
+
+`Prepare draft release` starts with the job `gate`.
+The job runs only when the workflow starts from `main`.
+The job runs `eng/check-release-gate.py` for the `main` commit that the workflow packages.
+The gate fails if no successful `Package candidates` run exists for that exact commit.
+In that run, the job `Package (<rid>)` and its step "Update the real package through the editor" must pass for each of win-x64, linux-x64, osx-x64 and osx-arm64.
+The gate also fails if the GitHub Actions API lookup fails.
+No package job starts until the gate passes.
+
+Each push to `main` starts a `Package candidates` run for the new commit.
+The workflow cancels an older run on the same branch when a newer run starts.
+So only the newest `main` commit can get a successful run.
+
+Before you start `Prepare draft release`:
+
+1. Find the `Package candidates` run from the push to `main`.
+2. Make sure that its commit is the current `main` commit.
+3. Wait until the run passes on all four targets.
+4. Start `Prepare draft release` from `main`.
+
+If the run is missing, was cancelled or failed, start `Package candidates` on `main` with `workflow_dispatch`.
+Wait until that run passes on all four targets, then go to step 4.
+If the gate fails, do not start `Prepare draft release` again until a run for the current `main` commit passes.
+
 ## Update behavior and trust
 
 The Updates panel shows the installed version, check result, available version, download bytes, release notes, progress, and errors.
@@ -152,6 +198,20 @@ The adapter accepts one signed stable feed from the fixed Tangopad GitHub reposi
 It validates application ID, runtime, filename, package type, size, version, and SHA-256.
 It rejects invalid signatures, prereleases, build metadata, and downgrades.
 It permits HTTPS redirects only to GitHub and its specified release-asset hosts.
+Each feed check has one total deadline that equals the transport timeout.
+The production transport timeout is ten minutes.
+The feed and its signature share this deadline. It covers redirects and response reads.
+It does not restart for each redirect.
+Each package download has an inactivity deadline that equals the transport timeout.
+The deadline starts before the request, so it also covers redirects and response headers.
+Each read that returns data restarts the deadline.
+A package download has no total deadline, because a slow link must be able to finish
+and a download cannot resume.
+A host that sends 1 byte in each window can keep a package download open.
+These controls limit this risk: redirects go only to the HTTPS GitHub hosts above,
+the download stops when it exceeds the authenticated size, and the caller can cancel it.
+Caller cancellation can stop the operation earlier. A timeout stops the operation
+without applying an update and permits retry.
 It checks the staged package again before invoking the native updater.
 Offline checks, missing releases, and rejected downloads leave editing available and permit retry.
 
@@ -159,6 +219,8 @@ The application refuses apply when another same-named process is detected.
 Startup and apply also share a mutex and a pending-update marker outside replaced content.
 New editors wait while the initiating process or native helper is active.
 A stale marker clears after those processes exit, which permits recovery after a crash.
+On Unix, an owner that exits during the process identity query can produce `ESRCH`.
+The startup gate treats that result as an exited owner. Permission errors and other native query failures still stop startup.
 The marker records the target version. If the previous version restarts after a failed replacement, the editor displays a recovery message.
 Native apply runs silently. The restarted editor displays the failure instead of leaving a native error dialog open.
 Concurrent-start behavior still needs native Windows and macOS acceptance.
@@ -206,6 +268,11 @@ A second editor retains its exact unsaved text when it prevents apply.
 Unix portable checks also reject a read-only distribution directory before native apply.
 On Windows it also blocks a staged directory to force replacement failure after backup, then retries.
 Evidence is in `artifacts/native-update/<runtime>/`.
+Use `--recovery-attempts 5` to repeat native failure recovery five times in each storage mode.
+The candidate workflow exposes the same `recovery_attempts` input for manual runs and defaults to five attempts.
+The probe records startup checkpoints. Failed runs retain process state, pending markers, and available macOS launch and crash logs.
+The production workflow requires at least five successful native recovery attempts in each storage mode.
+The production validator rejects evidence with fewer attempts.
 These local feeds do not prove the published GitHub release path or downloaded-file OS trust prompts.
 Optional platform signing, notarization, protected Windows installations, and starts during native apply still require acceptance evidence.
 Issue #45 must remain open until these checks and production release validation pass.

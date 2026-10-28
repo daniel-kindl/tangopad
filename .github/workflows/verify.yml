@@ -36,18 +36,44 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil at-spi2-core libatspi2.0-0
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
+      - name: Check the pull request title rule
+        shell: bash
+        run: python3 eng/test-check-pr-title.py
+      - name: Check documentation
+        if: runner.os == 'Linux'
+        run: |
+          python3 eng/test-check-docs.py
+          python3 eng/test-review-docs.py
+          python3 eng/check-docs.py
+          python3 eng/test-release-notes.py
+          python3 eng/release-notes.py
+          python3 eng/test-check-notices.py
+          python3 eng/test-check-package-launch.py
+          python3 eng/test-update-test.py
+          python3 eng/test-check-package-update.py
+          python3 eng/test-check-release-gate.py
+          python3 eng/check-notices.py
+          python3 eng/test-check-native-update.py
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
         run: /usr/bin/python3 eng/check-native-editor.py
+      - name: Check Linux user-guide workflows
+        if: runner.os == 'Linux'
+        run: /usr/bin/python3 eng/check-native-editor.py --user-guide-only
+      - name: Audit Linux accessibility and display scaling
+        if: runner.os == 'Linux'
+        run: /usr/bin/python3 eng/check-native-accessibility.py
       - name: Upload native editor evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-editor-${{ matrix.os }}
-          path: artifacts/native-editor-*
+          path: |
+            artifacts/native-editor-*
+            artifacts/native-accessibility-*
           if-no-files-found: warn
           retention-days: 7
       - name: Upload test results

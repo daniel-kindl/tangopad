@@ -2,6 +2,14 @@ name: Package candidates
 
 on:
   workflow_dispatch:
+    inputs:
+      recovery_attempts:
+        description: Number of native recovery attempts per storage mode, from 1 to 10.
+        type: number
+        default: 5
+  # The release gate needs a green run for the exact main commit that the draft release packages.
+  push:
+    branches: [main]
   pull_request:
     branches: [dev, main]
     paths:
@@ -9,7 +17,21 @@ on:
       - '.config/dotnet-tools.json'
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
+      - 'eng/test-check-native-update.py'
+      - 'eng/check-native-editor.py'
+      - 'eng/*package-launch.py'
+      - 'eng/*package-update.py'
+      - 'eng/*update-test*.py'
+      - 'Directory.Build.targets'
+      - 'tests/Editor.Desktop.SmokeTests/**'
+      - 'eng/check-notices.py'
+      - 'eng/test-check-notices.py'
+      - 'eng/notices.json'
+      - 'docs/licenses/**'
       - 'eng/check-release-validation.py'
+      - 'eng/release-notes.py'
+      - 'eng/test-release-notes.py'
+      - 'CHANGELOG.md'
       - 'eng/*vpk.py'
       - 'eng/build-windows-updater.py'
       - 'eng/package-macos-installer.py'
@@ -54,14 +76,38 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb
+          sudo apt-get install -y --no-install-recommends squashfs-tools openssl libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil
       - name: Check release validation rules
         run: python eng/check-release-validation.py
+      - name: Check distribution notices
+        run: |
+          python eng/test-check-notices.py
+          python eng/check-notices.py
+      - name: Check release text
+        run: |
+          python eng/test-release-notes.py
+          python eng/release-notes.py
+      - name: Check vpk pack output capture
+        run: python eng/test-check-native-update.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages
         run: python eng/package-release.py --rid ${{ matrix.rid }}
+      - name: Check Linux packaged user-guide workflows
+        if: runner.os == 'Linux'
+        run: |
+          /usr/bin/python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import sys
+          images = list(Path("artifacts/release/linux-x64").glob("*/*.AppImage"))
+          if len(images) != 1:
+              raise RuntimeError("Expected one Linux candidate AppImage.")
+          subprocess.run([sys.executable, "eng/check-native-editor.py", "--user-guide-only", "--executable", str(images[0])], check=True)
+          PY
       - name: Check native editor updates and recovery
+        env:
+          TANGOPAD_RECOVERY_ATTEMPTS: ${{ inputs.recovery_attempts || 5 }}
         run: python eng/check-native-update.py --rid ${{ matrix.rid }}
       - name: Upload native update evidence
         if: always()
@@ -71,8 +117,29 @@ jobs:
           path: |
             artifacts/native-update/${{ matrix.rid }}/
             artifacts/native-helper/${{ matrix.rid }}/
+            artifacts/native-editor-*/
           if-no-files-found: warn
           retention-days: 7
+      - name: Install and launch the real package
+        run: python eng/check-package-launch.py --rid ${{ matrix.rid }}
+      - name: Upload package launch evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-launch-${{ matrix.rid }}
+          path: artifacts/package-launch/${{ matrix.rid }}/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Update the real package through the editor
+        run: python eng/check-package-update.py --rid ${{ matrix.rid }}
+      - name: Upload update-test evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: update-test-${{ matrix.rid }}
+          path: artifacts/update-test-evidence/${{ matrix.rid }}/
+          if-no-files-found: warn
+          retention-days: 3
       - name: Upload candidates
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

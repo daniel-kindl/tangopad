@@ -1,5 +1,7 @@
 # Plain-text editor verification
 
+[Native user-guide verification](user-guide-verification.md) records the scripted tutorial, recovery cases, and Linux AppImage candidate result.
+
 Date: 2026-10-17
 
 Changes: [issue #19](https://github.com/daniel-kindl/tangopad/issues/19),

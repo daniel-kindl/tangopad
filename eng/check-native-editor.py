@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the Release editor through X11 input and real GTK portal dialogs."""
 
+import argparse
 import contextlib
 import ctypes
 import hashlib
@@ -91,6 +92,11 @@ class Desktop:
         self.focus(window)
         return window
 
+    def command(self, window, name):
+        # Positions use the default 1040-pixel shell and the native test font.
+        points = {"recent": (156, 52), "wrap": (390, 52), "preview": (950, 94)}
+        self.click(window, *points[name])
+
     def picker(self, shortcut, title):
         self.key(shortcut)
         window = self.window(title)
@@ -101,6 +107,8 @@ class Desktop:
         # GTK Save starts in the Name field. Open uses the location field.
         if not saving:
             self.key("ctrl+l")
+            # GTK creates the location entry after the shortcut event.
+            time.sleep(0.2)
         self.key("ctrl+a")
         self.type(str(path))
         # GTK posts filename completion after the text input event.
@@ -114,7 +122,12 @@ class Desktop:
             # A second click cannot accept the centered overwrite dialog.
             time.sleep(0.2)
             if self.find(title) == window:
-                self.click(window, int(geometry["WIDTH"]) - 50, int(geometry["HEIGHT"]) - 24)
+                try:
+                    self.click(window, int(geometry["WIDTH"]) - 50, int(geometry["HEIGHT"]) - 24)
+                except RuntimeError as error:
+                    # GTK can close the picker between the lookup and the optional click.
+                    if "BadWindow" not in str(error) or self.find(title) == window:
+                        raise
 
     def overwrite(self):
         def child():
@@ -186,6 +199,26 @@ class Desktop:
             x11.XFlush(display)
         finally:
             x11.XCloseDisplay(display)
+
+
+def exercise_menus(ui):
+    window = ui.editor()
+    ui.key("alt+h")
+    ui.key("End")
+    ui.key("Return")
+    about = ui.window("About Tangopad")
+    ui.focus(about)
+    ui.record("help-about-dialog")
+    ui.key("Escape")
+    ui.editor()
+    ui.key("alt+h")
+    ui.key("Home")
+    ui.key("Return")
+    updates = ui.window("Updates")
+    ui.focus(updates)
+    ui.record("help-update-dialog")
+    ui.key("Escape")
+    ui.editor()
 
 
 def exercise_drops(ui, files, launch):
@@ -277,15 +310,25 @@ def exercise_recent(ui, files):
     wait("recent path persisted in the fresh profile", lambda: paths() and paths()[0] == str(fixture))
     ui.key("ctrl+n")
     window = ui.editor()
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     # Flyout focus starts on the first recent entry.
     ui.key("Return")
     window = ui.editor(fixture)
     ui.record("recent-file-reopen")
+    ui.key("ctrl+n")
+    ui.editor()
+    ui.key("alt+f")
+    ui.key("Down")
+    ui.key("Down")
+    ui.key("Right")
+    time.sleep(0.2)
+    ui.key("Return")
+    window = ui.editor(fixture)
+    ui.record("recent-file-menu-reopen")
     ui.key("ctrl+End")
     ui.type("!")
     window = ui.editor(fixture, dirty=True)
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     # Move from the first entry to Clear through the popup's focus cycle.
     ui.key("shift+Tab")
     ui.key("Return")
@@ -312,11 +355,11 @@ def exercise_line_numbers(ui, files):
 
     def gutter():
         # The second line has no caret or selection during these checks.
-        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((0, 76, 20, 88)).tobytes()
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((20, 151, 35, 166)).tobytes()
 
     numbered = gutter()
     # Tab from Word Wrap selects Line numbers in both host font layouts.
-    ui.click(window, 700, 25)
+    ui.command(window, "wrap")
     ui.key("space")
     ui.key("Tab")
     ui.key("space")
@@ -411,7 +454,7 @@ def exercise_external_notification(ui, files):
     x, y = int(geometry["X"]), int(geometry["Y"])
 
     def banner_pixels():
-        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((x, y + 45, x + 500, y + 90))
+        return ImageGrab.grab(xdisplay=ui.env["DISPLAY"]).crop((x, y + 112, x + 500, y + 164))
 
     time.sleep(0.3)
     before = banner_pixels()
@@ -426,8 +469,8 @@ def exercise_external_notification(ui, files):
     wait("external file notification", message_visible)
     ui.editor(fixture)
     ui.record("external-change-nonblocking-banner")
-    # The notification follows the first toolbar row at the default window size.
-    ui.click(window, 260, 65)
+    # The notification follows the menu, toolbar, and document tab at the default window size.
+    ui.click(window, 270, 136)
     time.sleep(0.3)
     ui.click(window, 120, 150)
     ui.key("ctrl+End")
@@ -607,14 +650,14 @@ def exercise(ui, files, app):
                 # IN_ACCESS and IN_OPEN detect reads of the referenced local asset.
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the preview asset.")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Preview accessed a network or local-file resource.")
                 ui.record("markdown-preview-shown-without-resource-access")
             finally:
                 os.close(watch)
-        ui.click(window, 120, 100)
+        ui.click(window, 120, 160)
         ui.key("ctrl+End")
         addition = "!"
         ui.type(addition)
@@ -630,9 +673,9 @@ def exercise(ui, files, app):
         ui.key("ctrl+z")
         ui.key("ctrl+s")
         ui.saved(markdown, markdown_text)
-        ui.click(window, 794, 25)
+        ui.command(window, "preview")
         ui.record("markdown-preview-hidden-with-undo-and-find")
-        ui.click(window, 794, 25)
+        ui.command(window, "preview")
         time.sleep(0.5)
         plain = files / "highlighting.txt"
         ui.picker("ctrl+shift+s", "Save text file")
@@ -725,13 +768,13 @@ def exercise(ui, files, app):
             try:
                 if libc.inotify_add_watch(watch, os.fsencode(asset), 0x21) < 0:
                     raise OSError(ctypes.get_errno(), "Cannot monitor the Textile preview asset.")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Textile preview accessed a network or local-file resource.")
                 ui.record("textile-preview-shown-without-resource-access")
                 ui.record("redmine-references-and-local-contents-without-resource-access")
-                ui.click(window, 120, 100)
+                ui.click(window, 120, 160)
                 ui.key("ctrl+End")
                 ui.type("!")
                 ui.key("ctrl+s")
@@ -741,9 +784,9 @@ def exercise(ui, files, app):
                 ui.key("ctrl+z")
                 ui.key("ctrl+s")
                 ui.saved(textile, textile_text)
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 ui.record("textile-preview-hidden-with-undo")
-                ui.click(window, 794, 25)
+                ui.command(window, "preview")
                 time.sleep(0.5)
                 if select.select([server, watch], [], [], 0)[0]:
                     raise RuntimeError("Textile preview accessed a resource after an edit or toggle.")
@@ -849,14 +892,14 @@ def exercise(ui, files, app):
         for _ in range(5):
             ui.key("ctrl+plus")
         # Word Wrap follows Replace in the existing toolbar.
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.editor(wrapped)
         ui.record("word-wrap-enabled-long-unicode-line")
         ui.click(window, 120, 150)
         ui.key("ctrl+End")
         ui.type("!")
         ui.editor(wrapped, dirty=True)
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.record("word-wrap-disabled-after-edit")
         ui.click(window, 120, 150)
         ui.key("ctrl+z")
@@ -867,7 +910,7 @@ def exercise(ui, files, app):
         ui.editor(wrapped, dirty=True)
         ui.key("ctrl+s")
         ui.saved(wrapped, long_text + b"!")
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.key("ctrl+n")
         ui.editor()
         ui.picker("ctrl+o", "Open text file")
@@ -910,7 +953,7 @@ def exercise(ui, files, app):
         ui.key("ctrl+s")
         ui.saved(wrapped, long_text + b"!")
         ui.record("go-to-line-cancel-preserves-selection-and-bytes")
-        ui.click(window, 700, 25)
+        ui.command(window, "wrap")
         ui.click(window, 120, 150)
         ui.key("ctrl+0")
         ui.key("ctrl+n")
@@ -958,16 +1001,16 @@ def exercise_preferences(ui, files, launch, executable, settings=None, arguments
 
     def pixels():
         shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
-        return (shot.crop((680, 10, 940, 40)).tobytes(), shot.crop((0, 100, 800, 250)).tobytes())
+        return (shot.crop((373, 36, 439, 68)).tobytes(), shot.crop((12, 160, 800, 310)).tobytes())
 
     app = launch([str(executable), *arguments], f"preferences-{mode}-first", cwd=files)
     window = open_fixture()
     time.sleep(0.5)
     defaults = pixels()
-    ui.click(window, 700, 25)
+    ui.command(window, "wrap")
     ui.key("Tab")
     ui.key("space")
-    ui.click(window, 200, 80)
+    ui.click(window, 120, 160)
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
     ui.key("ctrl+plus")
@@ -993,7 +1036,7 @@ def exercise_preferences(ui, files, launch, executable, settings=None, arguments
         raise RuntimeError("The simulated update changed persistent state.")
     app = launch([str(executable), *arguments], f"preferences-{mode}-restored", cwd=files)
     window = ui.editor()
-    ui.click(window, 185, 25)
+    ui.command(window, "recent")
     ui.key("Return")
     window = ui.editor(fixture)
     ui.key("ctrl+Home")
@@ -1095,7 +1138,243 @@ def exercise_regex(ui, files):
     ui.saved(path, expected)
 
 
+
+def exercise_user_guide(ui, files):
+    """Follow the guide's first-file and recovery steps through native controls."""
+    notes = files / "notes.txt"
+    copy = files / "notes-copy.txt"
+    rescue = files / "conflict-copy.txt"
+    recovered = files / "recovered-note.txt"
+
+    def file_menu(start, direction="Down", moves=0):
+        ui.key("alt+f")
+        ui.key(start)
+        for _ in range(moves):
+            ui.key(direction)
+        ui.key("Return")
+
+    def choose(path, saving):
+        ui.focus(ui.window("Save text file" if saving else "Open text file"))
+        ui.choose(path, saving=saving)
+        return ui.editor(path)
+
+    ui.editor()
+    ui.type("A note for tomorrow")
+    # In an Untitled document, Reload is disabled. From Exit, Save is two enabled items above.
+    file_menu("End", "Up", 2)
+    choose(notes, saving=True)
+    ui.saved(notes, b"A note for tomorrow")
+    ui.record("guide-first-save-through-file-menu")
+
+    file_menu("Home")
+    ui.editor()
+    file_menu("Home", moves=1)
+    choose(notes, saving=False)
+    ui.key("ctrl+End")
+    ui.key("Return")
+    ui.type("Second line")
+    file_menu("End", "Up", 3)
+    original = b"A note for tomorrow\nSecond line"
+    ui.saved(notes, original)
+    ui.record("guide-new-open-edit-save-through-file-menu")
+
+    file_menu("End", "Up", 2)
+    choose(copy, saving=True)
+    ui.saved(copy, original)
+    ui.key("ctrl+End")
+    ui.type("!")
+    ui.key("ctrl+s")
+    copied = original + b"!"
+    ui.saved(copy, copied)
+    ui.bytes(notes, original)
+    ui.record("guide-save-as-preserves-original-and-changes-destination")
+
+    ui.type(" unsaved")
+    file_menu("Home")
+    ui.decision("Cancel")
+    ui.editor(copy, dirty=True)
+    ui.bytes(copy, copied)
+    file_menu("Home")
+    ui.decision("Save")
+    copied += b" unsaved"
+    ui.bytes(copy, copied)
+    ui.editor()
+    ui.record("guide-unsaved-cancel-and-save-before-new")
+    ui.type("throwaway text")
+    file_menu("Home")
+    ui.decision("Discard")
+    ui.editor()
+    ui.bytes(copy, copied)
+    ui.record("guide-discard-does-not-write-unsaved-text")
+
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(copy, saving=False)
+    ui.editor(copy)
+    ui.key("ctrl+End")
+    ui.type(" local")
+    external = b"Changed by another program\n"
+    copy.write_bytes(external)
+    ui.key("ctrl+s")
+    ui.conflict("Cancel")
+    ui.bytes(copy, external)
+    ui.editor(copy, dirty=True)
+    ui.picker("ctrl+shift+s", "Save text file")
+    ui.choose(rescue, saving=True)
+    kept = copied + b" local"
+    ui.saved(rescue, kept)
+    ui.bytes(copy, external)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(copy, saving=False)
+    ui.editor(copy)
+    ui.key("ctrl+End")
+    ui.type(" inspected")
+    ui.key("ctrl+s")
+    ui.saved(copy, external + b" inspected")
+    ui.bytes(rescue, kept)
+    ui.record("guide-conflict-cancel-save-copy-and-inspect-disk-version")
+
+    denied = files / "read-only"
+    denied.mkdir()
+    restricted = denied / "notes.txt"
+    ui.picker("ctrl+shift+s", "Save text file")
+    ui.choose(restricted, saving=True)
+    disk = external + b" inspected"
+    ui.saved(restricted, disk)
+    ui.key("ctrl+End")
+    ui.type(" kept")
+    denied.chmod(0o500)
+    try:
+        ui.key("ctrl+s")
+        ui.focus(ui.window("File operation failed"))
+        ui.record("guide-permission-error-with-unsaved-text")
+        ui.key("Escape")
+        ui.gone("File operation failed")
+        ui.editor(restricted, dirty=True)
+        ui.bytes(restricted, disk)
+        ui.picker("ctrl+shift+s", "Save text file")
+        ui.choose(recovered, saving=True)
+        ui.saved(recovered, disk + b" kept")
+        ui.bytes(restricted, disk)
+        ui.record("guide-save-as-recovers-after-permission-error")
+    finally:
+        denied.chmod(0o700)
+
+    invalid = files / "not-utf8.txt"
+    invalid.write_bytes(b"\xff\xfeinvalid")
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(invalid, saving=False)
+    ui.focus(ui.window("File operation failed"))
+    ui.key("Escape")
+    ui.gone("File operation failed")
+    ui.editor(recovered)
+    ui.bytes(recovered, disk + b" kept")
+    ui.record("guide-invalid-utf8-keeps-the-current-file")
+
+    encoded = files / "encoding-input.txt"
+    round_trip = files / "encoding-output.txt"
+    content = "Café 😀\r\nsecond\nthird\rlast".encode("utf-8")
+    encoded.write_bytes(b"\xef\xbb\xbf" + content)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(encoded, saving=False)
+    ui.editor(encoded)
+    ui.key("ctrl+End")
+    ui.type("!")
+    ui.picker("ctrl+shift+s", "Save text file")
+    ui.choose(round_trip, saving=True)
+    window = ui.editor(round_trip)
+    ui.saved(round_trip, content + b"!")
+    ui.bytes(encoded, b"\xef\xbb\xbf" + content)
+    ui.record("guide-utf8-bom-removal-and-exact-mixed-endings")
+
+    settings = Path(ui.env["XDG_DATA_HOME"]) / "Tangopad" / "state.bin"
+    ui.command(window, "wrap")
+    ui.key("Tab")
+    ui.key("space")
+    wait("guide presentation choices", lambda: (state := read_state(settings)) is not None
+         and state["wordWrap"] is True and state["showLineNumbers"] is False)
+    ui.record("guide-word-wrap-and-line-numbers")
+    ui.click(window, 120, 160)
+    ui.key("ctrl+plus")
+    wait("guide font zoom", lambda: read_state(settings)["fontSize"] == 16)
+    ui.key("ctrl+0")
+    wait("guide reset zoom", lambda: read_state(settings)["fontSize"] == 15)
+    ui.saved(round_trip, content + b"!")
+    ui.command(window, "wrap")
+    ui.key("Tab")
+    ui.key("space")
+    wait("restored guide presentation defaults", lambda: (state := read_state(settings)) is not None
+         and state["wordWrap"] is False and state["showLineNumbers"] is True)
+    ui.record("guide-font-zoom-and-reset-preserve-document")
+
+    sample = files / "field-notes.md"
+    sample_bytes = (ROOT / "docs/user/samples/field-notes.md").read_bytes()
+    sample.write_bytes(sample_bytes)
+    ui.picker("ctrl+o", "Open text file")
+    ui.choose(sample, saving=False)
+    window = ui.editor(sample)
+    ui.command(window, "preview")
+
+    def heading_ink():
+        shot = ImageGrab.grab(xdisplay=ui.env["DISPLAY"])
+        background = shot.getpixel((1000, 400))
+        region = shot.crop((540, 150, 1000, 210))
+        return sum(count for count, color in region.getcolors(region.width * region.height) if color != background)
+
+    wait("visible guide preview heading", lambda: heading_ink() > 200)
+    ui.record("guide-sample-markdown-preview")
+    before = heading_ink()
+    ui.click(window, 120, 160)
+    ui.key("ctrl+Home")
+    ui.key("End")
+    ui.type(" edited")
+    ui.key("ctrl+s")
+    edited = sample_bytes.replace(b"# Field notes", b"# Field notes edited", 1)
+    ui.saved(sample, edited)
+    wait("longer guide preview heading", lambda: heading_ink() > before + 20)
+    ui.record("guide-preview-updates-after-source-edit")
+    ui.command(window, "preview")
+    ui.record("guide-hide-preview-restores-source-view")
+    ui.click(window, 120, 160)
+    ui.key("ctrl+h")
+    ui.type("draft")
+    ui.key("Return")
+    ui.key("Tab")
+    ui.type("final")
+    # Find next selects a match, so Replace current participates in the focus order.
+    for _ in range(7):
+        ui.key("Tab")
+    ui.key("space")
+    ui.key("Escape")
+    ui.key("ctrl+s")
+    ui.saved(sample, edited.replace(b"draft", b"final"))
+    ui.key("ctrl+z")
+    ui.key("ctrl+s")
+    ui.saved(sample, edited)
+    ui.record("guide-replace-all-and-one-step-undo")
+    ui.picker("ctrl+g", "Go To Line")
+    ui.type("2")
+    ui.key("Return")
+    ui.gone("Go To Line")
+    ui.editor(sample)
+    ui.type("T")
+    ui.key("ctrl+s")
+    first_line, rest = edited.split(b"\n", 1)
+    ui.saved(sample, first_line + b"\nT" + rest)
+    ui.key("ctrl+z")
+    ui.key("ctrl+s")
+    ui.saved(sample, edited)
+    ui.record("guide-go-to-line-and-undo-preserve-source")
+    ui.key("ctrl+n")
+    ui.editor()
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--user-guide-only", action="store_true", help="Check documented first-file and recovery workflows only.")
+    parser.add_argument("--executable", type=Path, help="Use a supplied Linux executable for --user-guide-only.")
+    args = parser.parse_args()
+    if args.executable and not args.user_guide_only:
+        parser.error("Use --user-guide-only with --executable.")
     if sys.platform != "linux" or os.geteuid() == 0 or ctypes.sizeof(ctypes.c_long) != 8:
         raise RuntimeError("NOT TESTED: Run as a non-root user on 64-bit Linux with X11 test dependencies.")
     for command in ("Xvfb", "xdotool", "dbus-daemon"):
@@ -1104,14 +1383,18 @@ def main():
     for path in ("/usr/libexec/xdg-desktop-portal", "/usr/libexec/xdg-desktop-portal-gtk"):
         if not Path(path).is_file():
             raise RuntimeError(f"NOT TESTED: Install {Path(path).name}, then repeat this command.")
-    executable = ROOT / "src/Editor.App/bin/Release/net10.0/Editor.App"
+    executable = args.executable.resolve() if args.executable else ROOT / "src/Editor.App/bin/Release/net10.0/Editor.App"
     if not executable.is_file():
-        raise RuntimeError("Build Editor.App in Release, then repeat this command.")
+        raise RuntimeError("NOT TESTED: Select an existing executable, or build Editor.App in Release.")
     evidence = Path(tempfile.mkdtemp(prefix="native-editor-", dir=ROOT / "artifacts"))
+    guide_files = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
+                   for path in sorted((ROOT / "docs/user").rglob("*.md"))} if args.user_guide_only else {}
     with contextlib.ExitStack() as stack:
         scratch = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="session-", dir=evidence)))
         env = os.environ.copy()
         env.pop("WAYLAND_DISPLAY", None)
+        if args.executable and executable.suffix.lower() == ".appimage":
+            env["APPIMAGE_EXTRACT_AND_RUN"] = "1"
         env.update(LC_ALL="C.UTF-8", GDK_BACKEND="x11", XDG_CURRENT_DESKTOP="GNOME", XDG_CONFIG_HOME=str(scratch / "config"),
                    XDG_CACHE_HOME=str(scratch / "cache"), XDG_DATA_HOME=str(scratch / "data"), XDG_RUNTIME_DIR=str(scratch / "runtime"))
         Path(env["XDG_RUNTIME_DIR"]).mkdir(mode=0o700)
@@ -1151,6 +1434,15 @@ def main():
         try:
             files = scratch / "files"
             files.mkdir()
+            if args.user_guide_only:
+                exercise_user_guide(ui, files)
+                ui.close(ui.editor())
+                wait("editor exit after guide checks", lambda: app.poll() is not None)
+                if app.returncode != 0:
+                    raise RuntimeError(f"Editor exited with code {app.returncode}.")
+                result = "PASS"
+                return
+            exercise_menus(ui)
             exercise_drops(ui, files, launch)
             exercise_recent(ui, files)
             exercise_line_numbers(ui, files)
@@ -1186,7 +1478,7 @@ def main():
             # A separate dirty document checks the Discard close branch.
             app = launch([str(executable)], "editor-discard")
             window = ui.editor()
-            ui.click(window, 120, 100)
+            ui.click(window, 120, 160)
             ui.type("discard on close")
             window = ui.editor(dirty=True)
             ui.close(window)
@@ -1202,6 +1494,16 @@ def main():
         finally:
             report = {
                 "result": result,
+                "scope": "user-guide" if args.user_guide_only else "editor-workflows",
+                "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+                "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()),
+                "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+                "assembly_sha256": (hashlib.sha256(executable.with_name(executable.name + ".dll").read_bytes()).hexdigest()
+                                    if executable.with_name(executable.name + ".dll").is_file() else None),
+                "launch_kind": ("supplied-AppImage-extraction" if args.executable and executable.suffix.lower() == ".appimage"
+                                else "supplied-executable" if args.executable else "source-build"),
+                "guide_files": guide_files,
+                "package_acceptance": "NOT TESTED: Production installation, update, and uninstall acceptance.",
                 "host": platform.freedesktop_os_release()["PRETTY_NAME"],
                 "architecture": platform.machine(),
                 "session": f"Xvfb {env['DISPLAY']}, GTK portal, private D-Bus",

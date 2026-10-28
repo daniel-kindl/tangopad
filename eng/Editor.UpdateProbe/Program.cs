@@ -21,10 +21,14 @@ internal static class Program
     private static void Main(string[] args)
     {
         VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
-        string? updateError = DesktopApplicationUpdater.WaitForPendingUpdate();
         string root = DesktopApplicationUpdater.GetDistributionDirectory() ?? throw new IOException("The probe must run from a native package.");
         string configurationPath = Path.Combine(root, ".tangopad-update-probe.json");
         ProbeConfiguration configuration = ReadConfiguration(configurationPath);
+        Trace(configuration, $"Started {Environment.ProcessPath}. Action: {configuration.Action}. Arguments: {string.Join(' ', args)}");
+        Trace(configuration, "Waiting for the native update handoff.");
+        AppDomain.CurrentDomain.UnhandledException += (_, error) => Trace(configuration, error.ExceptionObject.ToString() ?? "An unhandled exception occurred.");
+        string? updateError = DesktopApplicationUpdater.WaitForPendingUpdate();
+        Trace(configuration, "The native update handoff completed. Recovery: " + (updateError ?? "none"));
         if (args.Contains("--probe-secondary", StringComparer.Ordinal))
         {
             configuration = configuration with { Action = "hold", ResultPath = configuration.ResultPath + ".secondary" };
@@ -42,6 +46,7 @@ internal static class Program
         }
         AppStateStore state = new(statePath);
         state.Ready.GetAwaiter().GetResult();
+        Trace(configuration, "Application state is ready at " + statePath);
         if (state.StorageError is not null) { throw new IOException(state.StorageError); }
         if (configuration.Action == "initialize") { state.Preferences.Update(wordWrap: true, showLineNumbers: false, fontSize: 17); }
         using ProbeTransport handler = new(configurationPath);
@@ -67,14 +72,17 @@ internal static class Program
             IClassicDesktopStyleApplicationLifetime desktop = (IClassicDesktopStyleApplicationLifetime)Avalonia.Application.Current!.ApplicationLifetime!;
             EditorWindow window = (EditorWindow)desktop.MainWindow!;
             while (!window.IsVisible) { await Task.Delay(20).ConfigureAwait(true); }
+            Trace(configuration, "The editor window is visible.");
             if (updateError is not null)
             {
+                Trace(configuration, "Waiting for the recovery dialog.");
                 while (window.OwnedWindows.OfType<ErrorDialog>().SingleOrDefault() is not { IsVisible: true })
                 {
                     await Task.Delay(20).ConfigureAwait(true);
                 }
                 ErrorDialog dialog = window.OwnedWindows.OfType<ErrorDialog>().Single();
                 dialog.FindControl<Button>("OkButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Trace(configuration, "The recovery dialog was dismissed.");
             }
             await Task.WhenAll(window.ViewModel.InitializePreferencesAsync(), window.ViewModel.InitializeHistoryAsync()).ConfigureAwait(true);
             if (!await window.ViewModel.OpenPathAsync(configuration.DocumentPath).ConfigureAwait(true)) { throw new IOException("The probe could not open its document."); }
@@ -108,6 +116,7 @@ internal static class Program
                 bitmap.Save(Path.Combine(configuration.EvidenceDirectory, "window.png"), new PngBitmapEncoderOptions());
             }
             WriteReport(configuration.ResultPath, report);
+            Trace(configuration, "The probe report was written to " + configuration.ResultPath);
             if (configuration.Action == "hold")
             {
                 using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(75));
@@ -150,6 +159,13 @@ internal static class Program
     private static void WriteConfiguration(string path, ProbeConfiguration configuration)
     {
         WriteReport(path, configuration);
+    }
+
+    private static void Trace(ProbeConfiguration configuration, string message)
+    {
+        _ = Directory.CreateDirectory(configuration.EvidenceDirectory);
+        File.AppendAllText(Path.Combine(configuration.EvidenceDirectory, "startup.log"),
+            $"{DateTimeOffset.UtcNow:O} PID {Environment.ProcessId}: {message}{Environment.NewLine}");
     }
 
     private static void WriteReport<T>(string path, T value)

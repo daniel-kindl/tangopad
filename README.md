@@ -1,146 +1,60 @@
 # Tangopad
 
-Tangopad is the foundation for an open-source, offline-first desktop text and
-document editor for Windows, Linux, and macOS. The first planned formats are plain
-text and Markdown. The design prioritizes performance, reliability, and independent modules.
+Tangopad is an offline-first desktop editor for plain text, Markdown, and Redmine Textile.
+Edit local files, search and replace text, and preview markup beside its source.
+No account is required.
 
-Tangopad currently edits one plain-text document. New, Open, Save, and Save As
-use the existing document session and strict UTF-8 file store.
-Markdown source highlighting and an optional read-only preview are available.
-Open a `.md` or `.markdown` file, then select Show Preview. Select Hide Preview to
-restore the full-width editor. Links are inactive, and images show descriptions only.
-Open a `.textile` file for Redmine Textile source highlighting and an optional offline preview.
-Textile preview supports a bounded syntax baseline with native tables and inactive resource labels.
-Wiki captions and attachment names stay local text. Contents lists use local headings.
-Server and plugin macros show named placeholders.
-Show Preview stays available for Markdown files. Each format uses its own parser.
-[Textile highlighting](docs/textile-highlighting.md) lists the recognized source forms.
-[Textile preview](docs/textile-preview.md) lists rendered forms and limits.
-Large documents can exceed the [preview limits](docs/adr/0008-safe-markdown-preview.md).
-JSON, XML, XAML, YAML, CSV, and TSV files have visual source highlighting in the same text editor.
-See [structured-text highlighting](docs/structured-text-highlighting.md) for supported syntax and limits.
-Highlighting preserves the source text and adds no automatic formatting.
-Export and multiple tabs remain unimplemented.
+**Pre-release:** The first stable release, 1.0.0, is not yet published.
+Version 1.0.0 targets Windows x64, Linux x64, macOS x64, and macOS arm64.
+The 1.0.0 packages are not signed with a Windows or Apple certificate.
+Windows SmartScreen shows a warning for the Setup file.
+macOS Gatekeeper blocks the first open of the app.
+See [installation and platform limits](docs/user/install.md) before choosing a package.
 
-Install the exact .NET SDK from [global.json](global.json). Run the shared verification command from the repository root:
+![Tangopad on Linux with Markdown source on the left and a read-only preview on the right.](docs/user/media/markdown.png)
+
+Linux development build after the interface redesign. This is a real application capture.
+[Capture details and release review](docs/product-documentation.md) identify its source and validation limits.
+
+- Edit one UTF-8 document with undo, redo, explicit save, and unsaved-change confirmation.
+- Find literal text, whole words, or regular expressions. Replace all in one undo operation.
+- Highlight Markdown, Textile, JSON, XML, XAML, YAML, CSV, and TSV source.
+- Preview supported Markdown and Textile without loading images or following document links.
+- Choose light or dark appearance, Word Wrap, line numbers, and font zoom.
+- Reopen recent files and keep preferences in per-user or portable storage.
+
+## Get started
+
+Read the [user guide](docs/user/README.md) for installation, a first editing session,
+shortcuts, and troubleshooting. Use [GitHub Releases](https://github.com/daniel-kindl/tangopad/releases)
+for published artifacts when available. CI candidate artifacts are for testing.
+Read the [changelog](CHANGELOG.md) for merged changes awaiting release.
+
+There are no tabs, exports, autosave, or automatic recovery of unsaved document text.
+Save important work regularly. The [limitations](docs/user/troubleshooting.md#known-limitations)
+include preview bounds and outstanding accessibility checks.
+
+## Build and contribute
+
+Install the exact .NET SDK in [global.json](global.json).
+From the repository root, run:
 
 ```sh
 dotnet msbuild eng/verify.proj
-```
-
-The command checks locked dependencies, known vulnerabilities, formatting, static
-analysis, the Release build, architecture tests, and native editor startup.
-It requires network access to NuGet.
-Linux native startup needs an X11 display.
-The check starts Xvfb when no display is open and the host has the Xvfb command.
-[Native startup](docs/native-startup.md) records the supported hosts, native libraries, and results.
-
-To start the editor, run:
-
-```sh
 dotnet run --project src/Editor.App --configuration Release
 ```
 
-Type in the new document. Use Open to select a UTF-8 file.
-Use Save to write the document, or Save As to select another destination.
-Recent Files reopens up to ten recent destinations. Paths stay on this device.
-Select Clear Recent Files to clear the list. See [recent files](docs/recent-files.md)
-for storage locations, privacy, and failure behavior.
-An asterisk in the title marks unsaved changes. The title shows the full file path.
-New, Open, and window close ask whether to save unsaved changes.
-Cancel leaves the document open. Errors appear in a dialog.
+Verification requires NuGet network access and native desktop prerequisites.
+Read [the developer guide](docs/development.md) for Windows, Linux, and macOS setup,
+repository layout, CI, and release work.
+[CONTRIBUTING.md](CONTRIBUTING.md) defines the contribution and review workflow.
 
-| Action | Linux and Windows | macOS |
-| --- | --- | --- |
-| New | Ctrl+N | Command+N |
-| Open | Ctrl+O | Command+O |
-| Save | Ctrl+S | Command+S |
-| Save As | Ctrl+Shift+S | Command+Shift+S |
-| Find | Ctrl+F | Command+F |
-| Replace | Ctrl+H | Command+H |
-| Go To Line (editor focus) | Ctrl+G | Command+G |
-
-The Line numbers checkbox in the toolbar shows or hides the editor gutter. Numbers are enabled by default.
-The choice survives document changes and app restarts.
-Hiding numbers preserves logical line positions, text, and undo history.
-
-Word Wrap in the toolbar fits long lines to the editor width. It is off by default and
-preserves your choice across document changes and app restarts.
-Wrapping changes only the display. It preserves text, saved line endings, and undo history.
-Word Wrap, Line Numbers, and font size use local per-user storage.
-See [editor preferences](docs/editor-preferences.md) for presentation behavior.
-Preferences and recent paths share a versioned `state.bin` in the OS user-data directory.
-Use `--portable` or place `tangopad.portable` beside the application to keep state in
-its sibling `data/` directory. `--installed` overrides the marker.
-See [application state](docs/app-state.md) for locations, JSON migration, backup,
-and the data-preservation requirements for updates.
-
-Find searches literal text with optional case sensitivity. Enter finds the next match
-while focus is in a search field. Shift+Enter finds the previous match.
-Both directions wrap. Escape closes the panel and returns focus to the editor.
-Paste multiline text into either search field to preserve its exact line endings.
-Replace current changes only a selected match. Replace all replaces non-overlapping
-matches from left to right and reports the replacement count. One Undo restores the operation.
-[Search behavior](docs/find-replace.md) describes matching and command availability.
-
-Go To Line accepts whole numbers from 1 to 2147483647. Numbers beyond the last
-line go to the beginning of the last logical line. Wrapping does not change line numbers.
-Enter confirms the line. Escape, Cancel, or closing the dialog preserves the caret and selection.
-
-The bottom status bar shows the caret line and column, character count, and word count.
-Characters are Unicode scalar values. A supplementary character such as `😀` counts as one.
-A base letter and a combining mark count separately. CRLF counts as two characters.
-LF and CR each count as one. This is not a count of visible glyphs or grapheme clusters.
-Words are maximal sequences of non-whitespace Unicode scalar values separated by Unicode whitespace.
-Empty and whitespace-only documents have zero words. Tabs, CRLF, LF, CR, and other Unicode whitespace separate words.
-The policy counts plain text and Markdown source, including punctuation. It does not count rendered Markdown words or use language-aware segmentation.
-Both counts update after typing, paste, Find/Replace, undo, redo, Open, and New.
-Caret movement, selection, theme changes, and scrolling reuse the cached counts.
-Counting preserves the exact text without normalization.
-
-You can continue editing during a save. Edits after the saved snapshot remain dirty.
-Cancel operation requests cancellation of pending file I/O.
-Close an open file picker to complete a cancellation request.
-
-Files load as strict UTF-8. Saves write UTF-8 without an added BOM.
-Text and line endings remain unchanged. See [persistence rules](docs/adr/0006-local-text-persistence.md)
-for BOM handling, file replacement, and metadata limits.
-[Editor verification](docs/editor-verification.md) records tested behavior and desktop limits.
-
-The repository contains these modules and support directories:
-
-```text
-src/
-  Editor.App/                 Desktop startup and presentation boundary
-  Editor.Application/         Plain-text load and save use cases
-  Editor.Core/                Plain-text document behavior
-  Editor.Infrastructure/      Local UTF-8 file persistence
-  Editor.Formats.Markdown/    Bounded Markdown parser
-  Editor.Formats.Textile/     Bounded Textile parser
-  Editor.Preview/             Inert preview data
-tests/
-  Editor.App.Tests/           Presentation commands and editor control
-  Editor.Application.Tests/   Document load and save behavior
-  Editor.Infrastructure.Tests/ Real filesystem integration
-  Editor.Architecture.Tests/  Executable dependency policy
-  Editor.Core.Tests/          Document identity, text, and baseline
-  Editor.Formats.Markdown.Tests/ Markdown parser behavior
-  Editor.Formats.Textile.Tests/ Textile parser behavior
-  Editor.Desktop.SmokeTests/  Native editor startup
-eng/                         Verification and dependency policy
-docs/                        Architecture, decisions, research, and planned issues
-.github/                     CI and contribution templates
-```
-
-Read [architecture](docs/architecture.md) for module ownership and the dependency
-diagram. The [file placement rules](docs/architecture.md#file-placement) describe
-presentation directories and when to add feature folders.
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
-[Tooling research](docs/tooling-research.md) records version checks and optional
-agent skills. [Planned issues](docs/backlog.md) define M0 and M1 work.
-[Verification results](docs/bootstrap-verification.md) record the bootstrap checks.
-[Native startup](docs/native-startup.md) records the native startup check and its platform limits.
+[Report a bug](https://github.com/daniel-kindl/tangopad/issues/new/choose) with the
+application version, OS, steps, and expected result. Remove private document text
+and paths before attaching logs or screenshots.
+For a suspected vulnerability, follow the [security policy](SECURITY.md).
+Do not put exploit details or secrets in a public issue.
 
 Tangopad uses the [MIT license](LICENSE).
-
-See [release distribution and updates](docs/release-distribution.md) for candidate packages, update trust, storage preservation, and production activation requirements.
+It builds on Avalonia, AvaloniaEdit, CommunityToolkit.Mvvm, Markdig, Velopack, and Lucide icons.
+The [third-party notices](docs/licenses) accompany their applicable components.
