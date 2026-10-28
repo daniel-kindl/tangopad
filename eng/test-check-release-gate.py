@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Unit tests for the release gate. Every case without a full green update run must fail."""
+import json
+import os
 from pathlib import Path
 import runpy
+import subprocess
+import sys
+import tempfile
 import unittest
 
 ENG = Path(__file__).resolve().parent
@@ -101,6 +106,45 @@ class ReleaseGate(unittest.TestCase):
     def test_an_older_green_run_is_enough_when_a_newer_run_failed(self):
         api = Api([run(2, conclusion='failure'), run(1)], {1: green_jobs(), 2: []})
         self.assertEqual(1, self.check(api))
+
+
+FAKE_GH = """#!/usr/bin/env python3
+import json, os, sys
+endpoint = sys.argv[-1]
+with open(os.environ['FAKE_GH_LOG'], 'a') as log:
+    log.write(endpoint + '\\n')
+answers = json.loads(os.environ['FAKE_GH_ANSWERS'])
+key = 'jobs' if '/jobs' in endpoint else 'runs'
+print(json.dumps(answers[key]))
+"""
+
+
+class ReleaseGateProcess(unittest.TestCase):
+    """The gate as the release workflow runs it: a process that must exit non-zero to stop the release."""
+
+    def gate_process(self, runs, jobs):
+        directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        fake = directory / 'gh'
+        fake.write_text(FAKE_GH, encoding='utf-8')
+        fake.chmod(0o755)
+        log = directory / 'calls.txt'
+        environment = {**os.environ, 'PATH': f"{directory}{os.pathsep}{os.environ['PATH']}", 'FAKE_GH_LOG': str(log),
+                       'FAKE_GH_ANSWERS': json.dumps({'runs': {'workflow_runs': runs}, 'jobs': {'jobs': jobs}})}
+        completed = subprocess.run([sys.executable, str(ENG / 'check-release-gate.py'), '--repo', REPO, '--sha', SHA],
+                                   env=environment, capture_output=True, text=True, timeout=60, check=False)
+        return completed, log.read_text(encoding='utf-8') if log.exists() else ''
+
+    @unittest.skipIf(os.name == 'nt', 'The fake gh is a POSIX script.')
+    def test_gate_exits_non_zero_when_no_green_run_exists_for_the_packaged_commit(self):
+        completed, calls = self.gate_process([run(sha='b' * 40)], green_jobs())
+        self.assertNotEqual(0, completed.returncode, completed.stdout)
+        self.assertIn('No successful', completed.stderr)
+        self.assertIn(f'head_sha={SHA}', calls)
+
+    @unittest.skipIf(os.name == 'nt', 'The fake gh is a POSIX script.')
+    def test_gate_exits_zero_only_for_a_full_green_run_of_the_packaged_commit(self):
+        completed, _ = self.gate_process([run()], green_jobs())
+        self.assertEqual(0, completed.returncode, completed.stderr)
 
 
 if __name__ == '__main__':
