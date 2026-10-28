@@ -189,6 +189,7 @@ class AppImageScan(unittest.TestCase):
         self.module = scanner()
         self.globals = self.module['contains_marker'].__globals__
         self.globals['platform_system'] = lambda: 'Linux'
+        self.globals['sudo_available'] = lambda: True
         self.calls = []
 
     def fake(self, files=None, error=None):
@@ -273,7 +274,15 @@ class AppImageScan(unittest.TestCase):
         self.assertEqual(2, len(set(destinations)))
         self.assertFalse(any(path.exists() for path in destinations))
 
-    def test_real_extractor_isolates_the_network_and_does_not_run_the_app(self):
+    def test_extractor_command_is_the_exact_privilege_dropping_sandbox(self):
+        image = self.appimage()
+        self.assertEqual(
+            ['timeout', '--signal=KILL', '300', 'sudo', '-n', 'unshare', '--net', '--',
+             'setpriv', '--reuid=1234', '--regid=5678', '--clear-groups', '--no-new-privs',
+             '--inh-caps=-all', '--bounding-set=-all', '--', str(image), '--appimage-extract'],
+            self.module['extractor_command'](image, 1234, 5678, 300))
+
+    def test_real_extractor_uses_the_script_uid_and_gid_and_does_not_run_the_app(self):
         recorded = {}
 
         class FakeSubprocess:
@@ -290,20 +299,49 @@ class AppImageScan(unittest.TestCase):
         self.globals['subprocess'] = FakeSubprocess
         image = self.appimage()
         self.module['run_extractor'](image, self.directory, 30)
-        command = recorded['command']
-        self.assertEqual(['unshare', '--user', '--map-root-user', '--net', '--'], command[:5])
-        self.assertEqual([str(image), '--appimage-extract'], command[5:])
-        self.assertEqual(30, recorded['timeout'])
+        self.assertEqual(self.module['extractor_command'](image, os.getuid(), os.getgid(), 30), recorded['command'])
+        self.assertGreater(recorded['timeout'], 30)
         self.assertTrue(recorded['check'])
         self.assertEqual(str(self.directory), str(recorded['cwd']))
         self.assertNotIn('APPIMAGE_EXTRACT_AND_RUN', recorded['env'])
         self.assertFalse({'http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY'} & set(recorded['env']))
 
-    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('unshare'), 'needs Linux')
+    def test_missing_sudo_fails_closed_and_does_not_extract(self):
+        self.fake({'AppRun': b'run'})
+        self.globals['sudo_available'] = lambda: False
+        with self.assertRaisesRegex(ValueError, 'sudo -n'):
+            self.module['require_absent']([self.appimage()])
+        self.assertEqual([], self.calls)
+
+    def test_sudo_check_is_non_interactive(self):
+        recorded = []
+        self.globals['shutil'] = type('S', (), {'which': staticmethod(lambda name: '/usr/bin/sudo'),
+                                                'rmtree': staticmethod(shutil.rmtree)})
+        class FakeSubprocess:
+            DEVNULL = subprocess.DEVNULL
+            @staticmethod
+            def run(command, **options):
+                recorded.append(command)
+                return subprocess.CompletedProcess(command, 1)
+        self.globals['subprocess'] = FakeSubprocess
+        self.assertFalse(self.module['sudo_available']())
+        self.assertEqual([['sudo', '-n', 'true']], recorded)
+        self.globals['shutil'] = type('S', (), {'which': staticmethod(lambda name: None)})
+        self.assertFalse(self.module['sudo_available']())
+
+    def test_extracted_files_not_owned_by_the_runner_uid_fail_closed(self):
+        self.fake({'AppRun': b'run'})
+        self.globals['runner_uid'] = lambda: os.getuid() + 1
+        with self.assertRaisesRegex(ValueError, 'owned by the runner user'):
+            self.module['require_absent']([self.appimage()])
+
+    @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('setpriv'), 'needs Linux')
     def test_real_extraction_of_a_file_that_is_not_an_appimage_fails_closed(self):
+        del self.globals['sudo_available']
+        self.module = scanner()
         image = self.appimage()
         image.chmod(0o755)
-        with self.assertRaisesRegex(ValueError, 'extraction failed'):
+        with self.assertRaisesRegex(ValueError, 'extraction failed|sudo -n'):
             self.module['require_absent']([image])
 
 
