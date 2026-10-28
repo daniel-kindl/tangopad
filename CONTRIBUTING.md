@@ -2,13 +2,13 @@
 
 ## Prepare a change
 
-1. Create a GitHub Issue with a bounded outcome and acceptance criteria.
+1. Create a GitHub Issue. Follow [dkstack review and merge](https://github.com/daniel-kindl/dkstack/blob/v1/workflow/review-and-merge.md).
 2. Assign the issue to an appropriate milestone from [the backlog](docs/backlog.md).
 3. Create a short-lived `feat/<issue>-<name>`, `fix/<issue>-<name>`, or `chore/<issue>-<name>` branch from `dev`.
 4. Read [architecture](docs/architecture.md) before changing module ownership or dependencies.
 5. Choose the owning layer and directory from the [placement rules](docs/architecture.md#file-placement).
 6. Record directory and namespace placement in the issue.
-7. Implement the smallest change that satisfies the issue.
+7. Implement the change. Follow [dkstack practices](https://github.com/daniel-kindl/dkstack/blob/v1/coding/practices.md).
 
 `main` holds stable releases. `dev` integrates reviewed changes and is the default
 branch. Target `dev` for normal pull requests. Merge a reviewed release pull
@@ -150,8 +150,8 @@ adapter exists. Native UI smoke checks and performance benchmarks need observabl
 behavior and platform-specific acceptance criteria. Use native startup tests for
 lifecycle checks. Use headless tests for control behavior.
 
-Use ASD-STE100 principles for technical prose. Keep terms consistent and sentences
-short. State the actor and one instruction per sentence. Preserve uncertainty,
+Follow [dkstack writing](https://github.com/daniel-kindl/dkstack/blob/v1/writing/index.md) for technical prose.
+State the actor in each instruction. Preserve uncertainty,
 modality, technical meaning, and exact API names. These rules do not claim formal
 dictionary compliance. For product text, first write clear technical wording,
 then revise it for natural language without changing its meaning.

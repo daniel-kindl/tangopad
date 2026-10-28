@@ -92,7 +92,7 @@ Reviewers must check new UI dependencies and directory placement.
 A new exception needs a rule ID, the smallest applicable scope, a reason, and review
 in the issue or pull request. Record persistent exceptions here or beside the code.
 Do not add broad pragmas, blanket `NoWarn`, global analyzer disabling, or a general
-formatter exclusion. Do not suppress genuine defects to make verification pass.
+formatter exclusion. Follow [dkstack quality gates](https://github.com/daniel-kindl/dkstack/blob/v1/coding/quality-gates.md).
 Prefer correcting the source. Generated source and external or platform API contracts
 can justify a narrow exception when the diagnostic cannot be corrected locally.
 The SDK defaults listed above are the only current warning exclusions.
