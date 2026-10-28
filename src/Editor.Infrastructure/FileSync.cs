@@ -50,6 +50,7 @@ internal sealed partial class FileSync : IFileSync
         {
             Architecture.X64 => LinuxDirectory,
             Architecture.Arm64 or Architecture.Arm => LinuxArmDirectory,
+            // These CPUs have no tested O_DIRECTORY value, so the folder flush is skipped and the save reports Flushed=false.
             Architecture.X86 or Architecture.Wasm or Architecture.S390x or Architecture.LoongArch64
                 or Architecture.Armv6 or Architecture.Ppc64le or Architecture.RiscV64 => null,
             _ => null,
