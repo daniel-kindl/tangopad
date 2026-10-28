@@ -11,11 +11,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    # Nothing builds or publishes until the real update passed on all 4 targets for this commit.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require a green real-update run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 eng/check-release-gate.py --repo "${{ github.repository }}" --sha "${{ github.sha }}"
   package:
+    needs: gate
     if: github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     environment: release
     timeout-minutes: 60
+    env:
+      # The build refuses the test-only update hook when this is set.
+      TANGOPAD_RELEASE_BUILD: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -58,6 +78,8 @@ jobs:
         run: python eng/package-release.py --rid ${{ matrix.rid }} --production
       - name: Check native editor updates and recovery
         run: python eng/check-native-update.py --rid ${{ matrix.rid }} --recovery-attempts 5
+      - name: Install and launch the real package
+        run: python eng/check-package-launch.py --rid ${{ matrix.rid }}
       - name: Collect native evidence
         shell: python
         run: |
@@ -72,6 +94,14 @@ jobs:
         with:
           name: native-update-${{ matrix.rid }}
           path: artifacts/native-update/${{ matrix.rid }}/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload package launch evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-launch-${{ matrix.rid }}
+          path: artifacts/package-launch/${{ matrix.rid }}/
           if-no-files-found: warn
           retention-days: 7
       - name: Upload production packages
