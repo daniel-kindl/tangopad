@@ -13,6 +13,7 @@ import runpy
 _package = runpy.run_path(str(Path(__file__).with_name("package-release.py")))
 RUNTIMES, ROOT, run, version = (_package[name] for name in ("RUNTIMES", "ROOT", "run", "version"))
 NOTES = runpy.run_path(str(ROOT / "eng/release-notes.py"))
+MARKER = runpy.run_path(str(ROOT / "eng/update-test-marker.py"))
 
 
 def validate_packages(packages, target):
@@ -77,6 +78,9 @@ def validate_packages(packages, target):
         package = directory / asset["FileName"]
         if package.stat().st_size != asset["Size"] or hashlib.sha256(package.read_bytes()).hexdigest().upper() != asset["SHA256"].upper():
             raise ValueError("The package does not match its signed metadata.")
+        if manifest.get("update_test") not in (None, False):
+            raise ValueError("Update-test packages cannot be published.")
+        MARKER["require_absent"](MARKER["zip_artifacts"](directory))
         if runtime == "win-x64":
             if any(result.get("replacement_after_backup_recovered") is not True for result in evidence):
                 raise ValueError("Windows replacement failure after backup requires recovery evidence in both modes.")

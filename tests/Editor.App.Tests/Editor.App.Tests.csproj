@@ -9,5 +9,7 @@
     <ProjectReference Include="../../src/Editor.App/Editor.App.csproj" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Avalonia.Headless" />
+    <!-- The test-only forwarder is not part of a default editor build. The tests compile its source here. -->
+    <Compile Include="../../src/Editor.App/UpdateTest/LoopbackForwarder.cs" Link="Updates/LoopbackForwarder.cs" />
   </ItemGroup>
 </Project>
