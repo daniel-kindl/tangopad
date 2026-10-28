@@ -7,6 +7,8 @@ readonly MAX_TITLE_LENGTH=50
 # Count Unicode code points in UTF-8 text. The count does not use the locale
 # of the caller, because C.UTF-8 does not exist on all runners.
 # Each code point has one byte that is not a continuation byte (0x80 to 0xBF).
+# This count is exact only for valid UTF-8. GitHub always sends the title as
+# valid UTF-8, so invalid input cannot reach this check.
 character_count() {
   local LC_ALL=C
   local lead_bytes=${1//[$'\x80'-$'\xbf']/}
