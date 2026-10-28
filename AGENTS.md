@@ -28,7 +28,8 @@ dkstack rules win. tangopad differs only through the exceptions in
 
 - Agents never use the owner bypass of the ruleset. See
   [GitHub integration safeguards](CONTRIBUTING.md#github-integration-safeguards).
-  All bots use the `daniel-kindl` account, so the ruleset cannot stop them.
+  All bots use the `daniel-kindl` account, which has the owner bypass,
+  so only this rule stops a bot from using it.
   This is a dkstack safety rule, not an exception.
 - `.github/workflows/release.yml` ("Prepare draft release") is a release workflow.
   Only Daniel starts it. A release OK never covers this workflow.
