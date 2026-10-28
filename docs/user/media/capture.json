@@ -1,9 +1,14 @@
 {
-  "sourceCommit": "12ec809ef5c33c73902f1195a81155bc819028ae",
+  "sourceCommit": "953fa9b687a7cf74a06b4ca4c6262890df7bb851",
   "sourceDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "executableSha256": "2a5ae6676a31000450ffbea3bbc12ebf611ab6a768dc5829df35f23fb76556af",
-  "assemblySha256": "a16dd3ae2d27cf9e11b11201a6054ffae359f2406e967660120075808506152a",
-  "host": "Fedora Linux 44 (Container Image)",
+  "executableSha256": "6e495c9c48335cd0efe777e5f0082b33a2c5feed7a2330bfd80b15927aa60225",
+  "assemblySha256": "6e495c9c48335cd0efe777e5f0082b33a2c5feed7a2330bfd80b15927aa60225",
+  "build": "Package candidates (packages.yml), linux-x64 AppImage",
+  "buildRun": "https://github.com/daniel-kindl/tangopad/actions/runs/40674101568",
+  "buildArtifact": "candidate-linux-x64",
+  "candidateAppImage": "TangopadDesktop-linux-x64.AppImage",
+  "candidateAppImageSha256": "b1f44045e148c3f6b0b46a02a70d84c4f1558795cb52c3de8735ba9f558c9610",
+  "host": "Debian GNU/Linux 13 (trixie)",
   "architecture": "x86_64",
   "session": "Xvfb, X11, 100% scale, Light, 1040 x 760",
   "sample": "docs/user/samples/field-notes.md",
@@ -14,13 +19,13 @@
       "file": "markdown.png",
       "width": 1040,
       "height": 760,
-      "sha256": "920eeda16f6e6efe0d4735679d81b5c193423e5639047944169346fe1b6c4b7f"
+      "sha256": "069b69f9a8ea907ddbcc394556f42708615d982b15d13825552fe7c28c4b233d"
     },
     {
       "file": "search.png",
       "width": 1040,
       "height": 760,
-      "sha256": "8d5691dc84a5aa926a936438df5f764a3d3bc59eb1d183ef6361ce50f6e286d9"
+      "sha256": "3cedfdd3daddd358bcf31127c331fd09e0fd5afa1d0d9c4b42e62d67e17f3d60"
     }
   ]
 }

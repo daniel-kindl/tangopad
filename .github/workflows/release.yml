@@ -11,11 +11,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    # Nothing builds or publishes until the real update passed on all 4 targets for this commit.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require a green real-update run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 eng/check-release-gate.py --repo "${{ github.repository }}" --sha "${{ github.sha }}"
   package:
+    needs: gate
     if: github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     environment: release
     timeout-minutes: 60
+    env:
+      # The build refuses the test-only update hook when this is set.
+      TANGOPAD_RELEASE_BUILD: "1"
     strategy:
       fail-fast: false
       matrix:

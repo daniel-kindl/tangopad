@@ -148,6 +148,8 @@ class PackageLaunchChecks(unittest.TestCase):
             CHECK['install']('osx-x64', Path('a.pkg'), resources, home, home=home)
             CHECK['install']('win-x64', Path('Setup.exe'), resources, home, home=home)
             CHECK['run_smoke'](['dotnet', 'test'], {})
+            CHECK['source_commit']()
+        self.assertIn(['git', 'rev-parse', 'HEAD'], [call[0] for call in fake.calls])
         for command, options in fake.calls:
             self.assertGreater(options.get('timeout', 0), 0, command)
             self.assertLessEqual(options['timeout'], 900, command)

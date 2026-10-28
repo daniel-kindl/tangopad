@@ -185,5 +185,49 @@ class ReleaseValidationTests(unittest.TestCase):
             self.validate(self.packages, self.commit)
 
 
+    def test_signed_update_test_package_is_rejected_by_the_marker_scan(self):
+        # Every signature and digest is valid. Only the marker inside the deflated package shows the test build.
+        marker = "Tangopad.UpdateTestHook.v1"
+        for runtime, encoding in (("linux-x64", "utf-16-le"), ("osx-arm64", "utf-8")):
+            with self.subTest(runtime=runtime):
+                path = self.packages / f"{runtime}/TangopadDesktop-{self.version}-{runtime}-full.nupkg"
+                original = path.read_bytes()
+                with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+                    archive.writestr("lib/app/Editor.App", b"MZ" + (marker * 3).encode(encoding))
+                self.assertNotIn(marker.encode(encoding), path.read_bytes())
+                feed = self.packages / f"{runtime}/releases.{runtime}.json"
+                metadata = json.loads(feed.read_bytes())
+                metadata["Assets"][0].update(Size=path.stat().st_size, SHA256=hashlib.sha256(path.read_bytes()).hexdigest().upper())
+                feed.write_text(json.dumps(metadata), encoding="utf-8")
+                self.sign(feed)
+                self.write_manifest(runtime)
+                try:
+                    with self.assertRaisesRegex(ValueError, "update-test marker"):
+                        self.validate(self.packages, self.commit)
+                finally:
+                    path.write_bytes(original)
+                    metadata["Assets"][0].update(Size=len(original), SHA256=hashlib.sha256(original).hexdigest().upper())
+                    feed.write_text(json.dumps(metadata), encoding="utf-8")
+                    self.sign(feed)
+                    self.write_manifest(runtime)
+
+    def test_signed_update_test_portable_archive_is_rejected(self):
+        path = self.packages / "win-x64/TangopadDesktop-win-x64-Portable.zip"
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("current/Editor.App.exe", "Tangopad.UpdateTestHook.v1".encode("utf-16-le"))
+        self.write_manifest("win-x64")
+        with self.assertRaisesRegex(ValueError, "update-test marker"):
+            self.validate(self.packages, self.commit)
+
+    def test_signed_update_test_manifest_is_rejected(self):
+        manifest = self.packages / "linux-x64/package.linux-x64.json"
+        content = json.loads(manifest.read_bytes())
+        content["update_test"] = True
+        manifest.write_text(json.dumps(content), encoding="utf-8")
+        self.sign(manifest)
+        with self.assertRaisesRegex(ValueError, "Update-test packages"):
+            self.validate(self.packages, self.commit)
+
+
 if __name__ == "__main__":
     unittest.main()

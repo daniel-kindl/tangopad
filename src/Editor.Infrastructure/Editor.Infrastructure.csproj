@@ -7,6 +7,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UpdatePublicKeyPath Condition="'$(UpdatePublicKeyPath)' == ''">$(MSBuildThisFileDirectory)../../eng/release/update-public-key.pem</UpdatePublicKeyPath>
   </PropertyGroup>
+  <!-- Only an update-test build lets the editor call the internal updater constructor. Production assemblies do not change. -->
+  <ItemGroup Condition="'$(TangopadUpdateTest)' == 'true'">
+    <InternalsVisibleTo Include="Editor.App" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Velopack" />
     <EmbeddedResource Include="$(UpdatePublicKeyPath)" LogicalName="Tangopad.UpdatePublicKey" Condition="Exists('$(UpdatePublicKeyPath)')" />
