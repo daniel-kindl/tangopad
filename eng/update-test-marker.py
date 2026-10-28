@@ -7,7 +7,8 @@ the marker in UTF-8 (assembly metadata) and in UTF-16 (the IL string literal).
 
 The Linux package keeps the app inside an AppImage with a compressed SquashFS image. The scan
 extracts each AppImage with its own runtime (--appimage-extract) into a fresh temporary
-directory, without network and with a timeout, and scans the extracted files. It never runs the
+directory, without network and with a timeout. sudo creates only the network namespace and
+setpriv drops all privileges before the extraction, and scans the extracted files. It never runs the
 app. The scan fails closed: on a host that is not Linux, when the extraction fails or times out,
 and when it gives no files.
 """
@@ -34,17 +35,38 @@ def is_appimage(content):
     return content[:4] == b"\x7fELF" and content[8:11] == b"AI\x02"
 
 
+def extractor_command(image, uid, gid, seconds):
+    """Root creates only the network namespace. setpriv then drops to the runner user before the extraction."""
+    return ["timeout", "--signal=KILL", str(seconds), "sudo", "-n", "unshare", "--net", "--",
+            "setpriv", f"--reuid={uid}", f"--regid={gid}", "--clear-groups", "--no-new-privs",
+            "--inh-caps=-all", "--bounding-set=-all", "--", str(image), "--appimage-extract"]
+
+
+def sudo_available():
+    """Return True only when sudo runs without a password prompt."""
+    if shutil.which("sudo") is None:
+        return False
+    return subprocess.run(["sudo", "-n", "true"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode == 0
+
+
+def runner_uid():
+    return os.getuid()
+
+
 def run_extractor(image, destination, timeout):
     """Extract an AppImage with its own runtime. No network, no proxy, a timeout, and the app does not run."""
     environment = {"PATH": "/usr/bin:/bin", "HOME": str(destination), "LANG": "C.UTF-8"}
-    subprocess.run(["unshare", "--user", "--map-root-user", "--net", "--", str(image), "--appimage-extract"],
-                   cwd=destination, env=environment, timeout=timeout, check=True,
+    subprocess.run(extractor_command(image, os.getuid(), os.getgid(), timeout),
+                   cwd=destination, env=environment, timeout=timeout + 30, check=True,
                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def _appimage_contains(content, depth):
     if platform_system() != "Linux":
         raise ValueError("The AppImage marker scan runs only on Linux. It cannot pass on another host.")
+    if not sudo_available():
+        raise ValueError("The AppImage marker scan needs sudo -n for the network sandbox. It cannot pass without it.")
     work = Path(tempfile.mkdtemp(prefix="tangopad-marker-scan-"))
     try:
         image = work / "package.AppImage"
@@ -62,6 +84,9 @@ def _appimage_contains(content, depth):
         files = [path for path in (output / "squashfs-root").rglob("*") if path.is_file() and not path.is_symlink()]
         if not files:
             raise ValueError("The AppImage extraction gave no files, so the marker scan cannot pass.")
+        owner = runner_uid()
+        if any(path.lstat().st_uid != owner for path in files):
+            raise ValueError("The extracted files are not owned by the runner user, so the privilege drop failed.")
         return any(_contains(path.read_bytes(), depth + 1) for path in files)
     finally:
         shutil.rmtree(work, ignore_errors=True)
