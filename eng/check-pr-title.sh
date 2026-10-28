@@ -2,9 +2,18 @@
 # This file is the pull request title rule.
 # Call this file from the pull request workflow. Do not copy the rule.
 set -eu -o pipefail
-# LC_ALL=C makes ${#title} count bytes, not characters.
-export LC_ALL=C
 readonly MAX_TITLE_LENGTH=50
+
+# Count Unicode code points in UTF-8 text. The count does not use the locale
+# of the caller, because C.UTF-8 does not exist on all runners.
+# Each code point has one byte that is not a continuation byte (0x80 to 0xBF).
+# This count is exact only for valid UTF-8. GitHub always sends the title as
+# valid UTF-8, so invalid input cannot reach this check.
+character_count() {
+  local LC_ALL=C
+  local lead_bytes=${1//[$'\x80'-$'\xbf']/}
+  printf '%s' "${#lead_bytes}"
+}
 
 usage() {
   printf '%s\n' \
@@ -32,7 +41,7 @@ title_matches() {
   if [[ $title == *$'\n'* || $title == *$'\r'* ]]; then
     return 1
   fi
-  if (( ${#title} > MAX_TITLE_LENGTH )); then
+  if (( $(character_count "$title") > MAX_TITLE_LENGTH )); then
     return 1
   fi
   [[ $title =~ $pattern ]]
@@ -114,7 +123,7 @@ reject_title() {
     'Write a description with visible text.' \
     'Do not add leading or trailing whitespace.' \
     'The title must be one line.' \
-    "The title must be ${MAX_TITLE_LENGTH} bytes or fewer. The title has ${#TITLE} bytes." \
+    "The title must be ${MAX_TITLE_LENGTH} characters or fewer. The title has $(character_count "$TITLE") characters." \
     "Received title: $(display_title "$TITLE")" >&2
 }
 
