@@ -145,6 +145,70 @@ public sealed class UpdateSourceTests
         }
     }
 
+    /// <summary>A package body that sends bytes and then stops is cancelled after one idle window.</summary>
+    [Fact]
+    public async Task PackageStallAfterBytesIsCancelled()
+    {
+        using ChunkedStream body = new(chunks: 1, TimeSpan.Zero, stallAfterChunks: true);
+        using Handler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) });
+        using HttpClient client = new(handler, disposeHandler: false) { Timeout = TimeSpan.FromMilliseconds(500) };
+        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client);
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            Task download = source.DownloadReleaseEntry(new Logger(), PackageAsset(3), path, _ => { }, TestContext.Current.CancellationToken);
+            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => download.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ConfigureAwait(true);
+            Assert.Equal(1, body.Sent);
+            Assert.True(body.Disposed);
+        }
+        finally { File.Delete(path); }
+    }
+
+    /// <summary>The feed and the signature share one deadline, so slow reads that each fit the timeout still fail together.</summary>
+    [Fact]
+    public async Task FeedAndSignatureShareOneDeadline()
+    {
+        using Handler handler = new(request => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new ChunkedStream(1, TimeSpan.FromMilliseconds(700), stallAfterChunks: false))
+        });
+        using HttpClient client = new(handler, disposeHandler: false) { Timeout = TimeSpan.FromMilliseconds(1000) };
+        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client);
+        Task check = source.GetReleaseFeed(new Logger(), "TangopadDesktop", "linux-x64", null, null);
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => check.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ConfigureAwait(true);
+    }
+
+    private static VelopackAsset PackageAsset(long size)
+    {
+        return new() { Version = SemanticVersion.Parse("0.2.0"), FileName = "TangopadDesktop-0.2.0-linux-x64-full.nupkg", Size = size };
+    }
+
+    /// <summary>Sends one zero byte per read after a delay, then ends or stalls.</summary>
+    private sealed class ChunkedStream(int chunks, TimeSpan delay, bool stallAfterChunks) : MemoryStream
+    {
+        internal int Sent { get; private set; }
+        internal bool Disposed { get; private set; }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (Sent == chunks)
+            {
+                if (stallAfterChunks) { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false); }
+                return 0;
+            }
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            buffer.Span[0] = 0;
+            Sent++;
+            return 1;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
     private sealed class StalledStream : MemoryStream
     {
         internal TaskCompletionSource ReadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
