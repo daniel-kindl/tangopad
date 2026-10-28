@@ -20,8 +20,16 @@ internal sealed partial class FileSync : IFileSync
 {
     private const int ReadOnly = 0;
 
-    /// <summary>Gets the flags for the folder open.</summary>
-    internal static int DirectoryOpenFlags => ReadOnly;
+    // The flag values differ between the systems: see fcntl.h on Linux (x64 and arm64) and on macOS.
+    private const int LinuxDirectory = 0x0001_0000;
+    private const int LinuxCloseOnExec = 0x0008_0000;
+    private const int MacDirectory = 0x0010_0000;
+    private const int MacCloseOnExec = 0x0100_0000;
+
+    /// <summary>Gets the flags for the folder open: read only, folders only and close on exec.</summary>
+    internal static int DirectoryOpenFlags { get; } = OperatingSystem.IsMacOS()
+        ? ReadOnly | MacDirectory | MacCloseOnExec
+        : ReadOnly | LinuxDirectory | LinuxCloseOnExec;
 
     /// <summary>Gets the shared instance.</summary>
     public static FileSync Default { get; } = new();
@@ -30,6 +38,8 @@ internal sealed partial class FileSync : IFileSync
     public void FlushFile(FileStream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
+
+        // Flush(true) calls fsync on Unix and FlushFileBuffers on Windows. No test can observe that call.
         stream.Flush(flushToDisk: true);
     }
 
@@ -42,7 +52,7 @@ internal sealed partial class FileSync : IFileSync
             return;
         }
 
-        int descriptor = NativeMethods.Open(path, ReadOnly);
+        int descriptor = NativeMethods.Open(path, DirectoryOpenFlags);
         if (descriptor < 0)
         {
             throw new IOException($"The folder '{path}' could not be opened to flush it (error {Marshal.GetLastPInvokeError()}).");
