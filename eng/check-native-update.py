@@ -26,6 +26,33 @@ def run(*arguments, **kwargs):
     return subprocess.run([str(arg) for arg in arguments], check=True, cwd=ROOT, **kwargs)
 
 
+PACK_TIMEOUT = 900
+PACK_LOG_TAIL = 16000
+
+
+def run_pack(command, log, timeout=PACK_TIMEOUT):
+    """Run one vpk pack call. Keep its full output in the evidence log and print the tail only on failure."""
+    command = [str(arg) for arg in command]
+    failure = None
+    try:
+        result = subprocess.run(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, check=False)
+        output = result.stdout
+        if result.returncode != 0:
+            failure = f"exit code {result.returncode}"
+    except subprocess.TimeoutExpired as error:
+        output = error.stdout or error.output or b""
+        failure = f"time limit of {timeout} s"
+    text = output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(text, encoding="utf-8")
+    if failure is None:
+        return
+    print(f"vpk pack failed with {failure}: {' '.join(command)}", flush=True)
+    print(f"Last {PACK_LOG_TAIL} characters of the output. The full output is in {log}.", flush=True)
+    print(text[-PACK_LOG_TAIL:], flush=True)
+    raise RuntimeError(f"vpk pack failed with {failure}.")
+
+
 def extract_zip(archive, destination):
     with zipfile.ZipFile(archive) as package:
         for entry in package.infolist():
@@ -211,7 +238,7 @@ def main():
                 command += ["--icon", str(ROOT / "eng/release/tangopad.svg")]
             if rid.startswith("osx-"):
                 command += ["--noInst"]
-            run(*command)
+            run_pack(command, evidence / f"vpk-pack-{version}.log")
             if rid.startswith("osx-"):
                 runpy.run_path(str(ROOT / "eng/package-macos-installer.py"))["build"](
                     feed, rid, "TangopadUpdateProbe", "Tangopad Update Probe", version)

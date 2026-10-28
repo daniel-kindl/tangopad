@@ -17,6 +17,7 @@ on:
       - '.config/dotnet-tools.json'
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
+      - 'eng/test-check-native-update.py'
       - 'eng/check-native-editor.py'
       - 'eng/*package-launch.py'
       - 'eng/*package-update.py'
@@ -86,6 +87,8 @@ jobs:
         run: |
           python eng/test-release-notes.py
           python eng/release-notes.py
+      - name: Check vpk pack output capture
+        run: python eng/test-check-native-update.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages
