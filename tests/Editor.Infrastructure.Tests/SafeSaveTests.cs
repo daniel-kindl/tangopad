@@ -32,6 +32,122 @@ public sealed class SafeSaveTests : IDisposable
         Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>Checks that a save removes the setuid, setgid and sticky bits and keeps the permission bits.</summary>
+    /// <param name="mode">The octal file mode of the existing file.</param>
+    /// <param name="expected">The octal file mode after the save.</param>
+    [Theory]
+    [InlineData(0b100_111_101_101, 0b111_101_101)]
+    [InlineData(0b010_111_101_101, 0b111_101_101)]
+    [InlineData(0b001_111_101_101, 0b111_101_101)]
+    [InlineData(0b111_111_111_111, 0b111_111_111)]
+    public async Task SaveRemovesSetuidSetgidAndSticky(int mode, int expected)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Unix file modes do not apply on Windows.");
+            return;
+        }
+
+        string path = Path.Combine(directory, "special.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        File.SetUnixFileMode(path, (UnixFileMode)mode);
+        if (File.GetUnixFileMode(path) != (UnixFileMode)mode)
+        {
+            Assert.Skip("This file system does not keep the special mode bits.");
+            return;
+        }
+
+        _ = await store.SaveAsync(path, "new", null, true, TestContext.Current.CancellationToken);
+
+        Assert.Equal((UnixFileMode)expected, File.GetUnixFileMode(path));
+        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>Checks that a save through a relative link or a chain of links uses the folder of the final target.</summary>
+    /// <param name="chain">Whether the saved link points to a second link.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SaveThroughRelativeLinkUsesTheFolderOfTheFinalTarget(bool chain)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows keeps the previous save path. Links are followed only on Unix.");
+            return;
+        }
+
+        string real = Directory.CreateDirectory(Path.Combine(directory, "real")).FullName;
+        string middle = Directory.CreateDirectory(Path.Combine(directory, "middle")).FullName;
+        string links = Directory.CreateDirectory(Path.Combine(directory, "links")).FullName;
+        string target = Path.Combine(real, "target.txt");
+        string link = Path.Combine(links, "link.txt");
+        await File.WriteAllTextAsync(target, "old", TestContext.Current.CancellationToken);
+        string next = Path.Combine(middle, "next.txt");
+        string first = chain ? "../middle/next.txt" : "../real/target.txt";
+        if (chain)
+        {
+            _ = File.CreateSymbolicLink(next, "../real/target.txt");
+        }
+
+        _ = File.CreateSymbolicLink(link, first);
+
+        RecordingSync sync = new(target);
+        string? revision = await new FileTextDocumentStore(sync).SaveAsync(link, "new", null, true, TestContext.Current.CancellationToken);
+
+        Assert.Equal(first, new FileInfo(link).LinkTarget);
+        if (chain)
+        {
+            Assert.Equal("../real/target.txt", new FileInfo(next).LinkTarget);
+        }
+
+        Assert.Equal("new", await File.ReadAllTextAsync(target, TestContext.Current.CancellationToken));
+        Assert.Equal([target], Directory.GetFileSystemEntries(real));
+        Assert.Equal([link], Directory.GetFileSystemEntries(links));
+        Assert.Equal(chain ? [next] : [], Directory.GetFileSystemEntries(middle));
+        Assert.Equal(["file old 3", "folder " + real + " new"], sync.Events);
+        Assert.StartsWith(link + "\n", revision, StringComparison.Ordinal);
+    }
+
+    /// <summary>Checks that a failed folder flush after the rename keeps the new content and the modified state.</summary>
+    [Fact]
+    public async Task FolderFlushFailureAfterRenameSaysTheFileWasSaved()
+    {
+        string path = Path.Combine(directory, "flush.txt");
+        await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
+        IOException cause = new("disk");
+        FileTextDocumentStore failing = new(new FailingFolderSync(cause));
+        Editor.Application.DocumentSession session = await Editor.Application.DocumentSession.LoadAsync(failing, path, TestContext.Current.CancellationToken);
+        session.Document.ReplaceText("new");
+
+        IOException failure = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(FileTextDocumentStore.SavedButNotFlushedMessage, failure.Message);
+        Assert.Equal("The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", failure.Message);
+        Assert.Same(cause, failure.InnerException);
+        Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal([path], Directory.GetFileSystemEntries(directory));
+        Assert.True(session.Document.IsDirty);
+        Assert.Equal(path, session.Destination);
+    }
+
+    /// <summary>Checks that the default sync opens only folders, with the flags of the current system.</summary>
+    [Fact]
+    public async Task DefaultSyncOpensOnlyFolders()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows has no folder flush.");
+            return;
+        }
+
+        int expected = OperatingSystem.IsMacOS() ? 0x0010_0000 | 0x0100_0000 : 0x0001_0000 | 0x0008_0000;
+        Assert.Equal(expected, FileSync.DirectoryOpenFlags);
+        string file = Path.Combine(directory, "file.txt");
+        await File.WriteAllTextAsync(file, "text", TestContext.Current.CancellationToken);
+
+        _ = Assert.ThrowsAny<IOException>(() => FileSync.Default.FlushDirectory(file));
+    }
+
     /// <summary>Checks that a save through a symbolic link keeps the link and changes the target file.</summary>
     [Fact]
     public async Task SaveThroughSymbolicLinkChangesTheTarget()
@@ -153,6 +269,20 @@ public sealed class SafeSaveTests : IDisposable
     public void Dispose()
     {
         Directory.Delete(directory, recursive: true);
+    }
+
+    /// <summary>Flushes files and fails each folder flush.</summary>
+    private sealed class FailingFolderSync(IOException failure) : IFileSync
+    {
+        public void FlushFile(FileStream stream)
+        {
+            stream.Flush(flushToDisk: true);
+        }
+
+        public void FlushDirectory(string path)
+        {
+            throw failure;
+        }
     }
 
     /// <summary>Records each flush with the state of the destination at that time.</summary>

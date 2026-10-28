@@ -20,6 +20,9 @@ internal sealed partial class FileSync : IFileSync
 {
     private const int ReadOnly = 0;
 
+    /// <summary>Gets the flags for the folder open.</summary>
+    internal static int DirectoryOpenFlags => ReadOnly;
+
     /// <summary>Gets the shared instance.</summary>
     public static FileSync Default { get; } = new();
 

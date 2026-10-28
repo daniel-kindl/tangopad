@@ -14,6 +14,9 @@ namespace Editor.Infrastructure;
 /// </remarks>
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
+    /// <summary>The message when the file was renamed into place but its folder could not be flushed.</summary>
+    internal const string SavedButNotFlushedMessage = "";
+
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly IFileSync sync;
 
