@@ -37,6 +37,13 @@ public sealed class StoredDocument(string text, string revision)
 }
 
 /// <summary>Contains the revision of a written snapshot and whether the adapter could flush it to the disk.</summary>
-/// <param name="Revision">The opaque revision of the written bytes, including destination identity.</param>
-/// <param name="Flushed">False when the snapshot is in place but the adapter could not flush it to the disk.</param>
-public sealed record SaveResult(string Revision, bool Flushed);
+/// <param name="revision">The opaque revision of the written bytes, including destination identity.</param>
+/// <param name="flushed">False when the snapshot is in place but the adapter could not flush it to the disk.</param>
+public sealed class SaveResult(string revision, bool flushed)
+{
+    /// <summary>Gets the opaque revision of the written bytes, including destination identity.</summary>
+    public string Revision { get; } = revision;
+
+    /// <summary>Gets a value indicating whether the adapter flushed the snapshot to the disk.</summary>
+    public bool Flushed { get; } = flushed;
+}
