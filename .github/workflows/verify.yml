@@ -39,6 +39,9 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libx11-6 libice6 libsm6 libfontconfig1 xvfb xdotool dbus-daemon xdg-desktop-portal xdg-desktop-portal-gtk python3-pil at-spi2-core libatspi2.0-0
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
+      - name: Check the pull request title rule
+        shell: bash
+        run: python3 eng/test-check-pr-title.py
       - name: Check documentation
         if: runner.os == 'Linux'
         run: |
@@ -53,7 +56,6 @@ jobs:
           python3 eng/test-check-package-update.py
           python3 eng/test-check-release-gate.py
           python3 eng/check-notices.py
-          python3 eng/test-check-pr-title.py
           python3 eng/test-check-native-update.py
       - name: Check Linux native editor workflows
         if: runner.os == 'Linux'
