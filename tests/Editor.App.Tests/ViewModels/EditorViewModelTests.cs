@@ -631,10 +631,12 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
         Assert.True(viewModel.IsDirty);
         Assert.Equal("/flaky.txt", viewModel.Session.Destination);
         Assert.Equal(0, dialogs.Conflicts);
+        Assert.Equal(1, dialogs.Errors);
 
         Assert.True(await viewModel.SaveAsync().ConfigureAwait(true));
         Assert.False(viewModel.IsDirty);
         Assert.Equal(0, dialogs.Conflicts);
+        Assert.Equal(1, dialogs.Errors);
         Assert.Equal(2, store.Saves);
     }
 
@@ -705,6 +707,7 @@ public sealed class EditorViewModelTests(ITestOutputHelper output)
             return Task.FromResult(Decision);
         }
 
-        public Task ShowErrorAsync(string message) { Error = message; return Task.CompletedTask; }
+        internal int Errors { get; private set; }
+        public Task ShowErrorAsync(string message) { Error = message; Errors++; return Task.CompletedTask; }
     }
 }

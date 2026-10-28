@@ -85,6 +85,23 @@ public sealed class DocumentSession
     /// </remarks>
     public async Task<bool> SaveAsAsync(string destination, bool overwrite = false, CancellationToken cancellationToken = default)
     {
+        return (await SaveAsWithOutcomeAsync(destination, overwrite, cancellationToken).ConfigureAwait(true)).Saved;
+    }
+
+    /// <summary>Saves a snapshot and reports whether it was written and flushed.</summary>
+    /// <param name="destination">The nonblank destination for the snapshot.</param>
+    /// <param name="overwrite">Whether the user explicitly permits replacing the current disk state.</param>
+    /// <param name="cancellationToken">The token that cancels the save.</param>
+    /// <returns>The outcome. Saved is false for a conflict without a write.</returns>
+    /// <exception cref="InvalidOperationException">A save is already pending.</exception>
+    public async Task<SaveOutcome> SaveAsWithOutcomeAsync(string destination, bool overwrite = false, CancellationToken cancellationToken = default)
+    {
+        bool saved = await SaveCoreAsync(destination, overwrite, cancellationToken).ConfigureAwait(true);
+        return new SaveOutcome(saved, true);
+    }
+
+    private async Task<bool> SaveCoreAsync(string destination, bool overwrite, CancellationToken cancellationToken)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(destination);
         cancellationToken.ThrowIfCancellationRequested();
         if (saving)

@@ -125,7 +125,7 @@ public sealed class SafeSaveTests : IDisposable
         Assert.Equal([path], Directory.GetFileSystemEntries(directory));
     }
 
-    /// <summary>Checks that the session shows the error, keeps the document modified and then saves again with no conflict.</summary>
+    /// <summary>Checks that the session reports a not flushed save without an exception, keeps the document modified and then saves again with no conflict.</summary>
     [Fact]
     public async Task SaveAgainAfterFlushFailureIsAPlainSave()
     {
@@ -135,15 +135,18 @@ public sealed class SafeSaveTests : IDisposable
         DocumentSession session = await DocumentSession.LoadAsync(new FileTextDocumentStore(sync), path, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("new");
 
-        IOException failure = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
+        SaveOutcome first = await session.SaveAsWithOutcomeAsync(path, false, TestContext.Current.CancellationToken);
 
-        Assert.Equal("The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", failure.Message);
-        Assert.Equal(DocumentSession.NotFlushedMessage, failure.Message);
+        Assert.True(first.Saved);
+        Assert.False(first.Flushed);
+        Assert.Equal("The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.", DocumentSession.NotFlushedMessage);
         Assert.True(session.Document.IsDirty);
         Assert.Equal(path, session.Destination);
 
-        Assert.True(await session.SaveAsync(TestContext.Current.CancellationToken));
+        SaveOutcome second = await session.SaveAsWithOutcomeAsync(path, false, TestContext.Current.CancellationToken);
 
+        Assert.True(second.Saved);
+        Assert.True(second.Flushed);
         Assert.False(session.Document.IsDirty);
         Assert.Equal(2, sync.Calls);
         Assert.Equal("new", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
@@ -157,7 +160,7 @@ public sealed class SafeSaveTests : IDisposable
         await File.WriteAllTextAsync(path, "old", TestContext.Current.CancellationToken);
         DocumentSession session = await DocumentSession.LoadAsync(new FileTextDocumentStore(new FailingFolderSync(1)), path, TestContext.Current.CancellationToken);
         session.Document.ReplaceText("new");
-        _ = await Assert.ThrowsAsync<IOException>(() => session.SaveAsync(TestContext.Current.CancellationToken));
+        Assert.False((await session.SaveAsWithOutcomeAsync(path, false, TestContext.Current.CancellationToken)).Flushed);
         await File.WriteAllTextAsync(path, "other process", TestContext.Current.CancellationToken);
 
         Assert.False(await session.SaveAsync(TestContext.Current.CancellationToken));
