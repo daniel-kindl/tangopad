@@ -14,7 +14,10 @@ on:
       - '.config/dotnet-tools.json'
       - 'eng/*release.py'
       - 'eng/check-native-update.py'
+      - 'eng/test-check-native-update.py'
       - 'eng/check-native-editor.py'
+      - 'eng/*package-launch.py'
+      - 'tests/Editor.Desktop.SmokeTests/**'
       - 'eng/check-notices.py'
       - 'eng/test-check-notices.py'
       - 'eng/notices.json'
@@ -78,6 +81,8 @@ jobs:
         run: |
           python eng/test-release-notes.py
           python eng/release-notes.py
+      - name: Check vpk pack output capture
+        run: python eng/test-check-native-update.py
       - name: Verify repository
         run: dotnet msbuild eng/verify.proj
       - name: Build signed test-feed packages
@@ -107,6 +112,16 @@ jobs:
             artifacts/native-update/${{ matrix.rid }}/
             artifacts/native-helper/${{ matrix.rid }}/
             artifacts/native-editor-*/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Install and launch the real package
+        run: python eng/check-package-launch.py --rid ${{ matrix.rid }}
+      - name: Upload package launch evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-launch-${{ matrix.rid }}
+          path: artifacts/package-launch/${{ matrix.rid }}/
           if-no-files-found: warn
           retention-days: 7
       - name: Upload candidates
