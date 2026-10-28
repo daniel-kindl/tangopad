@@ -51,7 +51,8 @@ See [release distribution](https://github.com/daniel-kindl/tangopad/blob/dev/doc
 - One document per window. There are no tabs, exports, autosave, or crash recovery of unsaved text.
 - Files must decode as UTF-8. Save does not add a BOM or preserve all filesystem metadata.
 - Preview is bounded and read-only. Document links stay inactive and images remain descriptions.
-- Linux uses X11 or XWayland. The recorded Linux audit lacks an accessible source-text interface.
+- Linux uses X11 or XWayland.
+- On Linux, screen readers cannot read the document text. The source editor has no AT-SPI `Text` interface.
 - Native screen-reader, OS high-contrast, production installation, and final documentation checks remain pending.
 - Uninstall is not tested in 1.0.0. The release ships with this limit.
 
