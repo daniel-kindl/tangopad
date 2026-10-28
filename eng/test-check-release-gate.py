@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Unit tests for the release gate. Every case without a full green update run must fail."""
+from pathlib import Path
+import runpy
+import unittest
+
+ENG = Path(__file__).resolve().parent
+SHA = 'a' * 40
+REPO = 'daniel-kindl/tangopad'
+TARGETS = ('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64')
+
+
+def gate():
+    return runpy.run_path(str(ENG / 'check-release-gate.py'), run_name='gate')
+
+
+def run(identifier=1, sha=SHA, conclusion='success', path='.github/workflows/packages.yml', repo=REPO):
+    return {'id': identifier, 'head_sha': sha, 'conclusion': conclusion, 'status': 'completed', 'path': path,
+            'head_repository': {'full_name': repo}}
+
+
+def job(rid, conclusion='success', step='success'):
+    return {'name': f'Package ({rid})', 'conclusion': conclusion,
+            'steps': [{'name': 'Update the real package through the editor', 'conclusion': step}]}
+
+
+def green_jobs():
+    return [job(rid) for rid in TARGETS]
+
+
+class Api:
+    def __init__(self, runs, jobs, error=None):
+        self.runs, self.jobs, self.error, self.calls = runs, jobs, error, []
+
+    def __call__(self, endpoint):
+        self.calls.append(endpoint)
+        if self.error is not None:
+            raise self.error
+        if '/jobs' in endpoint:
+            return {'jobs': self.jobs[int(endpoint.split('/runs/')[1].split('/')[0])]}
+        return {'workflow_runs': self.runs}
+
+
+class ReleaseGate(unittest.TestCase):
+    def setUp(self):
+        self.module = gate()
+
+    def check(self, api):
+        return self.module['check'](REPO, SHA, api)
+
+    def refused(self, api, message):
+        with self.assertRaisesRegex(ValueError, message):
+            self.check(api)
+
+    def test_full_green_run_for_the_same_commit_passes(self):
+        api = Api([run()], {1: green_jobs()})
+        self.assertEqual(1, self.check(api))
+        self.assertIn(f'head_sha={SHA}', api.calls[0])
+        self.assertIn('workflows/packages.yml/runs', api.calls[0])
+
+    def test_no_run_fails(self):
+        self.refused(Api([], {}), 'No successful')
+
+    def test_failed_run_fails(self):
+        self.refused(Api([run(conclusion='failure')], {1: green_jobs()}), 'No successful')
+
+    def test_run_for_a_different_commit_fails(self):
+        self.refused(Api([run(sha='b' * 40)], {1: green_jobs()}), 'No successful')
+
+    def test_run_of_another_workflow_fails(self):
+        self.refused(Api([run(path='.github/workflows/verify.yml')], {1: green_jobs()}), 'No successful')
+
+    def test_run_from_another_repository_fails(self):
+        self.refused(Api([run(repo='someone/fork')], {1: green_jobs()}), 'No successful')
+
+    def test_partial_run_with_a_missing_target_fails(self):
+        self.refused(Api([run()], {1: green_jobs()[:3]}), 'osx-arm64')
+
+    def test_failed_target_fails(self):
+        jobs = green_jobs()
+        jobs[1] = job('linux-x64', conclusion='failure')
+        self.refused(Api([run()], {1: jobs}), 'linux-x64')
+
+    def test_skipped_update_step_fails(self):
+        jobs = green_jobs()
+        jobs[2] = job('osx-x64', step='skipped')
+        self.refused(Api([run()], {1: jobs}), 'osx-x64')
+
+    def test_api_error_fails(self):
+        self.refused(Api([run()], {1: green_jobs()}, error=OSError('network')), 'lookup failed')
+
+    def test_malformed_api_answer_fails(self):
+        self.refused(Api([{'id': 1}], {1: green_jobs()}), 'No successful|lookup failed')
+
+    def test_a_bad_sha_is_refused_before_any_lookup(self):
+        api = Api([run()], {1: green_jobs()})
+        with self.assertRaisesRegex(ValueError, 'commit'):
+            self.module['check'](REPO, 'main', api)
+        self.assertEqual([], api.calls)
+
+    def test_an_older_green_run_is_enough_when_a_newer_run_failed(self):
+        api = Api([run(2, conclusion='failure'), run(1)], {1: green_jobs(), 2: []})
+        self.assertEqual(1, self.check(api))
+
+
+if __name__ == '__main__':
+    unittest.main()

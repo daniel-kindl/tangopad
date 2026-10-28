@@ -114,6 +114,30 @@ class Workflows(unittest.TestCase):
         job = self.job('release.yml', 'package')
         self.assertRegex(job, r'(?m)^    env:\n(?:      .*\n)*?      TANGOPAD_RELEASE_BUILD: "1"\n')
 
+    def test_release_gate_runs_first_with_read_only_actions_access(self):
+        job = self.job('release.yml', 'gate')
+        self.assertNotIn('needs:', job)
+        self.assertIn("if: github.ref == 'refs/heads/main'", job)
+        self.assertRegex(job, r'(?m)^    permissions:\n      actions: read\n      contents: read\n')
+        self.assertIn('python3 eng/check-release-gate.py --repo "${{ github.repository }}" --sha "${{ github.sha }}"', job)
+        self.assertIn('GH_TOKEN: ${{ github.token }}', job)
+        self.assertNotIn('continue-on-error', job)
+
+    def test_every_release_job_depends_on_the_gate(self):
+        text = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
+        names = re.findall(r'(?m)^  ([a-z-]+):\n', text.split('\njobs:\n', 1)[1])
+        self.assertIn('gate', names)
+        needs = {}
+        for name in names:
+            found = re.search(r'(?m)^    needs: (\[[^\]]*\]|[a-z-]+)$', self.job('release.yml', name))
+            needs[name] = set(re.findall(r'[a-z-]+', found.group(1))) if found else set()
+        self.assertIn('gate', needs['package'])
+
+        def reaches_gate(name, seen=()):
+            return name == 'gate' or any(reaches_gate(parent, seen + (name,)) for parent in needs[name] if parent not in seen)
+        for name in names:
+            self.assertTrue(reaches_gate(name), f'{name} does not depend on the gate')
+
     def test_release_workflow_never_builds_update_test_packages(self):
         text = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         for forbidden in ('--update-test', '--update-key-dir', 'TangopadUpdateTest', 'update-test'):
