@@ -10,12 +10,14 @@ namespace Editor.Infrastructure;
 /// Loads consume one initial UTF-8 BOM. Saves add no BOM. A save follows a symbolic link to its target file,
 /// writes a temporary file in the folder of that file, copies the Unix permission bits of the existing file,
 /// flushes the temporary file, renames it over the target and then flushes the folder.
+/// The rename replaces the file, so a hard link to the old file keeps the old content.
 /// The save does not keep the owner, ACLs, extended attributes or timestamps. See ADR 0009 for optimistic concurrency limits.
 /// </remarks>
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
     /// <summary>The message when the file was renamed into place but its folder could not be flushed.</summary>
-    internal const string SavedButNotFlushedMessage = "";
+    internal const string SavedButNotFlushedMessage =
+        "The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.";
 
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly IFileSync sync;
@@ -97,6 +99,7 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
                 await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
                 if (!OperatingSystem.IsWindows() && before is not null)
                 {
+                    // The mode is read now, not with before. A mode change between the two reads is the same race as the revision check.
                     File.SetUnixFileMode(stream.SafeFileHandle, File.GetUnixFileMode(target) & PermissionBits);
                 }
 
@@ -126,7 +129,16 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             }
 
             created = false;
-            sync.FlushDirectory(folder);
+            try
+            {
+                sync.FlushDirectory(folder);
+            }
+            catch (IOException failure)
+            {
+                // The rename commits the save. Do not roll back: report the error, so the document stays modified.
+                throw new IOException(SavedButNotFlushedMessage, failure);
+            }
+
             return persisted;
         }
         catch (Exception failure)
