@@ -70,7 +70,7 @@ def editor_processes(root, listing):
 
 def list_editor_processes(root):
     """Return the IDs of the editor processes that run from the installed files."""
-    command = "Get-Process Editor.App -ErrorAction SilentlyContinue | Select-Object Id,Path | ConvertTo-Json -Compress"
+    command = "Get-Process | Where-Object { $_.ProcessName -eq 'Editor.App' } | Select-Object Id,Path | ConvertTo-Json -Compress"
     listing = subprocess.run(["powershell", "-NoProfile", "-Command", command], check=True, capture_output=True, text=True,
                              timeout=QUERY_TIMEOUT).stdout
     return editor_processes(root, listing)

@@ -164,6 +164,15 @@ class PackageLaunchChecks(unittest.TestCase):
         self.assertEqual([('wait', work / 'installed/current/Editor.App.exe', ['Setup.exe'])], events)
         self.assertEqual(['Setup.exe', 'powershell'], [call[0][0] for call in fake.calls])
 
+    def test_process_listing_does_not_fail_when_no_editor_runs(self):
+        # Get-Process with a name and no match writes an error record, so PowerShell exits with code 1.
+        fake = FakeSubprocess(listings=[''])
+        with patched('subprocess', fake):
+            self.assertEqual([], CHECK['list_editor_processes'](Path('C:/installed')))
+        command = fake.calls[0][0][-1]
+        self.assertNotIn('Get-Process Editor.App', command)
+        self.assertIn("Where-Object { $_.ProcessName -eq 'Editor.App' }", command)
+
     def test_editor_processes_selects_only_processes_below_the_root(self):
         root = Path("C:/Temp/it's/installed")
         listing = json.dumps([{'Id': 1, 'Path': "C:\\Temp\\it's\\installed\\current\\Editor.App.exe"},
