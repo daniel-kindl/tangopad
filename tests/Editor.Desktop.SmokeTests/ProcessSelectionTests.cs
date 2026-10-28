@@ -23,4 +23,28 @@ public sealed class ProcessSelectionTests
         Assert.Equal([10, 11, 12], ProcessTree.WithDescendants(10, processes).Order());
         Assert.Equal([12], ProcessTree.WithDescendants(12, processes).Order());
     }
+
+    /// <summary>On Linux the X11 window owner set reads /proc and includes a child that the launcher started.</summary>
+    [Fact]
+    public void LinuxWindowOwnersIncludeARealChildProcess()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            Assert.Skip("This check reads the Linux process table.");
+            return;
+        }
+
+        using System.Diagnostics.Process child = System.Diagnostics.Process.Start("sleep", "30");
+        try
+        {
+            HashSet<long> owners = X11WindowProbe.WindowOwners(Environment.ProcessId);
+            Assert.Contains(Environment.ProcessId, owners);
+            Assert.Contains(child.Id, owners);
+        }
+        finally
+        {
+            child.Kill();
+            _ = child.WaitForExit(TimeSpan.FromSeconds(10));
+        }
+    }
 }
