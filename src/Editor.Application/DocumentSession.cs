@@ -11,7 +11,8 @@ namespace Editor.Application;
 public sealed class DocumentSession
 {
     /// <summary>The message when the file was written but the store could not flush it to the disk.</summary>
-    public const string NotFlushedMessage = "";
+    public const string NotFlushedMessage =
+        "The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.";
 
     private readonly ITextDocumentStore store;
     private bool saving;
@@ -76,6 +77,7 @@ public sealed class DocumentSession
     /// <param name="overwrite">Whether the user explicitly permits replacing the current disk state.</param>
     /// <returns>True after persistence and acknowledgement, or false for a conflict without a write.</returns>
     /// <exception cref="InvalidOperationException">A save is already pending.</exception>
+    /// <exception cref="IOException">The store wrote the file but could not flush it. The session keeps the new revision and destination, and the document stays modified.</exception>
     /// <remarks>
     /// Failure or observed cancellation preserves the baseline and destination.
     /// If the adapter ignores cancellation, cancellation observed after persistence still prevents acknowledgement.
@@ -102,6 +104,14 @@ public sealed class DocumentSession
             }
 
             Revision = persisted.Revision;
+            if (!persisted.Flushed)
+            {
+                // The file is on disk with this revision, so a later save is not a conflict.
+                // The document stays modified, so the user saves again.
+                Destination = destination;
+                throw new IOException(NotFlushedMessage);
+            }
+
             Document.AcceptChanges(snapshot);
             Destination = destination;
             return true;

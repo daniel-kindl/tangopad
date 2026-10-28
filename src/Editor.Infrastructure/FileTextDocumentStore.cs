@@ -15,10 +15,6 @@ namespace Editor.Infrastructure;
 /// </remarks>
 public sealed class FileTextDocumentStore : ITextDocumentStore
 {
-    /// <summary>The message when the file was renamed into place but its folder could not be flushed.</summary>
-    internal const string SavedButNotFlushedMessage =
-        "The file was saved, but it could not be flushed to disk. It may not survive a power loss. Save again.";
-
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private readonly IFileSync sync;
 
@@ -129,17 +125,18 @@ public sealed class FileTextDocumentStore : ITextDocumentStore
             }
 
             created = false;
+            bool flushed;
             try
             {
-                _ = sync.FlushDirectory(folder);
+                flushed = sync.FlushDirectory(folder);
             }
-            catch (IOException failure)
+            catch (IOException)
             {
-                // The rename commits the save. Do not roll back: report the error, so the document stays modified.
-                throw new IOException(SavedButNotFlushedMessage, failure);
+                // The rename commits the save. Do not roll back and do not throw: report the facts to the session.
+                flushed = false;
             }
 
-            return new SaveResult(persisted, true);
+            return new SaveResult(persisted, flushed);
         }
         catch (Exception failure)
         {
