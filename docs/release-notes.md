@@ -7,8 +7,8 @@ Tangopad's stable packaging path currently accepts only `major.minor.patch` vers
 Prerelease feeds and prerelease package publication remain outside this workflow.
 
 `Directory.Build.props` is the authoritative version source.
-The current 0.1.0 draft is not a published release.
-The changelog contains only Unreleased work until the first release is prepared.
+The 1.0.0 draft is not a published release.
+The 1.0.0 entry records the planned first release. It is not public until publication.
 Do not infer a release date from a commit date, tag creation time, or closed issue.
 
 ## Document a user-visible change

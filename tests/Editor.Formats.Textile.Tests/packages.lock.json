@@ -132,7 +132,7 @@
       "editor.formats.textile": {
         "type": "Project",
         "dependencies": {
-          "Editor.Preview": "[0.1.0, )"
+          "Editor.Preview": "[1.0.0, )"
         }
       },
       "editor.preview": {
