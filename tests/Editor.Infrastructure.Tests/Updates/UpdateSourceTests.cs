@@ -139,7 +139,7 @@ public sealed class UpdateSourceTests
         finally
         {
             await cancellation.CancelAsync().ConfigureAwait(true);
-            try { await operation.ConfigureAwait(true); }
+            try { await operation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true); }
             catch (OperationCanceledException) { }
             File.Delete(path);
         }
@@ -169,17 +169,17 @@ public sealed class UpdateSourceTests
     public async Task SlowSteadyPackageCompletesBeyondTimeout()
     {
         const int chunks = 8;
-        using ChunkedStream body = new(chunks, TimeSpan.FromMilliseconds(200), stallAfterChunks: false);
+        ManualTimeProvider time = new();
+        using ClockStream body = new(chunks, time, TimeSpan.FromMilliseconds(400));
         using Handler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(body) });
         using HttpClient client = new(handler, disposeHandler: false) { Timeout = TimeSpan.FromMilliseconds(500) };
-        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client);
+        SignedReleaseSource source = new("unused", "linux-x64", TestContext.Current.CancellationToken, client, timeProvider: time);
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         try
         {
-            System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
             await source.DownloadReleaseEntry(new Logger(), PackageAsset(chunks), path, _ => { }, TestContext.Current.CancellationToken)
                 .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            Assert.True(elapsed.Elapsed > TimeSpan.FromMilliseconds(1000));
+            Assert.Equal(TimeSpan.FromMilliseconds(400 * chunks), time.Elapsed);
             Assert.Equal(new byte[chunks], await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true));
         }
         finally { File.Delete(path); }
@@ -227,6 +227,86 @@ public sealed class UpdateSourceTests
         {
             Disposed = true;
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>Moves a manual clock forward before each one byte read, so no real time passes.</summary>
+    private sealed class ClockStream(int chunks, ManualTimeProvider time, TimeSpan step) : MemoryStream
+    {
+        private int sent;
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (sent == chunks) { return ValueTask.FromResult(0); }
+            time.Advance(step);
+            cancellationToken.ThrowIfCancellationRequested();
+            buffer.Span[0] = 0;
+            sent++;
+            return ValueTask.FromResult(1);
+        }
+    }
+
+    /// <summary>A clock that moves only when the test calls <see cref="Advance"/>. Due timers run on the calling thread.</summary>
+    private sealed class ManualTimeProvider : TimeProvider
+    {
+        private readonly List<ManualTimer> timers = [];
+        private readonly DateTimeOffset start = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        internal TimeSpan Elapsed { get; private set; }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            return start + Elapsed;
+        }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ManualTimer timer = new(this, callback, state);
+            lock (timers) { timers.Add(timer); }
+            _ = timer.Change(dueTime, period);
+            return timer;
+        }
+
+        internal void Advance(TimeSpan step)
+        {
+            Elapsed += step;
+            ManualTimer[] due;
+            lock (timers) { due = [.. timers.Where(timer => timer.Due is { } at && at <= Elapsed)]; }
+            foreach (ManualTimer timer in due) { timer.Fire(); }
+        }
+
+        internal void Remove(ManualTimer timer)
+        {
+            lock (timers) { _ = timers.Remove(timer); }
+        }
+
+        internal sealed class ManualTimer(ManualTimeProvider owner, TimerCallback callback, object? state) : ITimer
+        {
+            internal TimeSpan? Due { get; private set; }
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                Due = dueTime == Timeout.InfiniteTimeSpan ? null : owner.Elapsed + dueTime;
+                return true;
+            }
+
+            internal void Fire()
+            {
+                Due = null;
+                callback(state);
+            }
+
+            public void Dispose()
+            {
+                owner.Remove(this);
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
         }
     }
 
